@@ -1,0 +1,114 @@
+<div class="dashboard">
+
+  <!-- ── Stat Cards Row ────────────────────────────────────── -->
+  <div class="summary-row">
+    <div class="summary-card critical">
+      <span class="summary-label">Critical</span>
+      <span class="summary-value">{{ store.criticalCount() }}</span>
+      <span class="summary-delta">▲ Active</span>
+    </div>
+    <div class="summary-card high">
+      <span class="summary-label">High</span>
+      <span class="summary-value">{{ store.highCount() }}</span>
+      <span class="summary-delta">Last 60s</span>
+    </div>
+    <div class="summary-card events">
+      <span class="summary-label">Events</span>
+      <span class="summary-value">{{ store.events().length }}</span>
+      <span class="summary-delta">Processed</span>
+    </div>
+    <div class="summary-card tracked">
+      <span class="summary-label">Tracked IPs</span>
+      <span class="summary-value">{{ store.trackedIPs() }}</span>
+      <span class="summary-delta">Monitored</span>
+    </div>
+    <div class="summary-card epm">
+      <span class="summary-label">Events/Min</span>
+      <span class="summary-value">{{ store.eventsPerMinute() }}</span>
+      <span class="summary-delta">Live</span>
+    </div>
+  </div>
+
+  <!-- ── 4-Column Main Grid ─────────────────────────────────── -->
+  <div class="main-grid">
+
+    <!-- Col 1: Live Event Stream -->
+    <div class="panel stream-panel">
+      <div class="panel-header">
+        <span class="panel-title">Live SOC Stream</span>
+        <span class="live-indicator">
+          <span class="live-dot"></span>LIVE
+        </span>
+      </div>
+      <div class="table-wrapper">
+        <table class="event-table">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Source IP</th>
+              <th>Event</th>
+              <th>Score</th>
+              <th>Sev</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of store.events(); track e.timestamp) {
+              <tr class="event-row" [class]="'row-' + e.threat_level">
+                <td class="cell-ts">{{ e.timestamp | date:'HH:mm:ss' }}</td>
+                <td class="cell-ip">{{ e.ip }}</td>
+                <td class="cell-event">{{ getEventLabel(e.attack_type) }}</td>
+                <td class="cell-score">{{ e.score }}</td>
+                <td class="cell-sev">
+                  <span class="sev-badge" [class]="getSeverityClass(e.threat_level)">
+                    {{ e.threat_level[0].toUpperCase() }}
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="empty-row">Connecting to stream…</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Col 2: Charts Left (Severity + Attack Types) -->
+    <app-charts-column column="left" />
+
+    <!-- Col 3: Charts Right (EPM + Top IPs) -->
+    <app-charts-column column="right" />
+
+    <!-- Col 4: Alerts Panel -->
+    <div class="panel alerts-panel">
+      <div class="panel-header">
+        <span class="panel-title">Critical Alerts</span>
+        @if (store.criticalCount() > 0) {
+          <span class="alert-badge">{{ store.criticalCount() }}</span>
+        }
+      </div>
+      <div class="alerts-list">
+        @for (e of store.events(); track e.timestamp) {
+          @if (e.threat_level === 'critical') {
+            <div class="alert-item">
+              <div class="alert-indicator"></div>
+              <div class="alert-body">
+                <span class="alert-title">{{ e.attack_type }} Detected</span>
+                <span class="alert-detail">{{ e.ip }}</span>
+                <span class="alert-score">Score: {{ e.score }}</span>
+                <span class="alert-time">{{ e.timestamp | date:'HH:mm:ss' }}</span>
+              </div>
+            </div>
+          }
+        } @empty {
+          <div class="no-alerts">
+            <span class="no-alerts-dot"></span>
+            No critical alerts
+          </div>
+        }
+      </div>
+    </div>
+
+  </div>
+</div>

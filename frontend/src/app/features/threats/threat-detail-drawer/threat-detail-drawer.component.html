@@ -1,0 +1,74 @@
+<div class="drawer-overlay" (click)="close()"></div>
+
+<div class="drawer">
+  <div class="drawer-header">
+    <div class="drawer-title">
+      <span class="drawer-label">THREAT INTELLIGENCE</span>
+      @if (history) {
+        <span class="drawer-ip">{{ history.ip }}</span>
+      }
+    </div>
+    <button class="close-btn" (click)="close()">✕</button>
+  </div>
+
+  @if (loading) {
+    <div class="drawer-loading">Loading intelligence data…</div>
+  }
+
+  @if (history) {
+    <div class="drawer-body">
+
+      <!-- Score Badge -->
+      <div class="score-section">
+        <div class="score-ring" [style.borderColor]="scoreColor(history.score)">
+          <span class="score-value" [style.color]="scoreColor(history.score)">{{ history.score }}</span>
+          <span class="score-sub">THREAT SCORE</span>
+        </div>
+        <div class="score-meta">
+          <div class="meta-row">
+            <span class="meta-label">Level</span>
+            <span class="meta-val" [style.color]="scoreColor(history.score)">{{ history.threat_level.toUpperCase() }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Total Events</span>
+            <span class="meta-val">{{ history.events.length }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Regions</span>
+            <span class="meta-val">{{ history.regions.join(', ') }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MITRE Tags -->
+      @if (history.mitre_tags.length > 0) {
+        <div class="section">
+          <span class="section-title">MITRE ATT&CK</span>
+          <div class="tags">
+            @for (tag of history.mitre_tags; track tag) {
+              <span class="mitre-tag">{{ tag }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Event Timeline -->
+      <div class="section">
+        <span class="section-title">EVENT TIMELINE</span>
+        <div class="timeline">
+          @for (e of history.events.slice(0, 20); track e.timestamp) {
+            <div class="timeline-item">
+              <div class="tl-dot" [style.background]="scoreColor(e.score)"></div>
+              <div class="tl-body">
+                <span class="tl-type">{{ e.attack_type }}</span>
+                <span class="tl-score">Score: {{ e.score }}</span>
+                <span class="tl-time">{{ e.timestamp | date:'HH:mm:ss' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+    </div>
+  }
+</div>

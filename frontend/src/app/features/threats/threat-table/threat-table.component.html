@@ -1,0 +1,43 @@
+<div class="threat-table-wrapper">
+  <div class="table-header">
+    <span class="table-title">Threat Intelligence — IP Index</span>
+    <span class="table-sub">{{ rows.length }} tracked IPs · click row for details</span>
+  </div>
+
+  @if (loading) {
+    <div class="loading">Loading threat data…</div>
+  } @else {
+    <table class="threat-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>IP Address</th>
+          <th>Max Score</th>
+          <th>Events</th>
+          <th>Level</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows; track row.ip; let i = $index) {
+          <tr class="ip-row" (click)="selectIp(row.ip)">
+            <td class="cell-idx">{{ i + 1 }}</td>
+            <td class="cell-ip">{{ row.ip }}</td>
+            <td class="cell-score" [class]="scoreClass(row.score)">{{ row.score }}</td>
+            <td class="cell-count">{{ row.count }}</td>
+            <td class="cell-level">
+              <span class="level-badge" [class]="scoreClass(row.score)">
+                {{ row.score >= 80 ? 'CRITICAL' : row.score >= 60 ? 'HIGH' : row.score >= 40 ? 'MEDIUM' : 'LOW' }}
+              </span>
+            </td>
+            <td class="cell-action">Details →</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="empty-row">No threat data yet — stream must be active</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

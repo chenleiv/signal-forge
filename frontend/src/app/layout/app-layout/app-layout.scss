@@ -1,0 +1,288 @@
+// ── Palo Alto / XSIAM Palette ────────────────────────────────
+$bg:       #0f1117;
+$sb-bg:    #13171f;
+$panel-bg: #13171f;
+$border:   #1e2535;
+$border-2: #252d3d;
+
+$accent:   #fa582d;   // Palo Alto orange
+$text:     #e5e7eb;
+$secondary:#9ca3af;
+$muted:    #4b5563;
+$green:    #16a34a;
+
+// ── Root ─────────────────────────────────────────────────────
+:host { display: block; height: 100vh; }
+
+.layout {
+  display: flex;
+  height: 100vh;
+  background: $bg;
+  color: $text;
+  overflow: hidden;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+// ── Sidebar ──────────────────────────────────────────────────
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: $sb-bg;
+  border-right: 1px solid $border;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+// Logo
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 14px;
+  border-bottom: 1px solid $border;
+}
+
+.logo-icon {
+  width: 32px;
+  height: 32px;
+  background: rgba(250, 88, 45, 0.1);
+  border: 1px solid rgba(250, 88, 45, 0.3);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-text { display: flex; flex-direction: column; gap: 1px; }
+
+.logo-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: $text;
+  letter-spacing: 0.2px;
+}
+
+.logo-sub {
+  font-size: 9px;
+  color: $muted;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+
+// Nav sections
+.nav-section {
+  padding: 14px 0 4px;
+  flex-shrink: 0;
+
+  & + .nav-section { border-top: 1px solid $border; }
+}
+
+.nav-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  color: $muted;
+  letter-spacing: 0.8px;
+  padding: 0 14px 6px;
+  text-transform: uppercase;
+}
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 8px;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: $secondary;
+  text-decoration: none;
+  border-radius: 5px;
+  border-left: 2px solid transparent;
+  transition: color 0.12s, background 0.12s;
+
+  &:hover {
+    color: $text;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &.active {
+    color: $text;
+    font-weight: 500;
+    background: rgba(250, 88, 45, 0.08);
+    border-left-color: $accent;
+  }
+}
+
+.item-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+
+  .active & { opacity: 1; color: $accent; }
+}
+
+// Footer / User
+.sidebar-footer {
+  margin-top: auto;
+  padding: 12px;
+  border-top: 1px solid $border;
+}
+
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 4px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.12s;
+
+  &:hover { background: rgba(255,255,255,0.04); }
+}
+
+.user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(250, 88, 45, 0.15);
+  border: 1px solid rgba(250, 88, 45, 0.3);
+  color: $accent;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.user-info { display: flex; flex-direction: column; gap: 2px; }
+.user-name { font-size: 12px; color: $text; font-weight: 500; }
+.user-status { display: flex; align-items: center; gap: 5px; font-size: 10px; color: $muted; }
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: $green;
+  animation: pulse-g 2.5s ease-in-out infinite;
+}
+
+@keyframes pulse-g {
+  0%,100% { box-shadow: 0 0 3px rgba(22,163,74,0.5); }
+  50%      { box-shadow: 0 0 8px rgba(22,163,74,0.9); }
+}
+
+// ── Main ─────────────────────────────────────────────────────
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+// Topbar
+.topbar {
+  height: 46px;
+  flex-shrink: 0;
+  background: $sb-bg;
+  border-bottom: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.topbar-section { color: $muted; }
+.topbar-sep     { color: $muted; font-size: 10px; }
+.topbar-page    { color: $text; font-weight: 500; }
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.topbar-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(22, 163, 74, 0.08);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: $green;
+}
+
+.chip-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: $green;
+  animation: pulse-g 2.5s ease-in-out infinite;
+}
+
+.topbar-time {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  color: $muted;
+  letter-spacing: 0.5px;
+}
+
+.topbar-notif {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.12s;
+
+  &:hover { background: rgba(255,255,255,0.06); }
+}
+
+.notif-badge {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 12px;
+  height: 12px;
+  background: $accent;
+  border-radius: 50%;
+  font-size: 8px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Content
+.content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
