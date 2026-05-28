@@ -1,11 +1,7 @@
-import { Component, signal } from '@angular/core';
-import { interval } from 'rxjs';
-
-type ThreatNode = {
-  id: number;
-  region: 'us' | 'eu' | 'ru' | 'il';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-};
+import { Component, ElementRef, OnInit, OnDestroy, inject, effect } from '@angular/core';
+import { ThreatStoreService } from '../../core/services/threat-store.service';
+import * as d3 from 'd3';
+import * as topojson from 'topojson-client';
 
 @Component({
   selector: 'app-threat-map',
@@ -13,49 +9,133 @@ type ThreatNode = {
   templateUrl: './threat-map.html',
   styleUrl: './threat-map.scss',
 })
-export class ThreatMap {
-  threats = signal<ThreatNode[]>([]);
+export class ThreatMap implements OnInit, OnDestroy {
+  private el = inject(ElementRef);
+  private store = inject(ThreatStoreService);
 
-  private idCounter = 0;
+  private svg: any;
+  private projection: any;
 
   constructor() {
-    this.startSimulation();
-  }
-
-  startSimulation() {
-    interval(1500).subscribe(() => {
-      this.addThreat();
-      this.cleanupThreats();
+    effect(() => {
+      const events = this.store.events();
+      if (events.length > 0 && this.svg && this.projection) {
+        events.slice(0, 3).forEach((e) => this.drawAttack(e));
+      }
     });
   }
 
-  addThreat() {
-    const regions: ThreatNode['region'][] = ['us', 'eu', 'ru', 'il'];
-    const severities: ThreatNode['severity'][] = ['low', 'medium', 'high', 'critical'];
+  ngOnInit() {
+    this.initMap();
+  }
 
-    const newThreat: ThreatNode = {
-      id: this.idCounter++,
-      region: regions[Math.floor(Math.random() * regions.length)],
-      severity: severities[Math.floor(Math.random() * severities.length)],
+  ngOnDestroy() {
+    if (this.svg) this.svg.remove();
+  }
+
+  private async initMap() {
+    const world = (await d3.json(
+      'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
+    )) as any;
+
+    const container = this.el.nativeElement.querySelector('.map-container');
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+
+    this.projection = d3
+      .geoNaturalEarth1()
+      .scale(width / 5)
+      .translate([width / 2, height / 2]);
+
+    const path = d3.geoPath().projection(this.projection);
+
+    this.svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
+
+    // Ocean background
+    this.svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#0a0f1a');
+
+    // Countries
+    this.svg
+      .append('g')
+      .selectAll('path')
+      .data((topojson.feature(world, world.objects.countries) as any).features)
+      .join('path')
+      .attr('d', path)
+      .attr('fill', '#1a2540')
+      .attr('stroke', '#2a3a60')
+      .attr('stroke-width', 0.5);
+
+    // Attack points layer
+    this.svg.append('g').attr('class', 'attacks');
+  }
+
+  private readonly REGION_COORDS: Record<string, [number, number]> = {
+    US: [-95, 38],
+    EU: [10, 51],
+    RU: [60, 55],
+    CN: [105, 35],
+    IL: [35, 31],
+    BR: [-51, -14],
+  };
+
+  private drawAttack(event: any) {
+    if (!this.svg || !this.projection) return;
+
+    const target = this.REGION_COORDS['US'];
+    const source = this.REGION_COORDS[event.region] ?? this.REGION_COORDS['EU'];
+    const color = this.severityColor(event.threat_level);
+
+    const [sx, sy] = this.projection(source)!;
+    const [tx, ty] = this.projection(target)!;
+
+    const line = this.svg
+      .select('.attacks')
+      .append('line')
+      .attr('x1', sx)
+      .attr('y1', sy)
+      .attr('x2', sx)
+      .attr('y2', sy)
+      .attr('stroke', color)
+      .attr('stroke-width', 1.5)
+      .attr('opacity', 0.8);
+
+    line
+      .transition()
+      .duration(800)
+      .attr('x2', tx)
+      .attr('y2', ty)
+      .transition()
+      .duration(600)
+      .attr('opacity', 0)
+      .remove();
+
+    // Pulse dot at source
+    // Impact flash at target
+    this.svg
+      .select('.attacks')
+      .append('circle')
+      .attr('cx', tx)
+      .attr('cy', ty)
+      .attr('r', 0)
+      .attr('fill', 'none')
+      .attr('stroke', color)
+      .attr('stroke-width', 1.5)
+      .attr('opacity', 0.9)
+      .transition()
+      .delay(800)
+      .duration(400)
+      .attr('r', 8)
+      .attr('opacity', 0)
+      .remove();
+  }
+
+  private severityColor(level: string): string {
+    const map: Record<string, string> = {
+      critical: '#dc2626',
+      high: '#ea580c',
+      medium: '#d97706',
+      low: '#2563eb',
     };
-
-    this.threats.update((list) => [...list, newThreat]);
-  }
-
-  cleanupThreats() {
-    this.threats.update((list) => list.slice(-15));
-  }
-
-  getColor(severity: ThreatNode['severity']) {
-    switch (severity) {
-      case 'low':
-        return '#38bdf8';
-      case 'medium':
-        return '#fbbf24';
-      case 'high':
-        return '#fb923c';
-      case 'critical':
-        return '#ef4444';
-    }
+    return map[level] ?? '#2563eb';
   }
 }

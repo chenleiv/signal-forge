@@ -1,18 +1,1 @@
-<div class="map-container">
-
-  <h2>Global Threat Map (Live)</h2>
-
-  <div class="world">
-
-    @for (t of threats(); track t.id) {
-      <div
-        class="node"
-        [class]="t.region"
-        [style.background]="getColor(t.severity)"
-        [style.box-shadow]="'0 0 12px ' + getColor(t.severity)">
-      </div>
-    }
-
-  </div>
-
-</div>
+<div class="map-container"></div>

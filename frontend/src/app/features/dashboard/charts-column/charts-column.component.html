@@ -1,8 +1,12 @@
 <div class="charts-col">
   <div class="chart-wrapper">
-    <div echarts [options]="topChart()" class="echart"></div>
+    @if (topChart()) {
+    <div echarts [options]="topChart()!" class="echart"></div>
+    }
   </div>
   <div class="chart-wrapper">
-    <div echarts [options]="bottomChart()" class="echart"></div>
+    @if (bottomChart()) {
+    <div echarts [options]="bottomChart()!" class="echart"></div>
+    }
   </div>
 </div>

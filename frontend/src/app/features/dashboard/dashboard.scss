@@ -1,18 +1,18 @@
 // ── Palette (Palo Alto XSIAM) ────────────────────────────────
-$bg:       #0f1117;
+$bg: #0f1117;
 $panel-bg: #13171f;
-$border:   #1e2535;
+$border: #1e2535;
 $border-2: #252d3d;
 
-$red:      #dc2626;   // Critical
-$orange:   #ea580c;   // High
-$yellow:   #d97706;   // Medium
-$blue:     #2563eb;   // Low / info
-$green:    #16a34a;
-$accent:   #fa582d;   // Palo Alto orange
-$text:     #e5e7eb;
-$muted:    #4b5563;
-$secondary:#9ca3af;
+$red: #dc2626; // Critical
+$orange: #ea580c; // High
+$yellow: #d97706; // Medium
+$blue: #2563eb; // Low / info
+$green: #16a34a;
+$accent: #fa582d; // Palo Alto orange
+$text: #e5e7eb;
+$muted: #4b5563;
+$secondary: #9ca3af;
 
 // ── Host ─────────────────────────────────────────────────────
 :host {
@@ -41,8 +41,13 @@ $secondary:#9ca3af;
   flex-shrink: 0;
 }
 
-.summary-card.epm { border-top-color: #a855f7; }
-.summary-card.epm .summary-value { color: #a855f7; }
+.summary-card.epm {
+  border-top-color: #a855f7;
+}
+
+.summary-card.epm .summary-value {
+  color: #a855f7;
+}
 
 .summary-card {
   background: $panel-bg;
@@ -54,11 +59,25 @@ $secondary:#9ca3af;
   flex-direction: column;
   gap: 3px;
 
-  &.critical { border-top-color: $red;    }
-  &.high     { border-top-color: $orange; }
-  &.events   { border-top-color: $blue;   }
-  &.tracked  { border-top-color: $green;  }
-  &.epm      { border-top-color: $accent; }
+  &.critical {
+    border-top-color: $red;
+  }
+
+  &.high {
+    border-top-color: $orange;
+  }
+
+  &.events {
+    border-top-color: $blue;
+  }
+
+  &.tracked {
+    border-top-color: $green;
+  }
+
+  &.epm {
+    border-top-color: $accent;
+  }
 }
 
 .summary-label {
@@ -74,11 +93,25 @@ $secondary:#9ca3af;
   font-family: 'JetBrains Mono', 'Courier New', monospace;
   line-height: 1.1;
 
-  .critical & { color: $red;    }
-  .high     & { color: $orange; }
-  .events   & { color: $blue;   }
-  .tracked  & { color: $text;   }
-  .epm      & { color: $accent; }
+  .critical & {
+    color: $red;
+  }
+
+  .high & {
+    color: $orange;
+  }
+
+  .events & {
+    color: $blue;
+  }
+
+  .tracked & {
+    color: $text;
+  }
+
+  .epm & {
+    color: $accent;
+  }
 }
 
 .summary-delta {
@@ -115,7 +148,6 @@ $secondary:#9ca3af;
   display: flex;
   flex-direction: column;
   min-height: 265px;
-
 }
 
 .panel-header {
@@ -256,16 +288,37 @@ $secondary:#9ca3af;
   border-radius: 3px;
   letter-spacing: 0;
 
-  &.sev-critical { background: $red;    color: #fff; }
-  &.sev-high     { background: $orange; color: #fff; }
-  &.sev-medium   { background: $yellow; color: #fff; }
-  &.sev-low      { background: $blue;   color: #fff; }
+  &.sev-critical {
+    background: $red;
+    color: #fff;
+  }
+
+  &.sev-high {
+    background: $orange;
+    color: #fff;
+  }
+
+  &.sev-medium {
+    background: $yellow;
+    color: #fff;
+  }
+
+  &.sev-low {
+    background: $blue;
+    color: #fff;
+  }
 }
 
 // Row severity highlight
-tr.row-high td    { background: rgba(245, 158, 11, 0.03); }
-tr.row-medium td  { background: rgba(255, 204, 0, 0.02); }
-tr.row-low td     { }
+tr.row-high td {
+  background: rgba(245, 158, 11, 0.03);
+}
+
+tr.row-medium td {
+  background: rgba(255, 204, 0, 0.02);
+}
+
+tr.row-low td {}
 
 .empty-row {
   text-align: center;

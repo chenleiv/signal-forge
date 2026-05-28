@@ -1,40 +1,12 @@
-.map-container {
-  padding: 20px;
-}
-
-.world {
-  position: relative;
-  height: 500px;
-  background: radial-gradient(circle at center, #0f172a, #050816);
-  border-radius: 12px;
+:host {
+  display: block;
+  flex: 1;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.06);
 }
 
-/* בסיס נקודות */
-.node {
-  position: absolute;
-  width: 10px;
-  height: 10px;
-  background: #00d4ff;
-  border-radius: 50%;
-  box-shadow: 0 0 12px #00d4ff;
-  animation: pulse 1.5s infinite;
-}
-
-/* מיקומים גסים */
-.us { top: 45%; left: 20%; }
-.eu { top: 35%; left: 50%; }
-.ru { top: 30%; left: 65%; }
-.il { top: 55%; left: 58%; }
-
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(2.5);
-    opacity: 0;
-  }
+.map-container {
+  width: 100%;
+  height: 100%;
+  background: #0a0f1a;
+  overflow: hidden;
 }

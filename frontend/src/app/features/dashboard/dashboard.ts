@@ -1,6 +1,5 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { ThreatsService } from '../../core/services/threats.service';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { ChartsColumnComponent } from './charts-column/charts-column.component';
 
@@ -11,17 +10,8 @@ import { ChartsColumnComponent } from './charts-column/charts-column.component';
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
 })
-export class Dashboard implements OnInit, OnDestroy {
-  private ws    = inject(ThreatsService);
+export class Dashboard {
   readonly store = inject(ThreatStoreService);
-
-  ngOnInit() {
-    this.ws.connect();
-  }
-
-  ngOnDestroy() {
-    this.ws.disconnect();
-  }
 
   // ── Template helpers ───────────────────────────────────────
 
@@ -35,11 +25,11 @@ export class Dashboard implements OnInit, OnDestroy {
 
   getEventLabel(attackType: string): string {
     const labels: Record<string, string> = {
-      SQLi:       'SQL Injection attempt',
-      DDoS:       'DDoS flood detected',
+      SQLi: 'SQL Injection attempt',
+      DDoS: 'DDoS flood detected',
       BruteForce: 'Brute force login',
-      PortScan:   'Port scan observed',
-      Malware:    'Malware beacon',
+      PortScan: 'Port scan observed',
+      Malware: 'Malware beacon',
     };
     return labels[attackType] ?? 'Unknown event';
   }
