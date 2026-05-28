@@ -1,1 +1,39 @@
-<p>alerts works!</p>
+<div class="alerts-page">
+
+    <div class="page-header">
+        <h1 class="page-title">Alerts</h1>
+        <span class="count-badge">{{ filtered().length }} alerts</span>
+    </div>
+
+    <div class="filter-bar">
+        <button class="filter-btn" [class.active]="filterLevel() === 'all'" (click)="setFilter('all')">All</button>
+        <button class="filter-btn critical" [class.active]="filterLevel() === 'critical'"
+            (click)="setFilter('critical')">Critical</button>
+        <button class="filter-btn high" [class.active]="filterLevel() === 'high'"
+            (click)="setFilter('high')">High</button>
+        <button class="filter-btn medium" [class.active]="filterLevel() === 'medium'"
+            (click)="setFilter('medium')">Medium</button>
+        <button class="filter-btn low" [class.active]="filterLevel() === 'low'" (click)="setFilter('low')">Low</button>
+    </div>
+
+    <div class="alerts-list">
+        @for (alert of filtered(); track alert.ip + alert.timestamp) {
+        <div class="alert-row sev-border-{{ alert.threat_level }}">
+            <span class="sev-badge sev-{{ alert.threat_level }}">{{ alert.threat_level[0].toUpperCase() }}</span>
+            <span class="alert-time mono">{{ alert.timestamp | date:'HH:mm:ss' }}</span>
+            <span class="alert-ip mono">{{ alert.ip }}</span>
+            <span class="alert-type">{{ alert.attack_type }}</span>
+            <span class="alert-region mono">{{ alert.region }}</span>
+            <span class="alert-score" [class.score-critical]="alert.score >= 80"
+                [class.score-high]="alert.score >= 60 && alert.score < 80">
+                {{ alert.score }}
+            </span>
+            <button class="dismiss-btn" (click)="dismiss(alert)">Dismiss</button>
+        </div>
+        } @empty {
+        <div class="empty">No alerts — {{ filterLevel() !== 'all' ? 'try a different filter' : 'waiting for data...' }}
+        </div>
+        }
+    </div>
+
+</div>
