@@ -1,0 +1,270 @@
+$bg: #0f1117;
+$panel: #13171f;
+$border: #1e2535;
+$text: #e5e7eb;
+$muted: #9ca3af;
+$accent: #fa582d;
+
+:host {
+    display: block;
+    height: 100%;
+    overflow: hidden;
+}
+
+.incidents-page {
+    padding: 24px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    box-sizing: border-box;
+}
+
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.page-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: $text;
+    margin: 0;
+}
+
+.count-badge {
+    font-size: 11px;
+    color: $muted;
+    background: #1e2535;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid $border;
+    border-radius: 6px;
+}
+
+.inc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+
+    th {
+        position: sticky;
+        top: 0;
+        background: #0d1220;
+        color: $muted;
+        font-weight: 500;
+        text-transform: uppercase;
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        padding: 10px 12px;
+        text-align: left;
+        border-bottom: 1px solid $border;
+    }
+
+    td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #151c2b;
+        color: $text;
+    }
+}
+
+.inc-row {
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+        background: #1a2035;
+    }
+}
+
+.id-cell {
+    color: $accent;
+    font-family: monospace;
+    font-weight: 600;
+}
+
+.title-cell {
+    max-width: 260px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mono {
+    font-family: monospace;
+    color: $muted;
+}
+
+.empty {
+    text-align: center;
+    color: $muted;
+    padding: 40px;
+}
+
+.sev-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 3px;
+
+    &.sev-critical {
+        background: rgba(255, 45, 85, 0.2);
+        color: #ff2d55;
+    }
+
+    &.sev-high {
+        background: rgba(255, 107, 0, 0.2);
+        color: #ff6b00;
+    }
+
+    &.sev-medium {
+        background: rgba(255, 204, 0, 0.2);
+        color: #ffcc00;
+    }
+
+    &.sev-low {
+        background: rgba(0, 212, 255, 0.2);
+        color: #00d4ff;
+    }
+}
+
+.status-badge {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid;
+    font-weight: 600;
+}
+
+// ── Drawer ────────────────────────────────────────────────────
+
+.drawer-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 100;
+}
+
+.drawer {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 360px;
+    height: 100vh;
+    background: $panel;
+    border-left: 1px solid $border;
+    z-index: 101;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: slideIn 0.25s ease-out;
+    overflow-y: auto;
+    box-sizing: border-box;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+    }
+
+    to {
+        transform: translateX(0);
+    }
+}
+
+.drawer-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.drawer-id {
+    font-family: monospace;
+    font-size: 13px;
+    color: $accent;
+    font-weight: 700;
+    flex: 1;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: $muted;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px;
+
+    &:hover {
+        color: $text;
+    }
+}
+
+.drawer-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: $text;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.drawer-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px solid $border;
+}
+
+.meta-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: $muted;
+    letter-spacing: 0.05em;
+}
+
+.meta-val {
+    font-size: 12px;
+    color: $text;
+    font-family: monospace;
+}
+
+.mitre-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mitre-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.mitre-tag {
+    font-size: 10px;
+    font-family: monospace;
+    padding: 3px 8px;
+    border: 1px solid rgba(250, 88, 45, 0.4);
+    color: $accent;
+    border-radius: 3px;
+    background: rgba(250, 88, 45, 0.08);
+}

@@ -25,3 +25,19 @@ export interface IpHistory {
   regions: string[];
   mitre_tags: string[];
 }
+
+export type IncidentStatus = 'open' | 'investigating' | 'contained' | 'closed';
+
+export interface Incident {
+  id: string;
+  title: string;
+  severity: ThreatLevel;
+  status: IncidentStatus;
+  attack_type: AttackType;
+  source_region: string;
+  event_count: number;
+  assigned_to: string | null;
+  created_at: string;
+  updated_at: string;
+  mitre_tags: string[];
+}

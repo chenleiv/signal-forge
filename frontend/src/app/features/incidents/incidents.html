@@ -1,1 +1,93 @@
-<p>incidents works!</p>
+<div class="incidents-page">
+
+    <div class="page-header">
+        <h1 class="page-title">Incidents</h1>
+        <span class="count-badge">{{ incidents().length }} total</span>
+    </div>
+
+    <div class="table-wrap">
+        <table class="inc-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Severity</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Type</th>
+                    <th>Source</th>
+                    <th>Events</th>
+                    <th>Assigned To</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (inc of incidents(); track inc.id) {
+                <tr class="inc-row" (click)="open(inc)">
+                    <td class="id-cell">{{ inc.id }}</td>
+                    <td><span class="sev-badge sev-{{ inc.severity }}">{{ inc.severity[0].toUpperCase() }}</span></td>
+                    <td class="title-cell">{{ inc.title }}</td>
+                    <td><span class="status-badge" [style.color]="statusColor(inc.status)"
+                            [style.borderColor]="statusColor(inc.status)">{{ inc.status }}</span></td>
+                    <td class="mono">{{ inc.attack_type }}</td>
+                    <td class="mono">{{ inc.source_region }}</td>
+                    <td class="mono">{{ inc.event_count }}</td>
+                    <td>{{ inc.assigned_to ?? '—' }}</td>
+                    <td class="mono">{{ inc.created_at | date:'HH:mm:ss' }}</td>
+                </tr>
+                } @empty {
+                <tr>
+                    <td colspan="9" class="empty">No incidents yet — waiting for data...</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Drawer -->
+@if (selected()) {
+<div class="drawer-overlay" (click)="close()"></div>
+<aside class="drawer">
+    <div class="drawer-header">
+        <span class="drawer-id">{{ selected()!.id }}</span>
+        <span class="sev-badge sev-{{ selected()!.severity }}">{{ selected()!.severity }}</span>
+        <button class="close-btn" (click)="close()">✕</button>
+    </div>
+
+    <h2 class="drawer-title">{{ selected()!.title }}</h2>
+
+    <div class="drawer-meta">
+        <div class="meta-row">
+            <span class="meta-label">Status</span>
+            <span class="status-badge" [style.color]="statusColor(selected()!.status)"
+                [style.borderColor]="statusColor(selected()!.status)">{{ selected()!.status }}</span>
+        </div>
+        <div class="meta-row">
+            <span class="meta-label">Attack Type</span>
+            <span class="meta-val">{{ selected()!.attack_type }}</span>
+        </div>
+        <div class="meta-row">
+            <span class="meta-label">Source Region</span>
+            <span class="meta-val">{{ selected()!.source_region }}</span>
+        </div>
+        <div class="meta-row">
+            <span class="meta-label">Events</span>
+            <span class="meta-val">{{ selected()!.event_count }}</span>
+        </div>
+        <div class="meta-row">
+            <span class="meta-label">Assigned To</span>
+            <span class="meta-val">{{ selected()!.assigned_to ?? 'Unassigned' }}</span>
+        </div>
+    </div>
+
+    <div class="mitre-section">
+        <span class="meta-label">MITRE ATT&CK</span>
+        <div class="mitre-tags">
+            @for (tag of selected()!.mitre_tags; track tag) {
+            <span class="mitre-tag">{{ tag }}</span>
+            }
+        </div>
+    </div>
+</aside>
+}
