@@ -1,6 +1,5 @@
 <div class="dashboard">
 
-  <!-- ── Stat Cards Row ────────────────────────────────────── -->
   <div class="summary-row">
     <div class="summary-card critical">
       <span class="summary-label">Critical</span>
@@ -52,22 +51,22 @@
             </tr>
           </thead>
           <tbody>
-            @for (e of store.events(); track e.timestamp) {
-              <tr class="event-row" [class]="'row-' + e.threat_level">
-                <td class="cell-ts">{{ e.timestamp | date:'HH:mm:ss' }}</td>
-                <td class="cell-ip">{{ e.ip }}</td>
-                <td class="cell-event">{{ getEventLabel(e.attack_type) }}</td>
-                <td class="cell-score">{{ e.score }}</td>
-                <td class="cell-sev">
-                  <span class="sev-badge" [class]="getSeverityClass(e.threat_level)">
-                    {{ e.threat_level[0].toUpperCase() }}
-                  </span>
-                </td>
-              </tr>
+            @for (event of store.events(); track event.timestamp) {
+            <tr class="event-row" [class]="'row-' + event.threat_level">
+              <td class="cell-ts">{{ event.timestamp | date:'HH:mm:ss' }}</td>
+              <td class="cell-ip">{{ event.ip }}</td>
+              <td class="cell-event">{{ getEventLabel(event.attack_type) }}</td>
+              <td class="cell-score">{{ event.score }}</td>
+              <td class="cell-sev">
+                <span class="sev-badge" [class]="getSeverityClass(event.threat_level)">
+                  {{ event.threat_level[0].toUpperCase() }}
+                </span>
+              </td>
+            </tr>
             } @empty {
-              <tr>
-                <td colspan="5" class="empty-row">Connecting to stream…</td>
-              </tr>
+            <tr>
+              <td colspan="5" class="empty-row">Connecting to stream…</td>
+            </tr>
             }
           </tbody>
         </table>
@@ -85,29 +84,28 @@
       <div class="panel-header">
         <span class="panel-title">Critical Alerts</span>
         @if (store.criticalCount() > 0) {
-          <span class="alert-badge">{{ store.criticalCount() }}</span>
+        <span class="alert-badge">{{ store.criticalCount() }}</span>
         }
       </div>
       <div class="alerts-list">
-        @for (e of store.events(); track e.timestamp) {
-          @if (e.threat_level === 'critical') {
-            <div class="alert-item">
-              <div class="alert-indicator"></div>
-              <div class="alert-body">
-                <span class="alert-title">{{ e.attack_type }} Detected</span>
-                <span class="alert-detail">{{ e.ip }}</span>
-                <span class="alert-score">Score: {{ e.score }}</span>
-                <span class="alert-time">{{ e.timestamp | date:'HH:mm:ss' }}</span>
-              </div>
-            </div>
-          }
-        } @empty {
-          <div class="no-alerts">
-            <span class="no-alerts-dot"></span>
-            No critical alerts
+        @for (event of criticalEvents(); track event.timestamp) {
+        <div class="alert-item">
+          <div class="alert-indicator"></div>
+          <div class="alert-body">
+            <span class="alert-title">{{ event.attack_type }} Detected</span>
+            <span class="alert-detail">{{ event.ip }}</span>
+            <span class="alert-score">Score: {{ event.score }}</span>
+            <span class="alert-time">{{ event.timestamp | date:'HH:mm:ss' }}</span>
           </div>
+        </div>
+        } @empty {
+        <div class="no-alerts">
+          <span class="no-alerts-dot"></span>
+          No critical alerts
+        </div>
         }
       </div>
+
     </div>
 
   </div>
