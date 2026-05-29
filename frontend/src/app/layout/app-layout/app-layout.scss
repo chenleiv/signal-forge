@@ -1,18 +1,21 @@
 // ── Palo Alto / XSIAM Palette ────────────────────────────────
-$bg:       #0f1117;
-$sb-bg:    #13171f;
+$bg: #0f1117;
+$sb-bg: #13171f;
 $panel-bg: #13171f;
-$border:   #1e2535;
+$border: #1e2535;
 $border-2: #252d3d;
 
-$accent:   #fa582d;   // Palo Alto orange
-$text:     #e5e7eb;
-$secondary:#9ca3af;
-$muted:    #4b5563;
-$green:    #16a34a;
+$accent: #fa582d; // Palo Alto orange
+$text: #e5e7eb;
+$secondary: #9ca3af;
+$muted: #4b5563;
+$green: #16a34a;
 
 // ── Root ─────────────────────────────────────────────────────
-:host { display: block; height: 100vh; }
+:host {
+  display: block;
+  height: 100vh;
+}
 
 .layout {
   display: flex;
@@ -55,7 +58,11 @@ $green:    #16a34a;
   flex-shrink: 0;
 }
 
-.logo-text { display: flex; flex-direction: column; gap: 1px; }
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
 
 .logo-name {
   font-size: 13px;
@@ -76,7 +83,9 @@ $green:    #16a34a;
   padding: 14px 0 4px;
   flex-shrink: 0;
 
-  & + .nav-section { border-top: 1px solid $border; }
+  &+.nav-section {
+    border-top: 1px solid $border;
+  }
 }
 
 .nav-label {
@@ -128,7 +137,10 @@ $green:    #16a34a;
   flex-shrink: 0;
   opacity: 0.7;
 
-  .active & { opacity: 1; color: $accent; }
+  .active & {
+    opacity: 1;
+    color: $accent;
+  }
 }
 
 // Footer / User
@@ -147,7 +159,9 @@ $green:    #16a34a;
   cursor: pointer;
   transition: background 0.12s;
 
-  &:hover { background: rgba(255,255,255,0.04); }
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
 }
 
 .user-avatar {
@@ -165,9 +179,25 @@ $green:    #16a34a;
   flex-shrink: 0;
 }
 
-.user-info { display: flex; flex-direction: column; gap: 2px; }
-.user-name { font-size: 12px; color: $text; font-weight: 500; }
-.user-status { display: flex; align-items: center; gap: 5px; font-size: 10px; color: $muted; }
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-size: 12px;
+  color: $text;
+  font-weight: 500;
+}
+
+.user-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: $muted;
+}
 
 .status-dot {
   width: 5px;
@@ -178,8 +208,15 @@ $green:    #16a34a;
 }
 
 @keyframes pulse-g {
-  0%,100% { box-shadow: 0 0 3px rgba(22,163,74,0.5); }
-  50%      { box-shadow: 0 0 8px rgba(22,163,74,0.9); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 3px rgba(22, 163, 74, 0.5);
+  }
+
+  50% {
+    box-shadow: 0 0 8px rgba(22, 163, 74, 0.9);
+  }
 }
 
 // ── Main ─────────────────────────────────────────────────────
@@ -210,9 +247,19 @@ $green:    #16a34a;
   font-size: 12px;
 }
 
-.topbar-section { color: $muted; }
-.topbar-sep     { color: $muted; font-size: 10px; }
-.topbar-page    { color: $text; font-weight: 500; }
+.topbar-section {
+  color: $muted;
+}
+
+.topbar-sep {
+  color: $muted;
+  font-size: 10px;
+}
+
+.topbar-page {
+  color: $text;
+  font-weight: 500;
+}
 
 .topbar-right {
   display: flex;
@@ -260,7 +307,9 @@ $green:    #16a34a;
   cursor: pointer;
   transition: background 0.12s;
 
-  &:hover { background: rgba(255,255,255,0.06); }
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
 }
 
 .notif-badge {
@@ -285,4 +334,27 @@ $green:    #16a34a;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.chip-reconnecting {
+  border-color: rgba(255, 204, 0, 0.4);
+  background: rgba(255, 204, 0, 0.08);
+  color: #ffcc00;
+}
+
+.dot-reconnecting {
+  background: #ffcc00;
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }

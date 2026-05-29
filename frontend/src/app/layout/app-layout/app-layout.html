@@ -97,9 +97,9 @@
         <span class="topbar-page">Live Operations</span>
       </div>
       <div class="topbar-right">
-        <div class="topbar-chip">
-          <span class="chip-dot"></span>
-          LIVE FEED
+        <div class="topbar-chip" [class.chip-reconnecting]="ws.status() === 'reconnecting'">
+          <span class="chip-dot" [class.dot-reconnecting]="ws.status() === 'reconnecting'"></span>
+          {{ ws.status() === 'connected' ? 'LIVE FEED' : 'RECONNECTING...' }}
         </div>
         <span class="topbar-time">{{ time() }}</span>
         <div class="topbar-notif">

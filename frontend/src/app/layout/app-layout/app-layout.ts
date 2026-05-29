@@ -20,7 +20,7 @@ const PAGE_TITLES: Record<string, string> = {
   styleUrl: './app-layout.scss',
 })
 export class AppLayout implements OnInit, OnDestroy {
-  private ws = inject(ThreatsService);
+  readonly ws = inject(ThreatsService);
   private router = inject(Router);
 
   time = signal('');
