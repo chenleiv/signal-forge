@@ -16,6 +16,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+_incident_counter: int = 0
 
 # ── Simulation data ───────────────────────────────────────────
 
@@ -77,11 +78,13 @@ def _current_minute_str() -> str:
 
 
 def _create_incident(trigger: dict) -> None:
+    global _incident_counter
+    _incident_counter += 1
     attack_type = trigger["attack_type"]
     now = datetime.now(timezone.utc).isoformat()
     incidents_store.appendleft(
         {
-            "id": f"INC-{1000 + len(incidents_store) + 1:04d}",
+            "id": f"INC-{1000 + _incident_counter:04d}",
             "title": INCIDENT_TITLES.get(attack_type, "Unknown attack"),
             "severity": trigger["threat_level"],
             "status": random.choices(

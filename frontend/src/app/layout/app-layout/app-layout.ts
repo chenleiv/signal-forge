@@ -1,8 +1,9 @@
-import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject, computed } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
-import { filter } from 'rxjs/operators';
+import { filter, map } from 'rxjs/operators';
 import { ThreatsService } from '../../core/services/threats.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { toSignal } from '@angular/core/rxjs-interop';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Live Operations',
@@ -25,22 +26,24 @@ export class AppLayout implements OnInit, OnDestroy {
   private router = inject(Router);
   readonly settingsService = inject(SettingsService);
 
+  private navTitle = toSignal(
+    this.router.events.pipe(
+      filter((e) => e instanceof NavigationEnd),
+      map((e) => PAGE_TITLES[(e as NavigationEnd).urlAfterRedirects] ?? 'SignalForge'),
+    ),
+  );
+
+  readonly pageTitle = computed(
+    () => this.navTitle() ?? PAGE_TITLES[this.router.url] ?? 'SignalForge',
+  );
+
   time = signal('');
-  pageTitle = signal('Live Operations');
-
   private timer: ReturnType<typeof setInterval> | null = null;
-
-  constructor() {
-    this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe((e: any) => {
-      this.pageTitle.set(PAGE_TITLES[e.urlAfterRedirects] ?? 'SignalForge');
-    });
-  }
 
   ngOnInit() {
     this.tick();
     this.timer = setInterval(() => this.tick(), 1000);
     this.ws.connect();
-    this.pageTitle.set(PAGE_TITLES[this.router.url] ?? 'SignalForge');
   }
 
   ngOnDestroy() {

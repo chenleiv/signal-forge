@@ -12,13 +12,14 @@
             <div class="field-grid">
                 <div class="field">
                     <label>Analyst Name</label>
-                    <input [(ngModel)]="form().analystName"
+                    <input [ngModel]="form().analystName"
                         (ngModelChange)="form.update(s => ({...s, analystName: $event}))" placeholder="SOC Analyst" />
                 </div>
                 <div class="field">
                     <label>Role</label>
-                    <input [(ngModel)]="form().analystRole"
+                    <input [ngModel]="form().analystRole"
                         (ngModelChange)="form.update(s => ({...s, analystRole: $event}))" placeholder="Tier 1" />
+
                 </div>
             </div>
         </section>
@@ -29,8 +30,9 @@
             <div class="field-grid">
                 <div class="field full">
                     <label>WebSocket URL</label>
-                    <input [(ngModel)]="form().wsUrl" (ngModelChange)="form.update(s => ({...s, wsUrl: $event}))"
+                    <input [ngModel]="form().wsUrl" (ngModelChange)="form.update(s => ({...s, wsUrl: $event}))"
                         placeholder="ws://127.0.0.1:8000/ws/threats" />
+
                 </div>
                 <div class="field">
                     <label>Reconnect Delay (sec)</label>

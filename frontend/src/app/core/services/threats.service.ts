@@ -1,13 +1,15 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ThreatStoreService } from './threat-store.service';
 import { ThreatEvent } from '../../shared/models/threat.models';
-import { NotificationService } from './notification.service';
+import { SettingsService } from './settings.service';
 
 @Injectable({ providedIn: 'root' })
 export class ThreatsService {
   private socket!: WebSocket;
   private statsInterval!: ReturnType<typeof setInterval>;
   private store = inject(ThreatStoreService);
+  private settingsService = inject(SettingsService);
+
   private destroyed = false;
 
   readonly status = signal<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
@@ -15,7 +17,7 @@ export class ThreatsService {
   connect() {
     this.destroyed = false;
     this.status.set('reconnecting');
-    this.socket = new WebSocket('ws://127.0.0.1:8000/ws/threats');
+    this.socket = new WebSocket(this.settingsService.settings().wsUrl);
 
     this.socket.onopen = () => {
       this.status.set('connected');
@@ -29,7 +31,7 @@ export class ThreatsService {
     this.socket.onclose = () => {
       this.status.set('reconnecting');
       if (!this.destroyed) {
-        setTimeout(() => this.connect(), 3000);
+        setTimeout(() => this.connect(), this.settingsService.settings().reconnectDelay * 1000);
       }
     };
 

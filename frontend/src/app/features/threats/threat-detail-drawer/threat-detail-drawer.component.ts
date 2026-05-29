@@ -1,5 +1,15 @@
-import { Component, Input, OnChanges, SimpleChanges, output, inject } from '@angular/core';
+import {
+  Component,
+  Input,
+  OnChanges,
+  OnDestroy,
+  SimpleChanges,
+  output,
+  inject,
+} from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { Subject, Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
 import { IpHistory } from '../../../shared/models/threat.models';
 
@@ -10,9 +20,8 @@ import { IpHistory } from '../../../shared/models/threat.models';
   templateUrl: './threat-detail-drawer.component.html',
   styleUrl: './threat-detail-drawer.component.scss',
 })
-export class ThreatDetailDrawerComponent implements OnChanges {
+export class ThreatDetailDrawerComponent implements OnChanges, OnDestroy {
   @Input() ip: string | null = null;
-
   closed = output<void>();
 
   private store = inject(ThreatStoreService);
@@ -20,15 +29,34 @@ export class ThreatDetailDrawerComponent implements OnChanges {
   history: IpHistory | null = null;
   loading = false;
 
+  private ipChange$ = new Subject<string>();
+  private sub: Subscription = this.ipChange$
+    .pipe(
+      switchMap((ip) => {
+        this.loading = true;
+        this.history = null;
+        return this.store.fetchIpHistory(ip);
+      }),
+    )
+    .subscribe({
+      next: (h) => {
+        this.history = h;
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+      },
+    });
+
   ngOnChanges(changes: SimpleChanges) {
     if (changes['ip'] && this.ip) {
-      this.loading = true;
-      this.history = null;
-      this.store.fetchIpHistory(this.ip).subscribe({
-        next: (h) => { this.history = h; this.loading = false; },
-        error: () => { this.loading = false; },
-      });
+      this.ipChange$.next(this.ip);
     }
+  }
+
+  ngOnDestroy() {
+    this.sub.unsubscribe();
+    this.ipChange$.complete();
   }
 
   close() {
