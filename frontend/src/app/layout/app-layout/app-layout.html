@@ -77,9 +77,9 @@
       <div class="user-row">
         <div class="user-avatar">SF</div>
         <div class="user-info">
-          <span class="user-name">SOC Analyst</span>
+          <span class="user-name">{{ settingsService.settings().analystName }}</span>
           <span class="user-status">
-            <span class="status-dot"></span>Active
+            <span class="status-dot"></span>{{ settingsService.settings().analystRole }}
           </span>
         </div>
       </div>

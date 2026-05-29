@@ -1,1 +1,81 @@
-<p>settings works!</p>
+<div class="settings-page">
+
+    <div class="page-header">
+        <h1 class="page-title">Settings</h1>
+    </div>
+
+    <div class="sections">
+
+        <!-- User Profile -->
+        <section class="card">
+            <h2 class="card-title">User Profile</h2>
+            <div class="field-grid">
+                <div class="field">
+                    <label>Analyst Name</label>
+                    <input [(ngModel)]="form().analystName"
+                        (ngModelChange)="form.update(s => ({...s, analystName: $event}))" placeholder="SOC Analyst" />
+                </div>
+                <div class="field">
+                    <label>Role</label>
+                    <input [(ngModel)]="form().analystRole"
+                        (ngModelChange)="form.update(s => ({...s, analystRole: $event}))" placeholder="Tier 1" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Connection -->
+        <section class="card">
+            <h2 class="card-title">Connection</h2>
+            <div class="field-grid">
+                <div class="field full">
+                    <label>WebSocket URL</label>
+                    <input [(ngModel)]="form().wsUrl" (ngModelChange)="form.update(s => ({...s, wsUrl: $event}))"
+                        placeholder="ws://127.0.0.1:8000/ws/threats" />
+                </div>
+                <div class="field">
+                    <label>Reconnect Delay (sec)</label>
+                    <input type="number" [ngModel]="form().reconnectDelay"
+                        (ngModelChange)="form.update(s => ({...s, reconnectDelay: +$event}))" min="1" max="30" />
+                </div>
+                <div class="field">
+                    <label>Event Buffer Size</label>
+                    <input type="number" [ngModel]="form().bufferSize"
+                        (ngModelChange)="form.update(s => ({...s, bufferSize: +$event}))" min="10" max="500" />
+                </div>
+            </div>
+        </section>
+
+        <!-- Alert Thresholds -->
+        <section class="card">
+            <h2 class="card-title">Alert Thresholds</h2>
+            <p class="card-sub">Minimum score required to classify an event at each severity level.</p>
+            <div class="field-grid">
+                <div class="field">
+                    <label class="label-critical">Critical (≥)</label>
+                    <input type="number" [ngModel]="form().criticalThreshold"
+                        (ngModelChange)="form.update(s => ({...s, criticalThreshold: +$event}))" min="1" max="100" />
+                </div>
+                <div class="field">
+                    <label class="label-high">High (≥)</label>
+                    <input type="number" [ngModel]="form().highThreshold"
+                        (ngModelChange)="form.update(s => ({...s, highThreshold: +$event}))" min="1" max="100" />
+                </div>
+                <div class="field">
+                    <label class="label-medium">Medium (≥)</label>
+                    <input type="number" [ngModel]="form().mediumThreshold"
+                        (ngModelChange)="form.update(s => ({...s, mediumThreshold: +$event}))" min="1" max="100" />
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+        <button class="btn-reset" (click)="reset()">Reset to Defaults</button>
+        <button class="btn-save" (click)="save()">
+            {{ saved() ? '✓ Saved' : 'Save Settings' }}
+        </button>
+    </div>
+
+</div>

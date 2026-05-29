@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, signal, inject } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { ThreatsService } from '../../core/services/threats.service';
+import { SettingsService } from '../../core/services/settings.service';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Live Operations',
@@ -22,6 +23,7 @@ const PAGE_TITLES: Record<string, string> = {
 export class AppLayout implements OnInit, OnDestroy {
   readonly ws = inject(ThreatsService);
   private router = inject(Router);
+  readonly settingsService = inject(SettingsService);
 
   time = signal('');
   pageTitle = signal('Live Operations');
