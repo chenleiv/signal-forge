@@ -33,12 +33,17 @@ export class ThreatMap {
 
   ngOnDestroy() {
     if (this.svg) this.svg.remove();
+    this.svg = null;
   }
 
   private async initMap() {
-    const world = (await d3.json(
-      'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json',
-    )) as any;
+    let world: any;
+    try {
+      world = await d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+    } catch {
+      console.error('Failed to load world map data');
+      return;
+    }
 
     const container = this.el.nativeElement.querySelector('.map-container');
     const width = container.clientWidth;

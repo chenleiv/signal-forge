@@ -5,7 +5,6 @@ import { Threats } from './features/threats/threats';
 import { Alerts } from './features/alerts/alerts';
 import { Incidents } from './features/incidents/incidents';
 import { Settings } from './features/settings/settings';
-import { ThreatMap } from './features/threat-map/threat-map';
 
 export const routes: Routes = [
   {
@@ -26,7 +25,10 @@ export const routes: Routes = [
 
       { path: 'settings', component: Settings },
 
-      { path: 'map', component: ThreatMap },
+      {
+        path: 'map',
+        loadComponent: () => import('./features/threat-map/threat-map').then((m) => m.ThreatMap),
+      },
     ],
   },
 ];

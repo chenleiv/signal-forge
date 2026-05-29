@@ -84,8 +84,9 @@
     <div class="panel alerts-panel">
       <div class="panel-header">
         <span class="panel-title">Critical Alerts</span>
-        @if (store.criticalCount() > 0) {
-        <span class="alert-badge">{{ store.criticalCount() }}</span>
+        @let criticalCount = store.criticalCount();
+        @if (criticalCount > 0) {
+        <span class="alert-badge">{{ criticalCount }}</span>
         }
       </div>
       <div class="alerts-list">

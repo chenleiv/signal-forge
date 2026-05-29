@@ -29,7 +29,7 @@ export class AppLayout implements OnInit, OnDestroy {
   private navTitle = toSignal(
     this.router.events.pipe(
       filter((e) => e instanceof NavigationEnd),
-      map((e) => PAGE_TITLES[(e as NavigationEnd).urlAfterRedirects] ?? 'SignalForge'),
+      map((e: NavigationEnd) => PAGE_TITLES[e.urlAfterRedirects] ?? 'SignalForge'),
     ),
   );
 

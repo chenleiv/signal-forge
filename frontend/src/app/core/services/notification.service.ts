@@ -7,7 +7,7 @@ export class NotificationService {
 
   requestPermission() {
     if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+      Notification.requestPermission().then(() => {});
     }
   }
 
