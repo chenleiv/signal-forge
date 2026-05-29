@@ -448,3 +448,17 @@ tr.row-low td {}
   background: $green;
   flex-shrink: 0;
 }
+
+@keyframes rowFlash {
+  0% {
+    background: rgba(255, 45, 85, 0.2);
+  }
+
+  100% {
+    background: transparent;
+  }
+}
+
+.row-critical {
+  animation: rowFlash 1.5s ease-out;
+}

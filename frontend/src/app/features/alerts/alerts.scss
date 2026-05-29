@@ -223,3 +223,19 @@ $accent: #fa582d;
     padding: 60px;
     font-size: 13px;
 }
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.alert-row {
+    animation: slideDown 0.3s ease-out;
+}

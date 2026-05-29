@@ -9,14 +9,12 @@ export class ThreatsService {
   private statsInterval!: ReturnType<typeof setInterval>;
   private store = inject(ThreatStoreService);
   private destroyed = false;
-  private notif = inject(NotificationService);
 
   readonly status = signal<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
 
   connect() {
     this.destroyed = false;
     this.status.set('reconnecting');
-    this.notif.requestPermission();
     this.socket = new WebSocket('ws://127.0.0.1:8000/ws/threats');
 
     this.socket.onopen = () => {
@@ -26,12 +24,6 @@ export class ThreatsService {
     this.socket.onmessage = (event) => {
       const data: ThreatEvent = JSON.parse(event.data);
       this.store.addEvent(data);
-      if (data.threat_level === 'critical' && data.score >= 95) {
-        this.notif.notify(
-          `⚠ Critical Threat Detected`,
-          `${data.attack_type} from ${data.ip} — Score: ${data.score}`,
-        );
-      }
     };
 
     this.socket.onclose = () => {
