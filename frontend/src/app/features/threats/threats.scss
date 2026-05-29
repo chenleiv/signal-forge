@@ -1,7 +1,34 @@
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
 .threats-page {
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  position: relative;
+}
+
+.threats-split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 420px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.split-table {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #1e2535;
+}
+
+.split-detail {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #13171f;
 }

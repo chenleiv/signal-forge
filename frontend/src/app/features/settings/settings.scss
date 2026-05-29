@@ -3,7 +3,7 @@ $panel: #13171f;
 $border: #1e2535;
 $text: #e5e7eb;
 $muted: #9ca3af;
-$accent: #fa582d;
+$accent: #3b82f6;
 
 :host {
     display: block;
@@ -14,6 +14,7 @@ $accent: #fa582d;
 .settings-page {
     padding: 24px;
     max-width: 720px;
+    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -27,6 +28,12 @@ $accent: #fa582d;
     font-size: 18px;
     font-weight: 600;
     color: $text;
+    margin: 0 0 4px;
+}
+
+.page-sub {
+    font-size: 12px;
+    color: $muted;
     margin: 0;
 }
 
@@ -46,6 +53,20 @@ $accent: #fa582d;
     gap: 16px;
 }
 
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.card-icon {
+    width: 16px;
+    height: 16px;
+    color: $muted;
+    flex-shrink: 0;
+}
+
 .card-title {
     font-size: 13px;
     font-weight: 600;
@@ -56,9 +77,10 @@ $accent: #fa582d;
 }
 
 .card-sub {
-    font-size: 12px;
+    font-size: 11px;
     color: $muted;
-    margin: -8px 0 0;
+    width: 100%;
+    margin-left: 26px;
 }
 
 .field-grid {
@@ -105,18 +127,64 @@ $accent: #fa582d;
     }
 }
 
-.label-critical {
-    color: #ff2d55 !important;
+// ── Alert Thresholds ──────────────────────────────────────────
+.threshold-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
-.label-high {
-    color: #ff6b00 !important;
+.threshold-field {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+
+    input[type="number"] {
+        background: #0d1220;
+        border: 1px solid $border;
+        border-radius: 4px;
+        padding: 7px 10px;
+        color: $text;
+        font-size: 13px;
+        font-family: monospace;
+        width: 80px;
+        text-align: center;
+        outline: none;
+        transition: border-color 0.15s;
+
+        &:focus { border-color: $accent; }
+    }
 }
 
-.label-medium {
-    color: #ffcc00 !important;
+.threshold-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
+.sev-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.critical { background: #dc2626; }
+    &.high     { background: #ea580c; }
+    &.medium   { background: #d97706; }
+}
+
+.label-critical { font-size: 12px; color: #dc2626; font-weight: 500; }
+.label-high     { font-size: 12px; color: #ea580c; font-weight: 500; }
+.label-medium   { font-size: 12px; color: #d97706; font-weight: 500; }
+
+.threshold-op {
+    font-size: 14px;
+    color: $muted;
+    margin-left: 4px;
+}
+
+// ── Actions ───────────────────────────────────────────────────
 .actions {
     display: flex;
     gap: 12px;
@@ -151,7 +219,10 @@ $accent: #fa582d;
     transition: background 0.15s;
     min-width: 120px;
 
-    &:hover {
-        background: #e04d26;
+    &:hover { background: #2563eb; }
+
+    &.saved {
+        background: #16a34a;
+        &:hover { background: #15803d; }
     }
 }

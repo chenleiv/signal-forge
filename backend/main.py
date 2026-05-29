@@ -7,7 +7,7 @@ import random
 from collections import defaultdict, deque
 from typing import Any
 from uuid import uuid4
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,6 +18,7 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 _ai_summary_cache: dict[str, str] = {}
 
 _blocked_ips: set[str] = set()
+SECRET_KEY = os.environ.get("JWT_SECRET", "threatwatcher-dev-secret")
 
 
 app = FastAPI(title="SignalForge API")
@@ -165,6 +166,25 @@ def generate_threat() -> dict:
         "region": region,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+
+
+# ── REST: authentication ──────────────────────────────────────
+
+
+@app.post("/auth/login")
+async def login(body: dict):
+    if body.get("username") == "analyst" and body.get("password") == "threatwatcher":
+        from jose import jwt
+
+        token = jwt.encode(
+            {"sub": "analyst", "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
+            SECRET_KEY,
+            algorithm="HS256",
+        )
+        return {"access_token": token}
+    from fastapi import HTTPException
+
+    raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
 # ── WebSocket endpoint ────────────────────────────────────────

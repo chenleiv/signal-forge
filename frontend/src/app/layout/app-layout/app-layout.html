@@ -6,8 +6,8 @@
     <div class="logo">
       <div class="logo-icon">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="#fa582d" stroke-width="1.5" stroke-linejoin="round" />
-          <path d="M12 7l4 2.5v5L12 17l-4-2.5v-5L12 7z" fill="#fa582d" opacity="0.4" />
+          <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round" />
+          <path d="M12 7l4 2.5v5L12 17l-4-2.5v-5L12 7z" fill="#3b82f6" opacity="0.4" />
         </svg>
       </div>
       <div class="logo-text">
@@ -93,8 +93,8 @@
     <header class="topbar">
       <div class="topbar-left">
         <span class="topbar-section">Dashboards &amp; Reports</span>
+        <span class="topbar-sep">/</span>
         <span class="topbar-page">{{ pageTitle() }}</span>
-        <span class="topbar-page">Live Operations</span>
       </div>
       <div class="topbar-right">
         <button class="console-toggle-btn" (click)="consoleRef.isOpen.update(v => !v)" title="Toggle Console (`)">

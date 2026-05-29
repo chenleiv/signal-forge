@@ -2,13 +2,20 @@
 
     <div class="page-header">
         <h1 class="page-title">Settings</h1>
+        <p class="page-sub">Configure analyst profile, connection parameters, and alert thresholds.</p>
     </div>
 
     <div class="sections">
 
         <!-- User Profile -->
         <section class="card">
-            <h2 class="card-title">User Profile</h2>
+            <div class="card-header">
+                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.2" />
+                    <path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                </svg>
+                <h2 class="card-title">User Profile</h2>
+            </div>
             <div class="field-grid">
                 <div class="field">
                     <label>Analyst Name</label>
@@ -19,20 +26,25 @@
                     <label>Role</label>
                     <input [ngModel]="form().analystRole"
                         (ngModelChange)="form.update(s => ({...s, analystRole: $event}))" placeholder="Tier 1" />
-
                 </div>
             </div>
         </section>
 
         <!-- Connection -->
         <section class="card">
-            <h2 class="card-title">Connection</h2>
+            <div class="card-header">
+                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2" />
+                    <path d="M4.5 11.5a5 5 0 0 1 0-7M11.5 4.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                    <path d="M2 13.5a8 8 0 0 1 0-11M14 2.5a8 8 0 0 1 0 11" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                </svg>
+                <h2 class="card-title">Connection</h2>
+            </div>
             <div class="field-grid">
                 <div class="field full">
                     <label>WebSocket URL</label>
                     <input [ngModel]="form().wsUrl" (ngModelChange)="form.update(s => ({...s, wsUrl: $event}))"
                         placeholder="ws://127.0.0.1:8000/ws/threats" />
-
                 </div>
                 <div class="field">
                     <label>Reconnect Delay (sec)</label>
@@ -49,21 +61,39 @@
 
         <!-- Alert Thresholds -->
         <section class="card">
-            <h2 class="card-title">Alert Thresholds</h2>
-            <p class="card-sub">Minimum score required to classify an event at each severity level.</p>
-            <div class="field-grid">
-                <div class="field">
-                    <label class="label-critical">Critical (≥)</label>
+            <div class="card-header">
+                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
+                    <path d="M8 2l5.5 10H2.5L8 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                    <path d="M8 7v2.5M8 11v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                </svg>
+                <h2 class="card-title">Alert Thresholds</h2>
+                <span class="card-sub">Minimum score to classify an event at each severity level.</span>
+            </div>
+            <div class="threshold-grid">
+                <div class="threshold-field">
+                    <div class="threshold-label">
+                        <span class="sev-dot critical"></span>
+                        <label class="label-critical">Critical</label>
+                        <span class="threshold-op">≥</span>
+                    </div>
                     <input type="number" [ngModel]="form().criticalThreshold"
                         (ngModelChange)="form.update(s => ({...s, criticalThreshold: +$event}))" min="1" max="100" />
                 </div>
-                <div class="field">
-                    <label class="label-high">High (≥)</label>
+                <div class="threshold-field">
+                    <div class="threshold-label">
+                        <span class="sev-dot high"></span>
+                        <label class="label-high">High</label>
+                        <span class="threshold-op">≥</span>
+                    </div>
                     <input type="number" [ngModel]="form().highThreshold"
                         (ngModelChange)="form.update(s => ({...s, highThreshold: +$event}))" min="1" max="100" />
                 </div>
-                <div class="field">
-                    <label class="label-medium">Medium (≥)</label>
+                <div class="threshold-field">
+                    <div class="threshold-label">
+                        <span class="sev-dot medium"></span>
+                        <label class="label-medium">Medium</label>
+                        <span class="threshold-op">≥</span>
+                    </div>
                     <input type="number" [ngModel]="form().mediumThreshold"
                         (ngModelChange)="form.update(s => ({...s, mediumThreshold: +$event}))" min="1" max="100" />
                 </div>
@@ -75,7 +105,7 @@
     <!-- Actions -->
     <div class="actions">
         <button class="btn-reset" (click)="reset()">Reset to Defaults</button>
-        <button class="btn-save" (click)="save()">
+        <button class="btn-save" [class.saved]="saved()" (click)="save()">
             {{ saved() ? '✓ Saved' : 'Save Settings' }}
         </button>
     </div>

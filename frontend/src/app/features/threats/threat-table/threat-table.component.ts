@@ -1,4 +1,4 @@
-import { Component, OnInit, output, inject, DestroyRef } from '@angular/core';
+import { Component, OnInit, output, input, inject, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { ThreatStats } from '../../../shared/models/threat.models';
@@ -23,6 +23,7 @@ export class ThreatTableComponent implements OnInit {
   rows: IpRow[] = [];
   loading = true;
 
+  selectedIp = input<string | null>(null);
   ipSelected = output<string>();
 
   ngOnInit() {

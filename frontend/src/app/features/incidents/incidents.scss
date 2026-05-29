@@ -3,7 +3,7 @@ $panel: #13171f;
 $border: #1e2535;
 $text: #e5e7eb;
 $muted: #9ca3af;
-$accent: #fa582d;
+$accent: #3b82f6;
 
 :host {
     display: block;
@@ -12,22 +12,47 @@ $accent: #fa582d;
 }
 
 .incidents-page {
-    padding: 24px;
     height: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    box-sizing: border-box;
+    overflow: hidden;
 }
 
-.page-header {
+// ── Split layout ──────────────────────────────────────────────
+.incidents-split {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.split-table {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid $border;
+}
+
+.split-detail {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: $panel;
+}
+
+// ── Table header row ──────────────────────────────────────────
+.table-head-row {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid $border;
+    flex-shrink: 0;
 }
 
 .page-title {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 600;
     color: $text;
     margin: 0;
@@ -41,11 +66,12 @@ $accent: #fa582d;
     border-radius: 10px;
 }
 
+// ── Table ─────────────────────────────────────────────────────
 .table-wrap {
     flex: 1;
     overflow-y: auto;
-    border: 1px solid $border;
-    border-radius: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: $border transparent;
 }
 
 .inc-table {
@@ -56,19 +82,19 @@ $accent: #fa582d;
     th {
         position: sticky;
         top: 0;
-        background: #0d1220;
+        background: #0d1018;
         color: $muted;
-        font-weight: 500;
+        font-weight: 600;
         text-transform: uppercase;
         font-size: 10px;
         letter-spacing: 0.05em;
-        padding: 10px 12px;
+        padding: 8px 12px;
         text-align: left;
         border-bottom: 1px solid $border;
     }
 
     td {
-        padding: 10px 12px;
+        padding: 9px 12px;
         border-bottom: 1px solid #151c2b;
         color: $text;
     }
@@ -76,11 +102,11 @@ $accent: #fa582d;
 
 .inc-row {
     cursor: pointer;
-    transition: background 0.15s;
+    transition: background 0.12s;
 
-    &:hover {
-        background: #1a2035;
-    }
+    &:hover { background: #1a2035; }
+    &.row-selected td { background: rgba(59, 130, 246, 0.07); }
+    &.row-selected { border-left: 2px solid $accent; }
 }
 
 .id-cell {
@@ -90,7 +116,7 @@ $accent: #fa582d;
 }
 
 .title-cell {
-    max-width: 260px;
+    max-width: 240px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -117,25 +143,10 @@ $accent: #fa582d;
     font-weight: 700;
     border-radius: 3px;
 
-    &.sev-critical {
-        background: rgba(255, 45, 85, 0.2);
-        color: #ff2d55;
-    }
-
-    &.sev-high {
-        background: rgba(255, 107, 0, 0.2);
-        color: #ff6b00;
-    }
-
-    &.sev-medium {
-        background: rgba(255, 204, 0, 0.2);
-        color: #ffcc00;
-    }
-
-    &.sev-low {
-        background: rgba(0, 212, 255, 0.2);
-        color: #00d4ff;
-    }
+    &.sev-critical { background: rgba(220, 38, 38, 0.2);  color: #dc2626; }
+    &.sev-high     { background: rgba(234, 88, 12, 0.2);  color: #ea580c; }
+    &.sev-medium   { background: rgba(217, 119, 6, 0.2);  color: #d97706; }
+    &.sev-low      { background: rgba(0, 212, 255, 0.15); color: #00d4ff; }
 }
 
 .status-badge {
@@ -148,90 +159,93 @@ $accent: #fa582d;
     font-weight: 600;
 }
 
-// ── Drawer ────────────────────────────────────────────────────
-
-.drawer-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 100;
-}
-
-.drawer {
-    position: fixed;
-    top: 0;
-    right: 0;
-    width: 360px;
-    height: 100vh;
-    background: $panel;
-    border-left: 1px solid $border;
-    z-index: 101;
-    padding: 24px;
+// ── Detail panel ──────────────────────────────────────────────
+.detail-empty {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 20px;
-    animation: slideIn 0.25s ease-out;
-    overflow-y: auto;
-    box-sizing: border-box;
-}
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
 
-@keyframes slideIn {
-    from {
-        transform: translateX(100%);
-    }
-
-    to {
-        transform: translateX(0);
+    p {
+        font-size: 12px;
+        color: #4b5563;
+        text-align: center;
     }
 }
 
-.drawer-header {
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    border-bottom: 1px solid $border;
+    background: #0d1018;
+    flex-shrink: 0;
+}
+
+.detail-id-row {
     display: flex;
     align-items: center;
     gap: 10px;
 }
 
-.drawer-id {
+.detail-id {
     font-family: monospace;
-    font-size: 13px;
+    font-size: 14px;
     color: $accent;
     font-weight: 700;
-    flex: 1;
 }
 
 .close-btn {
     background: none;
-    border: none;
+    border: 1px solid $border;
     color: $muted;
-    font-size: 16px;
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
     cursor: pointer;
-    padding: 4px;
+    font-size: 11px;
+    transition: all 0.15s;
 
-    &:hover {
-        color: $text;
-    }
+    &:hover { background: $border; color: $text; }
 }
 
-.drawer-title {
-    font-size: 15px;
+.detail-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scrollbar-width: thin;
+    scrollbar-color: $border transparent;
+}
+
+.detail-title {
+    font-size: 13px;
     font-weight: 600;
     color: $text;
     margin: 0;
     line-height: 1.4;
 }
 
-.drawer-meta {
+.detail-meta {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 0;
 }
 
 .meta-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: 10px;
-    border-bottom: 1px solid $border;
+    padding: 8px 0;
+    border-bottom: 1px solid #151c2b;
+
+    &:last-child { border-bottom: none; }
 }
 
 .meta-label {
@@ -253,18 +267,28 @@ $accent: #fa582d;
     gap: 8px;
 }
 
+.section-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: $muted;
+    font-weight: 600;
+    border-bottom: 1px solid $border;
+    padding-bottom: 6px;
+}
+
 .mitre-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 5px;
 }
 
 .mitre-tag {
     font-size: 10px;
     font-family: monospace;
-    padding: 3px 8px;
-    border: 1px solid rgba(250, 88, 45, 0.4);
+    padding: 2px 8px;
+    border: 1px solid rgba(59, 130, 246, 0.25);
     color: $accent;
     border-radius: 3px;
-    background: rgba(250, 88, 45, 0.08);
+    background: rgba(59, 130, 246, 0.08);
 }

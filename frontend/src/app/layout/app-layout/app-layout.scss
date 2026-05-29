@@ -5,7 +5,7 @@ $panel-bg: #13171f;
 $border: #1e2535;
 $border-2: #252d3d;
 
-$accent: #fa582d; // Palo Alto orange
+$accent: #3b82f6;
 $text: #e5e7eb;
 $secondary: #9ca3af;
 $muted: #4b5563;
@@ -49,8 +49,8 @@ $green: #16a34a;
 .logo-icon {
   width: 32px;
   height: 32px;
-  background: rgba(250, 88, 45, 0.1);
-  border: 1px solid rgba(250, 88, 45, 0.3);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -126,7 +126,7 @@ $green: #16a34a;
   &.active {
     color: $text;
     font-weight: 500;
-    background: rgba(250, 88, 45, 0.08);
+    background: rgba(59, 130, 246, 0.08);
     border-left-color: $accent;
   }
 }
@@ -168,8 +168,8 @@ $green: #16a34a;
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(250, 88, 45, 0.15);
-  border: 1px solid rgba(250, 88, 45, 0.3);
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.3);
   color: $accent;
   font-size: 10px;
   font-weight: 700;
@@ -364,17 +364,16 @@ $green: #16a34a;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 212, 255, 0.05);
-  border: 1px solid rgba(0, 212, 255, 0.2);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 5px;
   padding: 3px 10px;
   cursor: pointer;
   transition: all 0.15s;
 
   &:hover {
-    background: rgba(0, 212, 255, 0.12);
-    border-color: rgba(0, 212, 255, 0.5);
-    box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -382,6 +381,6 @@ $green: #16a34a;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   font-weight: 700;
-  color: #00d4ff;
+  color: $secondary;
   letter-spacing: 0.5px;
 }

@@ -1,10 +1,10 @@
 <div class="threats-page">
-  <app-threat-table (ipSelected)="openDrawer($event)" />
-
-  @if (selectedIp()) {
-    <app-threat-detail-drawer
-      [ip]="selectedIp()"
-      (closed)="closeDrawer()"
-    />
-  }
+  <div class="threats-split">
+    <div class="split-table">
+      <app-threat-table (ipSelected)="openDrawer($event)" [selectedIp]="selectedIp()" />
+    </div>
+    <div class="split-detail">
+      <app-threat-detail-drawer [ip]="selectedIp()" (closed)="closeDrawer()" />
+    </div>
+  </div>
 </div>

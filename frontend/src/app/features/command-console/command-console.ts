@@ -50,7 +50,6 @@ export class CommandConsole {
 
   @HostListener('document:keydown', ['$event'])
   onGlobalKey(e: KeyboardEvent) {
-    console.log('key:', e.key);
     const tag = (document.activeElement as HTMLElement)?.tagName;
     if ((e.key === '`' || e.key === ';') && tag !== 'INPUT' && tag !== 'TEXTAREA') {
       e.preventDefault();

@@ -21,9 +21,9 @@ export class ChartsColumnComponent {
   bottomChart = signal<EChartsOption | null>(null);
 
   private readonly BASE_OPTS: EChartsOption = {
-    backgroundColor: '#060d1a',
+    backgroundColor: '#13171f',
     grid: { top: 32, bottom: 24, left: 8, right: 8, containLabel: true },
-    textStyle: { color: '#8899aa', fontFamily: 'monospace', fontSize: 10 },
+    textStyle: { color: '#6b7280', fontFamily: 'Inter, system-ui, sans-serif', fontSize: 10 },
   };
 
   constructor() {
@@ -48,16 +48,16 @@ export class ChartsColumnComponent {
 
     return {
       ...this.BASE_OPTS,
-      title: { text: 'THREATS BY SEVERITY', textStyle: { color: '#00d4ff', fontSize: 10 } },
+      title: { text: 'THREATS BY SEVERITY', textStyle: { color: '#9ca3af', fontSize: 10, fontWeight: 600 } },
       xAxis: {
         type: 'value',
-        axisLine: { lineStyle: { color: '#1e3a5f' } },
-        splitLine: { lineStyle: { color: '#0d1f36' } },
+        axisLine: { lineStyle: { color: '#1e2535' } },
+        splitLine: { lineStyle: { color: '#151c2b' } },
       },
       yAxis: {
         type: 'category',
         data: levels.map((l) => l.toUpperCase()),
-        axisLabel: { color: '#8899aa' },
+        axisLabel: { color: '#6b7280' },
       },
       series: [
         {
@@ -81,8 +81,8 @@ export class ChartsColumnComponent {
 
     return {
       ...this.BASE_OPTS,
-      title: { text: 'ATTACK TYPES', textStyle: { color: '#00d4ff', fontSize: 10 } },
-      legend: { bottom: 0, textStyle: { color: '#8899aa', fontSize: 9 }, itemWidth: 10 },
+      title: { text: 'ATTACK TYPES', textStyle: { color: '#9ca3af', fontSize: 10 } },
+      legend: { bottom: 0, textStyle: { color: '#6b7280', fontSize: 9 }, itemWidth: 10 },
       series: [
         {
           type: 'pie',
@@ -100,20 +100,20 @@ export class ChartsColumnComponent {
     const buckets = stats.events_per_min ?? [];
     return {
       ...this.BASE_OPTS,
-      title: { text: 'EVENTS PER MINUTE', textStyle: { color: '#00d4ff', fontSize: 10 } },
+      title: { text: 'EVENTS PER MINUTE', textStyle: { color: '#9ca3af', fontSize: 10 } },
       xAxis: {
         type: 'category',
         data: buckets.map((b: any) => b.minute),
-        axisLabel: { color: '#8899aa', fontSize: 9 },
-        axisLine: { lineStyle: { color: '#1e3a5f' } },
+        axisLabel: { color: '#6b7280', fontSize: 9 },
+        axisLine: { lineStyle: { color: '#1e2535' } },
       },
-      yAxis: { type: 'value', splitLine: { lineStyle: { color: '#0d1f36' } } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: '#151c2b' } } },
       series: [
         {
           type: 'line',
           data: buckets.map((b: any) => b.count),
           smooth: true,
-          lineStyle: { color: '#00d4ff', width: 2 },
+          lineStyle: { color: '#3b82f6', width: 2 },
           areaStyle: {
             color: {
               type: 'linear',
@@ -122,8 +122,8 @@ export class ChartsColumnComponent {
               x2: 0,
               y2: 1,
               colorStops: [
-                { offset: 0, color: '#00d4ff44' },
-                { offset: 1, color: '#00d4ff00' },
+                { offset: 0, color: 'rgba(59, 130, 246, 0.2)' },
+                { offset: 1, color: 'rgba(59, 130, 246, 0)' },
               ],
             },
           },
@@ -137,21 +137,21 @@ export class ChartsColumnComponent {
     const top = (stats.top_ips ?? []).slice(0, 8);
     return {
       ...this.BASE_OPTS,
-      title: { text: 'TOP ATTACKING IPs', textStyle: { color: '#00d4ff', fontSize: 10 } },
+      title: { text: 'TOP ATTACKING IPs', textStyle: { color: '#9ca3af', fontSize: 10 } },
       xAxis: {
         type: 'value',
-        axisLine: { lineStyle: { color: '#1e3a5f' } },
-        splitLine: { lineStyle: { color: '#0d1f36' } },
+        axisLine: { lineStyle: { color: '#1e2535' } },
+        splitLine: { lineStyle: { color: '#151c2b' } },
       },
       yAxis: {
         type: 'category',
         data: top.map((x: any) => x.ip),
-        axisLabel: { color: '#8899aa', fontSize: 9 },
+        axisLabel: { color: '#6b7280', fontSize: 9 },
       },
       series: [
         {
           type: 'bar',
-          data: top.map((x: any) => ({ value: x.count, itemStyle: { color: '#a855f7' } })),
+          data: top.map((x: any) => ({ value: x.count, itemStyle: { color: '#2563eb' } })),
           barMaxWidth: 16,
           label: { show: true, position: 'right', color: '#fff', fontSize: 9 },
         },

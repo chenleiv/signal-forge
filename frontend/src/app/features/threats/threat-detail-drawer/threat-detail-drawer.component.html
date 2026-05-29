@@ -1,123 +1,127 @@
-<div class="drawer-overlay" (click)="close()"></div>
-
-<div class="drawer">
-  <div class="drawer-header">
-    <div class="drawer-title">
+@if (!ip()) {
+  <div class="detail-empty">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="#4b5563" stroke-width="1.2" stroke-linejoin="round" />
+      <path d="M12 7l4 2.5v5L12 17l-4-2.5v-5L12 7z" fill="#4b5563" opacity="0.3" />
+    </svg>
+    <p>Select an IP to view threat intelligence</p>
+  </div>
+} @else {
+  <div class="detail-header">
+    <div>
       <span class="drawer-label">THREAT INTELLIGENCE</span>
-      @if (history()) {
-      <span class="drawer-ip">{{ history()?.ip }}</span>
-      }
+      <span class="drawer-ip">{{ history()?.ip ?? ip() }}</span>
     </div>
     <button class="close-btn" (click)="close()">✕</button>
   </div>
 
   @if (loading()) {
-  <div class="drawer-loading">Loading intelligence data…</div>
+    <div class="detail-loading">Loading intelligence data…</div>
   }
 
   @if (history()) {
-  <div class="drawer-body">
+    <div class="detail-body">
 
-    <!-- Score Badge -->
-    <div class="score-section">
-      <div class="score-ring" [style.borderColor]="scoreColor(history()?.score ?? 0)">
-        <span class="score-value" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.score }}</span>
-        <span class="score-sub">THREAT SCORE</span>
-      </div>
-      <div class="score-meta">
-        <div class="meta-row">
-          <span class="meta-label">Level</span>
-          <span class="meta-val" [style.color]="scoreColor(history()?.score ?? 0)">{{
-            history()?.threat_level?.toUpperCase() ?? '—'
-            }}</span>
+      <!-- Score Badge -->
+      <div class="score-section">
+        <div class="score-ring" [style.borderColor]="scoreColor(history()?.score ?? 0)">
+          <span class="score-value" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.score }}</span>
+          <span class="score-sub">THREAT SCORE</span>
         </div>
-        <div class="meta-row">
-          <span class="meta-label">Total Events</span>
-          <span class="meta-val">{{ history()?.events?.length ?? 0 }}</span>
-        </div>
-        <div class="meta-row">
-          <span class="meta-label">Regions</span>
-          <span class="meta-val">{{ history()?.regions?.join(', ') ?? '—' }}</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- AbuseIPDB Enrichment -->
-    @let abuseConfidence = history()?.abuse_confidence;
-    @if (abuseConfidence !== undefined) {
-    <div class="section">
-      <span class="section-title">ABUSEIPDB INTEL</span>
-      <div class="enrichment-grid">
-        <div class="enrich-item">
-          <span class="meta-label">Abuse Score</span>
-          <span class="abuse-badge" [class.danger]="abuseConfidence > 50"
-            [class.warning]="abuseConfidence > 20 && abuseConfidence <= 50">
-            {{ abuseConfidence }}%
-          </span>
-        </div>
-        <div class="enrich-item">
-          <span class="meta-label">Country</span>
-          <span class="meta-val">{{ history()?.country_code ?? '—' }}</span>
-        </div>
-        <div class="enrich-item">
-          <span class="meta-label">ISP</span>
-          <span class="meta-val">{{ history()?.isp ?? '—' }}</span>
-        </div>
-        <div class="enrich-item">
-          <span class="meta-label">Reports</span>
-          <span class="meta-val">{{ history()?.total_reports ?? '—' }}</span>
-        </div>
-      </div>
-    </div>
-    }
-
-    <!-- AI Summary -->
-    @if (aiLoading()) {
-    <div class="section">
-      <span class="section-title">AI ANALYSIS</span>
-      <div class="ai-loading">
-        <span class="ai-dot"></span>
-        <span class="ai-dot"></span>
-        <span class="ai-dot"></span>
-        Analyzing threat intelligence...
-      </div>
-    </div>
-    } @else if (aiSummary()) {
-    <div class="section">
-      <span class="section-title">AI ANALYSIS</span>
-      <p class="ai-summary">{{ aiSummary() }}</p>
-    </div>
-    }
-
-    <!-- MITRE Tags -->
-    @if ((history()?.mitre_tags?.length ?? 0) > 0) {
-    <div class="section">
-      <span class="section-title">MITRE ATT&CK</span>
-      <div class="tags">
-        @for (tag of history()?.mitre_tags ?? []; track tag) {
-        <span class="mitre-tag">{{ tag }}</span>
-        }
-      </div>
-    </div>
-    }
-
-    <!-- Event Timeline -->
-    <div class="section">
-      <span class="section-title">EVENT TIMELINE</span>
-      <div class="timeline">
-        @for (e of history()?.events?.slice(0, 20) ?? []; track e.timestamp) {
-        <div class="timeline-item">
-          <div class="tl-dot" [style.background]="scoreColor(e.score)"></div>
-          <div class="tl-body">
-            <span class="tl-type">{{ e.attack_type }}</span>
-            <span class="tl-score">Score: {{ e.score }}</span>
-            <span class="tl-time">{{ e.timestamp | date:'HH:mm:ss' }}</span>
+        <div class="score-meta">
+          <div class="meta-row">
+            <span class="meta-label">Level</span>
+            <span class="meta-val" [style.color]="scoreColor(history()?.score ?? 0)">{{
+              history()?.threat_level?.toUpperCase() ?? '—'
+              }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Total Events</span>
+            <span class="meta-val">{{ history()?.events?.length ?? 0 }}</span>
+          </div>
+          <div class="meta-row">
+            <span class="meta-label">Regions</span>
+            <span class="meta-val">{{ history()?.regions?.join(', ') ?? '—' }}</span>
           </div>
         </div>
-        }
       </div>
-    </div>
 
-  </div>
+      <!-- AbuseIPDB Enrichment -->
+      @let abuseConfidence = history()?.abuse_confidence;
+      @if (abuseConfidence !== undefined) {
+        <div class="section">
+          <span class="section-title">ABUSEIPDB INTEL</span>
+          <div class="enrichment-grid">
+            <div class="enrich-item">
+              <span class="meta-label">Abuse Score</span>
+              <span class="abuse-badge" [class.danger]="abuseConfidence > 50"
+                [class.warning]="abuseConfidence > 20 && abuseConfidence <= 50">
+                {{ abuseConfidence }}%
+              </span>
+            </div>
+            <div class="enrich-item">
+              <span class="meta-label">Country</span>
+              <span class="meta-val">{{ history()?.country_code ?? '—' }}</span>
+            </div>
+            <div class="enrich-item">
+              <span class="meta-label">ISP</span>
+              <span class="meta-val">{{ history()?.isp ?? '—' }}</span>
+            </div>
+            <div class="enrich-item">
+              <span class="meta-label">Reports</span>
+              <span class="meta-val">{{ history()?.total_reports ?? '—' }}</span>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- AI Summary -->
+      @if (aiLoading()) {
+        <div class="section">
+          <span class="section-title">AI ANALYSIS</span>
+          <div class="ai-loading">
+            <span class="ai-dot"></span>
+            <span class="ai-dot"></span>
+            <span class="ai-dot"></span>
+            Analyzing threat intelligence...
+          </div>
+        </div>
+      } @else if (aiSummary()) {
+        <div class="section">
+          <span class="section-title">AI ANALYSIS</span>
+          <p class="ai-summary">{{ aiSummary() }}</p>
+        </div>
+      }
+
+      <!-- MITRE Tags -->
+      @if ((history()?.mitre_tags?.length ?? 0) > 0) {
+        <div class="section">
+          <span class="section-title">MITRE ATT&CK</span>
+          <div class="tags">
+            @for (tag of history()?.mitre_tags ?? []; track tag) {
+              <span class="mitre-tag">{{ tag }}</span>
+            }
+          </div>
+        </div>
+      }
+
+      <!-- Event Timeline -->
+      <div class="section">
+        <span class="section-title">EVENT TIMELINE</span>
+        <div class="timeline">
+          @for (e of history()?.events?.slice(0, 20) ?? []; track e.timestamp) {
+            <div class="timeline-item">
+              <div class="tl-dot" [style.background]="scoreColor(e.score)"></div>
+              <div class="tl-body">
+                <span class="tl-type">{{ e.attack_type }}</span>
+                <span class="tl-score">Score: {{ e.score }}</span>
+                <span class="tl-time">{{ e.timestamp | date:'HH:mm:ss' }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+    </div>
   }
-</div>
+}

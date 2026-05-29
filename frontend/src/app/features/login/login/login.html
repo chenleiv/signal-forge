@@ -1,0 +1,41 @@
+<div class="login-page">
+    <div class="login-card">
+        <div class="login-logo">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round" />
+                <path d="M12 7l4 2.5v5L12 17l-4-2.5v-5L12 7z" fill="#3b82f6" opacity="0.4" />
+            </svg>
+            <span class="login-brand">SignalForge</span>
+        </div>
+
+        <h1 class="login-title">SOC Analyst Login</h1>
+        <p class="login-sub">Threat Operations Center</p>
+
+
+        <form class="login-form" (ngSubmit)="submit()">
+            <div class="field">
+                <label class="field-label">Username</label>
+                <input class="field-input" type="text" [value]="username()"
+                    (input)="username.set($any($event.target).value)" placeholder="analyst" autocomplete="off" />
+            </div>
+
+            <div class="field">
+                <label class="field-label">Password</label>
+                <input class="field-input" type="password" [value]="password()"
+                    (input)="password.set($any($event.target).value)" placeholder="••••••••••" autocomplete="off" />
+            </div>
+
+            @if (error()) {
+            <div class="login-error">{{ error() }}</div>
+            }
+
+            <button class="login-btn" type="submit" [disabled]="loading()">
+                {{ loading() ? 'Authenticating...' : 'Sign In' }}
+            </button>
+        </form>
+
+        <button class="demo-btn" type="button" (click)="demoLogin()" autocomplete="off">
+            ▶ Try Demo
+        </button>
+    </div>
+</div>

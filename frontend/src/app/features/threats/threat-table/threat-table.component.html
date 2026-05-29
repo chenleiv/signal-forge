@@ -20,7 +20,7 @@
       </thead>
       <tbody>
         @for (row of rows; track row.ip; let i = $index) {
-          <tr class="ip-row" (click)="selectIp(row.ip)">
+          <tr class="ip-row" (click)="selectIp(row.ip)" [class.row-selected]="row.ip === selectedIp()">
             <td class="cell-idx">{{ i + 1 }}</td>
             <td class="cell-ip">{{ row.ip }}</td>
             <td class="cell-score" [class]="scoreClass(row.score)">{{ row.score }}</td>
