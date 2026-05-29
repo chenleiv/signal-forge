@@ -1,3 +1,6 @@
+from __future__ import annotations
+import os
+import httpx
 import asyncio
 import json
 import random
@@ -7,6 +10,15 @@ from uuid import uuid4
 from datetime import datetime, timezone
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+
+ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
+_abuse_cache: dict[str, dict] = {}
+
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+_ai_summary_cache: dict[str, str] = {}
+
+_blocked_ips: set[str] = set()
+
 
 app = FastAPI(title="SignalForge API")
 
@@ -216,8 +228,34 @@ def get_stats():
 # ── REST: per-IP history ──────────────────────────────────────
 
 
+async def enrich_ip(ip: str) -> dict | None:
+    if ip in _abuse_cache:
+        return _abuse_cache[ip]
+    if not ABUSEIPDB_API_KEY:
+        return None
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                "https://api.abuseipdb.com/api/v2/check",
+                params={"ipAddress": ip, "maxAgeInDays": 90},
+                headers={"Key": ABUSEIPDB_API_KEY, "Accept": "application/json"},
+                timeout=5.0,
+            )
+            data = r.json().get("data", {})
+            result = {
+                "abuse_confidence": data.get("abuseConfidenceScore"),
+                "country_code": data.get("countryCode"),
+                "isp": data.get("isp"),
+                "total_reports": data.get("totalReports"),
+            }
+            _abuse_cache[ip] = result
+            return result
+    except Exception:
+        return None
+
+
 @app.get("/api/ip/{ip}/history")
-def get_ip_history(ip: str):
+async def get_ip_history(ip: str):
     events = list(ip_store.get(ip, []))
     if not events:
         return {
@@ -236,6 +274,8 @@ def get_ip_history(ip: str):
         {tag for e in events for tag in MITRE_MAP.get(e.get("attack_type", ""), [])}
     )
 
+    enrichment = await enrich_ip(ip) or {}
+
     return {
         "ip": ip,
         "score": score,
@@ -243,7 +283,89 @@ def get_ip_history(ip: str):
         "events": list(reversed(events))[:50],
         "regions": regions,
         "mitre_tags": mitre_tags,
+        **enrichment,
     }
+
+
+# ── REST: LLM analysis ────────────────────────────────────────
+@app.get("/api/ip/{ip}/ai-summary")
+async def get_ip_ai_summary(ip: str):
+    if ip in _ai_summary_cache:
+        return {"summary": _ai_summary_cache[ip]}
+    if not GROQ_API_KEY:
+        return {"summary": None}
+
+    from groq import Groq
+
+    events = list(ip_store.get(ip, []))
+    context = {
+        "ip": ip,
+        "total_events": len(events),
+        "max_score": max((e["score"] for e in events), default=0),
+        "attack_types": list({e["attack_type"] for e in events}),
+        "regions": list({e["region"] for e in events}),
+        "mitre_tags": list(
+            {t for e in events for t in MITRE_MAP.get(e["attack_type"], [])}
+        ),
+    }
+
+    client = Groq(api_key=GROQ_API_KEY)
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        max_tokens=150,
+        messages=[
+            {
+                "role": "user",
+                "content": f"You are a SOC analyst. Write a 2-sentence threat intelligence summary for this IP activity: {json.dumps(context)}. Be specific and technical.",
+            }
+        ],
+    )
+    summary = response.choices[0].message.content
+    _ai_summary_cache[ip] = summary
+    return {"summary": summary}
+
+
+# ── REST: command interface ────────────────────────────────────
+
+
+@app.post("/api/command")
+async def run_command(body: dict):
+    cmd = body.get("command", "").strip().lower()
+
+    if cmd == "help":
+        return {
+            "output": "Commands: help | status | block ip <ip> | unblock ip <ip> | scan <ip> | clear"
+        }
+    elif cmd == "status":
+        total = sum(len(v) for v in ip_store.values())
+        return {
+            "output": f"Tracked IPs: {len(ip_store)} | Blocked: {len(_blocked_ips)} | Total Events: {total}"
+        }
+    elif cmd.startswith("block ip "):
+        ip = cmd.split("block ip ")[1].strip()
+        _blocked_ips.add(ip)
+        return {"output": f"[BLOCKED] {ip} added to blocklist"}
+    elif cmd.startswith("unblock ip "):
+        ip = cmd.split("unblock ip ")[1].strip()
+        _blocked_ips.discard(ip)
+        return {"output": f"[OK] {ip} removed from blocklist"}
+    elif cmd.startswith("scan "):
+        ip = cmd.split("scan ")[1].strip()
+        events = ip_store.get(ip, deque())
+        blocked = "BLOCKED" if ip in _blocked_ips else "active"
+        score = max((e["score"] for e in events), default=0)
+        return {
+            "output": f"{ip} | {len(events)} events | max score: {score} | status: {blocked}"
+        }
+    elif cmd == "clear":
+        return {"output": "__clear__"}
+    else:
+        return {
+            "output": f"Unknown command: '{cmd}'. Type 'help' for available commands."
+        }
+
+
+# ── REST: incidents ────────────────────────────────────────────
 
 
 @app.get("/api/incidents")

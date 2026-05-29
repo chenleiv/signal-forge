@@ -1,16 +1,15 @@
 import {
   Component,
-  Input,
-  OnChanges,
-  OnDestroy,
-  SimpleChanges,
   output,
   inject,
   ChangeDetectionStrategy,
+  signal,
+  input,
+  effect,
+  DestroyRef,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { Subject, Subscription } from 'rxjs';
-import { switchMap } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
 import { IpHistory } from '../../../shared/models/threat.models';
 
@@ -22,43 +21,50 @@ import { IpHistory } from '../../../shared/models/threat.models';
   styleUrl: './threat-detail-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ThreatDetailDrawerComponent implements OnChanges, OnDestroy {
-  @Input() ip: string | null = null;
+export class ThreatDetailDrawerComponent {
+  ip = input<string | null>(null);
   closed = output<void>();
 
   private store = inject(ThreatStoreService);
+  private destroyRef = inject(DestroyRef);
 
-  history: IpHistory | null = null;
-  loading = false;
+  history = signal<IpHistory | null>(null);
+  loading = signal(false);
+  aiSummary = signal<string | null>(null);
+  aiLoading = signal(false);
 
-  private ipChange$ = new Subject<string>();
-  private sub: Subscription = this.ipChange$
-    .pipe(
-      switchMap((ip) => {
-        this.loading = true;
-        this.history = null;
-        return this.store.fetchIpHistory(ip);
-      }),
-    )
-    .subscribe({
-      next: (h) => {
-        this.history = h;
-        this.loading = false;
-      },
-      error: () => {
-        this.loading = false;
-      },
+  constructor() {
+    effect(() => {
+      const ip = this.ip();
+      if (!ip) return;
+
+      this.history.set(null);
+      this.loading.set(true);
+      this.aiSummary.set(null);
+      this.aiLoading.set(true);
+
+      this.store
+        .fetchIpHistory(ip)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (h) => {
+            this.history.set(h);
+            this.loading.set(false);
+          },
+          error: () => this.loading.set(false),
+        });
+
+      this.store
+        .fetchAiSummary(ip)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: (res) => {
+            this.aiSummary.set(res.summary);
+            this.aiLoading.set(false);
+          },
+          error: () => this.aiLoading.set(false),
+        });
     });
-
-  ngOnChanges(changes: SimpleChanges) {
-    if (changes['ip'] && this.ip) {
-      this.ipChange$.next(this.ip);
-    }
-  }
-
-  ngOnDestroy() {
-    this.sub.unsubscribe();
-    this.ipChange$.complete();
   }
 
   close() {

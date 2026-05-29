@@ -1,0 +1,22 @@
+@if (isOpen()) {
+<div class="console-overlay">
+    <div class="console">
+        <div class="console-header">
+            <span class="console-title">⚡ THREATWATCHER CONSOLE</span>
+            <span class="console-hint">ESC to close · ` to toggle</span>
+            <button class="console-close" (click)="isOpen.set(false)">✕</button>
+        </div>
+        <div class="console-output" #outputRef>
+            @for (line of lines(); track $index) {
+            <div class="line" [class.cmd-line]="line.startsWith('>')">{{ line }}</div>
+            }
+        </div>
+        <div class="console-input-row">
+            <span class="prompt">$</span>
+            <input #inputRef class="console-input" [value]="inputValue()"
+                (input)="inputValue.set($any($event.target).value)" (keydown)="onInputKey($event)"
+                placeholder="type a command..." autocomplete="off" spellcheck="false" />
+        </div>
+    </div>
+</div>
+}

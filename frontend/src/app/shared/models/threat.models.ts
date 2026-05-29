@@ -24,6 +24,10 @@ export interface IpHistory {
   events: ThreatEvent[];
   regions: string[];
   mitre_tags: string[];
+  abuse_confidence?: number;
+  country_code?: string;
+  isp?: string;
+  total_reports?: number;
 }
 
 export type IncidentStatus = 'open' | 'investigating' | 'contained' | 'closed';

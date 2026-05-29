@@ -4,6 +4,7 @@ import { filter, map } from 'rxjs/operators';
 import { ThreatsService } from '../../core/services/threats.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { CommandConsole } from '../../features/command-console/command-console';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Live Operations',
@@ -17,7 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [RouterLink, RouterLinkActive, RouterOutlet, CommandConsole],
   templateUrl: './app-layout.html',
   styleUrl: './app-layout.scss',
 })

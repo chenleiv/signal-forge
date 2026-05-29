@@ -49,4 +49,12 @@ export class ThreatStoreService {
   fetchIpHistory(ip: string) {
     return this.http.get<IpHistory>(`/api/ip/${ip}/history`);
   }
+
+  fetchAiSummary(ip: string) {
+    return this.http.get<{ summary: string | null }>(`/api/ip/${ip}/ai-summary`);
+  }
+
+  executeCommand(command: string) {
+    return this.http.post<{ output: string }>('/api/command', { command });
+  }
 }

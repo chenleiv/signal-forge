@@ -3,13 +3,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { Incident, IncidentStatus } from '../../shared/models/threat.models';
-import { RouterLink } from '@angular/router';
 import { timer } from 'rxjs';
 
 @Component({
   selector: 'app-incidents',
   standalone: true,
-  imports: [DatePipe, RouterLink],
+  imports: [DatePipe],
   templateUrl: './incidents.html',
   styleUrl: './incidents.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

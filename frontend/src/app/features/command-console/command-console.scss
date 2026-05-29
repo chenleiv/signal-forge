@@ -1,0 +1,114 @@
+.console-overlay {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 999;
+    animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.console {
+    background: #020810;
+    border-top: 1px solid #00d4ff40;
+    box-shadow: 0 -4px 30px #00d4ff15;
+    height: 220px;
+    display: flex;
+    flex-direction: column;
+}
+
+.console-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 16px;
+    border-bottom: 1px solid #0d2040;
+    background: #030c18;
+}
+
+.console-title {
+    font-size: 10px;
+    font-family: monospace;
+    color: #00d4ff;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+}
+
+.console-hint {
+    font-size: 10px;
+    color: #2a4a6a;
+    margin-left: auto;
+}
+
+.console-close {
+    background: none;
+    border: none;
+    color: #2a4a6a;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 6px;
+
+    &:hover {
+        color: #fff;
+    }
+}
+
+.console-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.line {
+    font-size: 12px;
+    font-family: monospace;
+    color: #4a8a6a;
+    white-space: pre-wrap;
+
+    &.cmd-line {
+        color: #00d4ff;
+    }
+}
+
+.console-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-top: 1px solid #0d2040;
+}
+
+.prompt {
+    color: #00d4ff;
+    font-family: monospace;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.console-input {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: #c8d8e8;
+    font-family: monospace;
+    font-size: 13px;
+
+    &::placeholder {
+        color: #1a3a5a;
+    }
+}

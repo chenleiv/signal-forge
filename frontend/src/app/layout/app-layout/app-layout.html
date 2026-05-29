@@ -97,6 +97,11 @@
         <span class="topbar-page">Live Operations</span>
       </div>
       <div class="topbar-right">
+        <button class="console-toggle-btn" (click)="consoleRef.isOpen.update(v => !v)" title="Toggle Console (`)">
+          <span class="console-btn-icon">&gt;_</span>
+        </button>
+
+
         <div class="topbar-chip" [class.chip-reconnecting]="ws.status() === 'reconnecting'">
           <span class="chip-dot" [class.dot-reconnecting]="ws.status() === 'reconnecting'"></span>
           {{ ws.status() === 'connected' ? 'LIVE FEED' : 'RECONNECTING...' }}
@@ -115,6 +120,9 @@
     <section class="content">
       <router-outlet></router-outlet>
     </section>
+
+    <app-command-console #consoleRef />
+
 
   </div>
 </div>
