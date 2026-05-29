@@ -1,9 +1,9 @@
 import { Component, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { HttpClient } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { Incident, IncidentStatus } from '../../shared/models/threat.models';
 import { timer } from 'rxjs';
+import { ThreatStoreService } from '../../core/services/threat-store.service';
 
 @Component({
   selector: 'app-incidents',
@@ -15,7 +15,7 @@ import { timer } from 'rxjs';
 })
 export class Incidents {
   private destroyRef = inject(DestroyRef);
-  protected readonly http = inject(HttpClient);
+  private store = inject(ThreatStoreService);
   incidents = signal<Incident[]>([]);
   selected = signal<Incident | null>(null);
 
@@ -26,8 +26,8 @@ export class Incidents {
   }
 
   private load() {
-    this.http
-      .get<Incident[]>('/api/incidents')
+    this.store
+      .fetchIncidents()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((d) => this.incidents.set(d));
   }

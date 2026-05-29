@@ -5,6 +5,7 @@ import {
   ThreatEvent,
   ThreatLevel,
   ThreatStats,
+  Incident,
 } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
 
@@ -56,5 +57,9 @@ export class ThreatStoreService {
 
   executeCommand(command: string) {
     return this.http.post<{ output: string }>('/api/command', { command });
+  }
+
+  fetchIncidents() {
+    return this.http.get<Incident[]>('/api/incidents');
   }
 }
