@@ -1,15 +1,8 @@
-import {
-  Component,
-  ElementRef,
-  OnInit,
-  OnDestroy,
-  inject,
-  effect,
-  ChangeDetectionStrategy,
-} from '@angular/core';
+import { Component, ElementRef, inject, effect, ChangeDetectionStrategy } from '@angular/core';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
+import { ThreatEvent } from '../../shared/models/threat.models';
 
 @Component({
   selector: 'app-threat-map',
@@ -29,7 +22,7 @@ export class ThreatMap {
     effect(() => {
       const events = this.store.events();
       if (events.length > 0 && this.svg && this.projection) {
-        events.slice(0, 3).forEach((e) => this.drawAttack(e));
+        this.drawAttack(events[0]);
       }
     });
   }
@@ -87,7 +80,7 @@ export class ThreatMap {
     BR: [-51, -14],
   };
 
-  private drawAttack(event: any) {
+  private drawAttack(event: ThreatEvent) {
     if (!this.svg || !this.projection) return;
 
     const target = this.REGION_COORDS['US'];
