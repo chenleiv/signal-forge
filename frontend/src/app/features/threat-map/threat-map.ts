@@ -1,4 +1,12 @@
-import { Component, ElementRef, OnInit, OnDestroy, inject, effect } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  OnInit,
+  OnDestroy,
+  inject,
+  effect,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
@@ -8,8 +16,9 @@ import * as topojson from 'topojson-client';
   standalone: true,
   templateUrl: './threat-map.html',
   styleUrl: './threat-map.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ThreatMap implements OnInit, OnDestroy {
+export class ThreatMap {
   private el = inject(ElementRef);
   private store = inject(ThreatStoreService);
 

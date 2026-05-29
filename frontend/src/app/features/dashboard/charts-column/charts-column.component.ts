@@ -1,7 +1,8 @@
-import { Component, Input, OnInit, inject, effect, signal } from '@angular/core';
+import { Component, inject, effect, signal, input, ChangeDetectionStrategy } from '@angular/core';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { EChartsOption } from 'echarts';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
+import { AttackType, ThreatLevel, ThreatStats } from '../../../shared/models/threat.models';
 
 @Component({
   selector: 'app-charts-column',
@@ -9,11 +10,12 @@ import { ThreatStoreService } from '../../../core/services/threat-store.service'
   imports: [NgxEchartsDirective],
   templateUrl: './charts-column.component.html',
   styleUrl: './charts-column.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ChartsColumnComponent {
-  @Input() column: 'left' | 'right' = 'left';
+  readonly column = input<'left' | 'right'>('left');
 
-  store = inject(ThreatStoreService);
+  private readonly store = inject(ThreatStoreService);
 
   topChart = signal<EChartsOption | null>(null);
   bottomChart = signal<EChartsOption | null>(null);
@@ -29,7 +31,7 @@ export class ChartsColumnComponent {
       const stats = this.store.stats();
       if (!stats) return;
 
-      if (this.column === 'left') {
+      if (this.column() === 'left') {
         this.topChart.set(this.buildSeverityChart(stats));
         this.bottomChart.set(this.buildAttackTypesChart(stats));
       } else {
@@ -39,10 +41,10 @@ export class ChartsColumnComponent {
     });
   }
 
-  private buildSeverityChart(stats: any): EChartsOption {
+  private buildSeverityChart(stats: ThreatStats): EChartsOption {
     const levels = ['critical', 'high', 'medium', 'low'];
     const colors = ['#ff2d55', '#ff6b00', '#ffcc00', '#00d4ff'];
-    const counts = levels.map((l) => stats.severity_counts[l] ?? 0);
+    const counts = levels.map((l) => stats.severity_counts[l as ThreatLevel] ?? 0);
 
     return {
       ...this.BASE_OPTS,
@@ -68,12 +70,12 @@ export class ChartsColumnComponent {
     };
   }
 
-  private buildAttackTypesChart(stats: any): EChartsOption {
+  private buildAttackTypesChart(stats: ThreatStats): EChartsOption {
     const types = Object.keys(stats.attack_types);
     const colors = ['#ff2d55', '#ff6b00', '#ffcc00', '#00d4ff', '#a855f7'];
     const data = types.map((t, i) => ({
       name: t,
-      value: stats.attack_types[t],
+      value: stats.attack_types[t as AttackType],
       itemStyle: { color: colors[i % colors.length] },
     }));
 
@@ -94,7 +96,7 @@ export class ChartsColumnComponent {
     };
   }
 
-  private buildEpmChart(stats: any): EChartsOption {
+  private buildEpmChart(stats: ThreatStats): EChartsOption {
     const buckets = stats.events_per_min ?? [];
     return {
       ...this.BASE_OPTS,
@@ -131,7 +133,7 @@ export class ChartsColumnComponent {
     };
   }
 
-  private buildTopIpsChart(stats: any): EChartsOption {
+  private buildTopIpsChart(stats: ThreatStats): EChartsOption {
     const top = (stats.top_ips ?? []).slice(0, 8);
     return {
       ...this.BASE_OPTS,

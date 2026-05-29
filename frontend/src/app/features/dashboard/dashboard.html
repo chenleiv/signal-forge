@@ -51,7 +51,8 @@
             </tr>
           </thead>
           <tbody>
-            @for (event of store.events(); track event.timestamp) {
+            @for (event of store.events(); track event.ip + event.timestamp) {
+
             <tr class="event-row" [class]="'row-' + event.threat_level">
               <td class="cell-ts">{{ event.timestamp | date:'HH:mm:ss' }}</td>
               <td class="cell-ip">{{ event.ip }}</td>
@@ -74,10 +75,10 @@
     </div>
 
     <!-- Col 2: Charts Left (Severity + Attack Types) -->
-    <app-charts-column column="left" />
+    <app-charts-column [column]="'left'" />
 
     <!-- Col 3: Charts Right (EPM + Top IPs) -->
-    <app-charts-column column="right" />
+    <app-charts-column [column]="'right'" />
 
     <!-- Col 4: Alerts Panel -->
     <div class="panel alerts-panel">

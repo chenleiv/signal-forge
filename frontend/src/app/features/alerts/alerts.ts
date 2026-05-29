@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { ThreatEvent, ThreatLevel } from '../../shared/models/threat.models';
@@ -9,9 +9,10 @@ import { ThreatEvent, ThreatLevel } from '../../shared/models/threat.models';
   imports: [DatePipe],
   templateUrl: './alerts.html',
   styleUrl: './alerts.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Alerts {
-  store = inject(ThreatStoreService);
+  protected readonly store = inject(ThreatStoreService);
 
   filterLevel = signal<ThreatLevel | 'all'>('all');
   dismissed = signal<Set<string>>(new Set());

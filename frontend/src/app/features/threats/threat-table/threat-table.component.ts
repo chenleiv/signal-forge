@@ -1,4 +1,5 @@
-import { Component, OnInit, output, inject } from '@angular/core';
+import { Component, OnInit, output, inject, DestroyRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { ThreatStats } from '../../../shared/models/threat.models';
 
@@ -16,7 +17,8 @@ interface IpRow {
   styleUrl: './threat-table.component.scss',
 })
 export class ThreatTableComponent implements OnInit {
-  private http = inject(HttpClient);
+  private destroyRef = inject(DestroyRef);
+  protected readonly http = inject(HttpClient);
 
   rows: IpRow[] = [];
   loading = true;
@@ -24,13 +26,18 @@ export class ThreatTableComponent implements OnInit {
   ipSelected = output<string>();
 
   ngOnInit() {
-    this.http.get<ThreatStats>('/api/stats').subscribe({
-      next: (stats) => {
-        this.rows = stats.top_ips;
-        this.loading = false;
-      },
-      error: () => { this.loading = false; },
-    });
+    this.http
+      .get<ThreatStats>('/api/stats')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (stats) => {
+          this.rows = stats.top_ips;
+          this.loading = false;
+        },
+        error: () => {
+          this.loading = false;
+        },
+      });
   }
 
   selectIp(ip: string) {

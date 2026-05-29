@@ -6,6 +6,7 @@ import {
   SimpleChanges,
   output,
   inject,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Subject, Subscription } from 'rxjs';
@@ -19,6 +20,7 @@ import { IpHistory } from '../../../shared/models/threat.models';
   imports: [DatePipe],
   templateUrl: './threat-detail-drawer.component.html',
   styleUrl: './threat-detail-drawer.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ThreatDetailDrawerComponent implements OnChanges, OnDestroy {
   @Input() ip: string | null = null;
