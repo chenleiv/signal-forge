@@ -1,4 +1,5 @@
 from __future__ import annotations
+import ipaddress
 import os
 import httpx
 import asyncio
@@ -8,8 +9,15 @@ from collections import defaultdict, deque
 from typing import Any
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from starlette.requests import Request
+
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 _abuse_cache: dict[str, dict] = {}
@@ -23,6 +31,13 @@ SECRET_KEY = os.environ.get("JWT_SECRET", "threatwatcher-dev-secret")
 
 
 app = FastAPI(title="SignalForge API")
+
+limiter = Limiter(key_func=get_remote_address)
+
+security = HTTPBearer()
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -85,6 +100,35 @@ _current_bucket_count: int = 0
 incidents_store: deque = deque(maxlen=50)
 _event_counter: int = 0
 _next_incident_at: int = random.randint(8, 12)
+
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        from jose import jwt
+
+        jwt.decode(credentials.credentials, SECRET_KEY, algorithms=["HS256"])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+
+def validate_ip(ip: str) -> str:
+    try:
+        parsed = ipaddress.ip_address(ip)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid IP address format")
+
+    if (
+        parsed.is_private
+        or parsed.is_loopback
+        or parsed.is_link_local
+        or parsed.is_reserved
+        or parsed.is_multicast
+    ):
+        raise HTTPException(
+            status_code=422, detail="Private or reserved IP not allowed"
+        )
+
+    return str(parsed)
 
 
 def _current_minute_str() -> str:
@@ -192,7 +236,15 @@ async def login(body: dict):
 
 
 @app.websocket("/ws/threats")
-async def threats_ws(ws: WebSocket):
+async def threats_ws(ws: WebSocket, token: str = ""):
+    try:
+        from jose import jwt
+
+        jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    except Exception:
+        await ws.close(code=4001)
+        return
+
     await ws.accept()
     try:
         while True:
@@ -208,7 +260,8 @@ async def threats_ws(ws: WebSocket):
 
 
 @app.get("/api/stats")
-def get_stats():
+@limiter.limit("50/minute")
+async def get_stats(request: Request, _=Depends(verify_token)):
     severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0}
     attack_types = {"SQLi": 0, "DDoS": 0, "BruteForce": 0, "PortScan": 0, "Malware": 0}
     ip_counts: dict[str, int] = {}
@@ -276,7 +329,10 @@ async def enrich_ip(ip: str) -> dict | None:
 
 
 @app.get("/api/ip/{ip}/history")
-async def get_ip_history(ip: str):
+@limiter.limit("30/minute")
+async def get_ip_history(
+    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+):
     events = list(ip_store.get(ip, []))
     if not events:
         return {
@@ -309,8 +365,13 @@ async def get_ip_history(ip: str):
 
 
 # ── REST: LLM analysis ────────────────────────────────────────
+
+
 @app.get("/api/ip/{ip}/ai-summary")
-async def get_ip_ai_summary(ip: str):
+@limiter.limit("10/minute")
+async def get_ip_ai_summary(
+    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+):
     if ip in _ai_summary_cache:
         return {"summary": _ai_summary_cache[ip]}
     if not GROQ_API_KEY:
@@ -350,8 +411,19 @@ async def get_ip_ai_summary(ip: str):
 
 
 @app.post("/api/command")
-async def run_command(body: dict):
+@limiter.limit("20/minute")
+async def run_command(request: Request, body: dict, _=Depends(verify_token)):
     cmd = body.get("command", "").strip().lower()
+
+    if len(cmd) > 100:
+        return {"output": "Error: command too long"}
+
+    ALLOWED_COMMANDS = {"help", "status", "clear"}
+    ALLOWED_PREFIXES = ("block ip ", "unblock ip ", "scan ")
+    if cmd not in ALLOWED_COMMANDS and not cmd.startswith(ALLOWED_PREFIXES):
+        return {
+            "output": f"Unknown command: '{cmd}'. Type 'help' for available commands."
+        }
 
     if cmd == "help":
         return {
@@ -390,7 +462,7 @@ async def run_command(body: dict):
 
 
 @app.get("/api/incidents")
-def get_incidents():
+async def get_incidents(_=Depends(verify_token)):
     return list(incidents_store)
 
 

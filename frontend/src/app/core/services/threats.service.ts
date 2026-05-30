@@ -17,7 +17,9 @@ export class ThreatsService {
   connect() {
     this.destroyed = false;
     this.status.set('reconnecting');
-    this.socket = new WebSocket(this.settingsService.settings().wsUrl);
+    const token = localStorage.getItem('sf_token') ?? '';
+    const wsUrl = `${this.settingsService.settings().wsUrl}?token=${token}`;
+    this.socket = new WebSocket(wsUrl);
 
     this.socket.onopen = () => {
       this.status.set('connected');
