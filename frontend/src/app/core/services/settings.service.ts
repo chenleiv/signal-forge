@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { environment } from '../../../environments/environment';
 
 export interface AppSettings {
   wsUrl: string;
@@ -12,7 +13,7 @@ export interface AppSettings {
 }
 
 const DEFAULTS: AppSettings = {
-  wsUrl: 'ws://127.0.0.1:8000/ws/threats',
+  wsUrl: environment.wsUrl,
   reconnectDelay: 3,
   bufferSize: 100,
   criticalThreshold: 80,
