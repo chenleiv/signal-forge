@@ -13,8 +13,6 @@ $accent: #3b82f6;
 
 .settings-page {
     padding: 24px;
-    max-width: 720px;
-    margin: 0 auto;
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -38,8 +36,8 @@ $accent: #3b82f6;
 }
 
 .sections {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 16px;
 }
 
@@ -153,7 +151,9 @@ $accent: #3b82f6;
         outline: none;
         transition: border-color 0.15s;
 
-        &:focus { border-color: $accent; }
+        &:focus {
+            border-color: $accent;
+        }
     }
 }
 
@@ -169,20 +169,44 @@ $accent: #3b82f6;
     border-radius: 50%;
     flex-shrink: 0;
 
-    &.critical { background: #dc2626; }
-    &.high     { background: #ea580c; }
-    &.medium   { background: #d97706; }
+    &.critical {
+        background: #dc2626;
+    }
+
+    &.high {
+        background: #ea580c;
+    }
+
+    &.medium {
+        background: #d97706;
+    }
 }
 
-.label-critical { font-size: 12px; color: #dc2626; font-weight: 500; }
-.label-high     { font-size: 12px; color: #ea580c; font-weight: 500; }
-.label-medium   { font-size: 12px; color: #d97706; font-weight: 500; }
+.label-critical {
+    font-size: 12px;
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.label-high {
+    font-size: 12px;
+    color: #ea580c;
+    font-weight: 500;
+}
+
+.label-medium {
+    font-size: 12px;
+    color: #d97706;
+    font-weight: 500;
+}
 
 .threshold-op {
     font-size: 14px;
     color: $muted;
     margin-left: 4px;
 }
+
+
 
 // ── Actions ───────────────────────────────────────────────────
 .actions {
@@ -219,10 +243,15 @@ $accent: #3b82f6;
     transition: background 0.15s;
     min-width: 120px;
 
-    &:hover { background: #2563eb; }
+    &:hover {
+        background: #2563eb;
+    }
 
     &.saved {
         background: #16a34a;
-        &:hover { background: #15803d; }
+
+        &:hover {
+            background: #15803d;
+        }
     }
 }

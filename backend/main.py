@@ -18,6 +18,7 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 _ai_summary_cache: dict[str, str] = {}
 
 _blocked_ips: set[str] = set()
+
 SECRET_KEY = os.environ.get("JWT_SECRET", "threatwatcher-dev-secret")
 
 

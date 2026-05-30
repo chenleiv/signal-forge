@@ -16,6 +16,7 @@ export class ThreatStoreService {
 
   readonly events = signal<ThreatEvent[]>([]);
   readonly stats = signal<ThreatStats | null>(null);
+  readonly frozen = signal(false);
 
   readonly criticalCount = computed(
     () => this.events().filter((e) => e.threat_level === 'critical').length,
@@ -24,6 +25,8 @@ export class ThreatStoreService {
     () => this.events().filter((e) => e.threat_level === 'high').length,
   );
   readonly trackedIPs = computed(() => new Set(this.events().map((e) => e.ip)).size);
+
+  readonly activeRegions = computed(() => new Set(this.events().map((e) => e.region)).size);
 
   readonly eventsPerMinute = computed(() => {
     const buckets = this.stats()?.events_per_min;
@@ -39,8 +42,13 @@ export class ThreatStoreService {
   };
 
   addEvent(event: ThreatEvent) {
+    if (this.frozen()) return;
     const size = this.settingsSvc.settings().bufferSize;
     this.events.update((list) => [event, ...list].slice(0, size));
+  }
+
+  toggleFreeze() {
+    this.frozen.update((v) => !v);
   }
 
   refreshStats() {
@@ -61,5 +69,9 @@ export class ThreatStoreService {
 
   fetchIncidents() {
     return this.http.get<Incident[]>('/api/incidents');
+  }
+
+  setSimulation(active: boolean) {
+    return this.http.post('/api/simulation', { active });
   }
 }

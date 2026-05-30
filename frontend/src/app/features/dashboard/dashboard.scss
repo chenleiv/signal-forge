@@ -36,7 +36,7 @@ $secondary: #9ca3af;
 // ── Summary Row ──────────────────────────────────────────────
 .summary-row {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 10px;
   flex-shrink: 0;
 }
@@ -78,7 +78,17 @@ $secondary: #9ca3af;
   &.epm {
     border-top-color: $accent;
   }
+
+  &.regions {
+    border-top-color: $green;
+  }
+
+  .regions & .summary-value {
+    color: $green;
+  }
 }
+
+
 
 .summary-label {
   font-size: 9px;
@@ -181,6 +191,10 @@ $secondary: #9ca3af;
   font-weight: 700;
   letter-spacing: 1px;
   color: $green;
+
+  &.paused {
+    color: $secondary;
+  }
 }
 
 .live-dot {
@@ -189,6 +203,34 @@ $secondary: #9ca3af;
   border-radius: 50%;
   background: $green;
   animation: blink 1.5s ease-in-out infinite;
+
+  .paused & {
+    background: $secondary;
+    animation: none;
+  }
+}
+
+.freeze-btn {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 3px 10px;
+  border-radius: 3px;
+  border: 1px solid $border;
+  background: transparent;
+  color: $secondary;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: $accent;
+    color: $accent;
+  }
+
+  &.frozen {
+    border-color: $yellow;
+    color: $yellow;
+  }
 }
 
 @keyframes blink {
