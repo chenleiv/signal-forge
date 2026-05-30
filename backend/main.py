@@ -25,7 +25,7 @@ app = FastAPI(title="SignalForge API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://signalforge.onrender.com", "http://localhost:4200"],
+    allow_origins=["https://signal-forge-tane.onrender.com", "http://localhost:4200"],
     allow_methods=["*"],
     allow_headers=["*"],
 )

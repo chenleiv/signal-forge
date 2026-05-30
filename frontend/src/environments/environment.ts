@@ -1,5 +1,4 @@
-// environments/environment.prod.ts
 export const environment = {
-  wsUrl: 'wss://signalforge.onrender.com/ws/threats',
-  apiUrl: 'https://signalforge.onrender.com',
+  wsUrl: 'wss://signalforge-api-ah1q.onrender.com/ws/threats',
+  apiUrl: 'https://signalforge-api-ah1q.onrender.com',
 };
