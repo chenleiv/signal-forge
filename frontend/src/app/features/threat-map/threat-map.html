@@ -1,1 +1,15 @@
-<div class="map-container"></div>
+<div class="map-page">
+    <div class="filter-bar">
+        <button class="filter-btn" [class.active]="filterLevel() === 'all'" (click)="setFilterLevel('all')">All</button>
+        <button class="filter-btn critical" [class.active]="filterLevel() === 'critical'"
+            (click)="setFilterLevel('critical')">Critical</button>
+        <button class="filter-btn high" [class.active]="filterLevel() === 'high'"
+            (click)="setFilterLevel('high')">High</button>
+        <button class="filter-btn medium" [class.active]="filterLevel() === 'medium'"
+            (click)="setFilterLevel('medium')">Medium</button>
+        <button class="filter-btn low" [class.active]="filterLevel() === 'low'"
+            (click)="setFilterLevel('low')">Low</button>
+    </div>
+    <div class="map-hint">Scroll to zoom · Drag to pan</div>
+    <div class="map-container"></div>
+</div>

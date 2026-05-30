@@ -6,7 +6,72 @@
 
 .map-container {
   width: 100%;
-  height: 100%;
+  flex: 1;
   background: #0a0f1a;
   overflow: hidden;
+}
+
+.map-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.filter-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  background: #0d1117;
+  border-bottom: 1px solid #1e2535;
+  flex-shrink: 0;
+}
+
+.filter-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 3px;
+  border: 1px solid #1e2535;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &.active,
+  &:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+  }
+
+  &.critical.active {
+    border-color: #dc2626;
+    color: #dc2626;
+  }
+
+  &.high.active {
+    border-color: #ea580c;
+    color: #ea580c;
+  }
+
+  &.medium.active {
+    border-color: #d97706;
+    color: #d97706;
+  }
+
+  &.low.active {
+    border-color: #2563eb;
+    color: #2563eb;
+  }
+}
+
+.map-hint {
+  position: absolute;
+  bottom: 12px;
+  right: 16px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.05em;
+  font-size: 12px;
+  pointer-events: none;
 }

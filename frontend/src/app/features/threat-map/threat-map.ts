@@ -1,4 +1,11 @@
-import { Component, ElementRef, inject, effect, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  inject,
+  effect,
+  ChangeDetectionStrategy,
+  signal,
+} from '@angular/core';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
@@ -14,6 +21,7 @@ import { ThreatEvent } from '../../shared/models/threat.models';
 export class ThreatMap {
   private el = inject(ElementRef);
   private store = inject(ThreatStoreService);
+  readonly filterLevel = signal<string>('all');
 
   private svg: any;
   private projection: any;
@@ -21,8 +29,12 @@ export class ThreatMap {
   constructor() {
     effect(() => {
       const events = this.store.events();
+      const filter = this.filterLevel();
       if (events.length > 0 && this.svg && this.projection) {
-        this.drawAttack(events[0]);
+        const event = events[0];
+        if (filter === 'all' || event.threat_level === filter) {
+          this.drawAttack(event);
+        }
       }
     });
   }
@@ -34,6 +46,10 @@ export class ThreatMap {
   ngOnDestroy() {
     if (this.svg) this.svg.remove();
     this.svg = null;
+  }
+
+  setFilterLevel(level: string) {
+    this.filterLevel.set(level);
   }
 
   private async initMap() {
@@ -58,11 +74,11 @@ export class ThreatMap {
 
     this.svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
 
-    // Ocean background
     this.svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#0a0f1a');
 
-    // Countries
-    this.svg
+    const zoomGroup = this.svg.append('g').attr('class', 'zoom-group');
+
+    zoomGroup
       .append('g')
       .selectAll('path')
       .data((topojson.feature(world, world.objects.countries) as any).features)
@@ -72,8 +88,16 @@ export class ThreatMap {
       .attr('stroke', '#2a3a60')
       .attr('stroke-width', 0.5);
 
-    // Attack points layer
-    this.svg.append('g').attr('class', 'attacks');
+    zoomGroup.append('g').attr('class', 'attacks');
+
+    const zoom = d3
+      .zoom<SVGSVGElement, unknown>()
+      .scaleExtent([1, 8])
+      .on('zoom', (event) => {
+        zoomGroup.attr('transform', event.transform);
+      });
+
+    this.svg.call(zoom);
   }
 
   private readonly REGION_COORDS: Record<string, [number, number]> = {

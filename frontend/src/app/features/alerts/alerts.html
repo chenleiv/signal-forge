@@ -3,6 +3,9 @@
     <div class="page-header">
         <h1 class="page-title">Alerts</h1>
         <span class="count-badge">{{ filtered().length }} alerts</span>
+        <button class="pause-btn" [class.paused]="paused()" (click)="togglePause()">
+            {{ paused() ? '▶ Resume' : '⏸ Pause' }}
+        </button>
     </div>
 
     <div class="filter-bar">
@@ -17,23 +20,47 @@
     </div>
 
     <div class="alerts-list">
-        @for (alert of filtered(); track alert.ip + alert.timestamp) {
-        <div class="alert-row sev-border-{{ alert.threat_level }}">
-            <span class="sev-badge sev-{{ alert.threat_level }}">{{ alert.threat_level[0].toUpperCase() }}</span>
-            <span class="alert-time mono">{{ alert.timestamp | date:'HH:mm:ss' }}</span>
-            <span class="alert-ip mono">{{ alert.ip }}</span>
-            <span class="alert-type">{{ alert.attack_type }}</span>
-            <span class="alert-region mono">{{ alert.region }}</span>
-            <span class="alert-score" [class.score-critical]="alert.score >= 80"
-                [class.score-high]="alert.score >= 60 && alert.score < 80">
-                {{ alert.score }}
-            </span>
-            <button class="dismiss-btn" (click)="dismiss(alert)">Dismiss</button>
+        <div class="table-wrap">
+            <table class="alerts-table">
+                <thead>
+                    <tr>
+                        <th>Severity</th>
+                        <th>Time</th>
+                        <th>Source IP</th>
+                        <th>Attack Type</th>
+                        <th>Region</th>
+                        <th>Score</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (alert of filtered(); track alert.ip + alert.timestamp) {
+                    <tr class="alert-row" [class.ack]="isAcknowledged(alert)">
+                        <td><span class="sev-pill sev-{{ alert.threat_level }}">{{ alert.threat_level }}</span></td>
+                        <td class="mono">{{ alert.timestamp | date:'HH:mm:ss' }}</td>
+                        <td class="mono">{{ alert.ip }}</td>
+                        <td>{{ alert.attack_type }}</td>
+                        <td class="mono muted">{{ alert.region }}</td>
+                        <td class="mono" [class.score-critical]="alert.score >= 80"
+                            [class.score-high]="alert.score >= 60 && alert.score < 80">{{ alert.score }}</td>
+                        <td>
+                            @if (!isAcknowledged(alert)) {
+                            <button class="ack-btn" (click)="acknowledge(alert)">Acknowledge</button>
+                            } @else {
+                            <span class="ack-indicator">✓ Ack'd</span>
+                            }
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="7" class="empty">No alerts — {{ filterLevel() !== 'all' ? 'try a different filter'
+                            : 'waiting for data...' }}</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
         </div>
-        } @empty {
-        <div class="empty">No alerts — {{ filterLevel() !== 'all' ? 'try a different filter' : 'waiting for data...' }}
-        </div>
-        }
+
     </div>
 
 </div>

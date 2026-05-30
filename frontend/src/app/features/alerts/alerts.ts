@@ -14,23 +14,33 @@ import { ThreatEvent, ThreatLevel } from '../../shared/models/threat.models';
 export class Alerts {
   protected readonly store = inject(ThreatStoreService);
 
+  paused = signal(false);
   filterLevel = signal<ThreatLevel | 'all'>('all');
-  dismissed = signal<Set<string>>(new Set());
+  acknowledged = signal<Set<string>>(new Set());
+  private snapshot = signal<ThreatEvent[]>([]);
 
   filtered = computed(() => {
     const level = this.filterLevel();
-    const dis = this.dismissed();
-    return this.store
-      .events()
-      .filter((e) => !dis.has(e.ip + e.timestamp))
-      .filter((e) => level === 'all' || e.threat_level === level);
+    const list = this.paused() ? this.snapshot() : this.store.events();
+    return list.filter((e) => level === 'all' || e.threat_level === level);
   });
 
   setFilter(level: ThreatLevel | 'all') {
     this.filterLevel.set(level);
   }
 
-  dismiss(e: ThreatEvent) {
-    this.dismissed.update((s) => new Set([...s, e.ip + e.timestamp]));
+  acknowledge(e: ThreatEvent) {
+    this.acknowledged.update((s) => new Set([...s, e.ip + e.timestamp]));
+  }
+
+  isAcknowledged(e: ThreatEvent): boolean {
+    return this.acknowledged().has(e.ip + e.timestamp);
+  }
+
+  togglePause() {
+    if (!this.paused()) {
+      this.snapshot.set([...this.store.events()]);
+    }
+    this.paused.update((v) => !v);
   }
 }
