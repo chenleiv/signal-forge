@@ -47,23 +47,47 @@ SECRET_KEY = os.environ.get("JWT_SECRET", "threatwatcher-dev-secret")
 
 from contextlib import asynccontextmanager
 
+async def _fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
+    try:
+        r = await client.get(
+            f"https://ipinfo.io/{ip}/json",
+            params={"token": IPINFO_TOKEN},
+            timeout=5.0,
+        )
+        d = r.json()
+        raw_org = d.get("org", "")
+        parts = raw_org.split(" ", 1)
+        asn = parts[0] if parts[0].startswith("AS") else "Unknown"
+        org = parts[1] if len(parts) > 1 else raw_org or "Unknown"
+        country_code = d.get("country", "??")
+        loc = d.get("loc", "")
+        result = {
+            "country": COUNTRY_NAMES.get(country_code, country_code),
+            "country_code": country_code,
+            "city": d.get("city", "Unknown"),
+            "org": org,
+            "asn": asn,
+            "timezone": d.get("timezone", "UTC"),
+        }
+        if loc:
+            lat, lng = map(float, loc.split(","))
+            result["lat"] = lat
+            result["lng"] = lng
+        return result
+    except Exception:
+        return None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if IPINFO_TOKEN:
         async with httpx.AsyncClient() as client:
             for ip in THREAT_IPS:
-                try:
-                    r = await client.get(
-                        f"https://ipinfo.io/{ip}/json",
-                        params={"token": IPINFO_TOKEN},
-                        timeout=5.0,
-                    )
-                    loc = r.json().get("loc", "")
-                    if loc:
-                        lat, lng = map(float, loc.split(","))
-                        _ip_coords[ip] = (lat, lng)
-                except Exception:
-                    pass
+                data = await _fetch_ipinfo(client, ip)
+                if data:
+                    _geo_cache[ip] = data
+                    if "lat" in data:
+                        _ip_coords[ip] = (data["lat"], data["lng"])
     yield
 
 
@@ -665,31 +689,13 @@ async def get_ip_geo(
         return _geo_cache[ip]
 
     if IPINFO_TOKEN:
-        try:
-            async with httpx.AsyncClient() as client:
-                r = await client.get(
-                    f"https://ipinfo.io/{ip}/json",
-                    params={"token": IPINFO_TOKEN},
-                    timeout=5.0,
-                )
-                d = r.json()
-                raw_org = d.get("org", "")
-                parts = raw_org.split(" ", 1)
-                asn = parts[0] if parts[0].startswith("AS") else "Unknown"
-                org = parts[1] if len(parts) > 1 else raw_org or "Unknown"
-                country_code = d.get("country", "??")
-                result = {
-                    "country": COUNTRY_NAMES.get(country_code, country_code),
-                    "country_code": country_code,
-                    "city": d.get("city", "Unknown"),
-                    "org": org,
-                    "asn": asn,
-                    "timezone": d.get("timezone", "UTC"),
-                }
-                _geo_cache[ip] = result
-                return result
-        except Exception:
-            pass
+        async with httpx.AsyncClient() as client:
+            data = await _fetch_ipinfo(client, ip)
+        if data:
+            _geo_cache[ip] = data
+            if "lat" in data:
+                _ip_coords[ip] = (data["lat"], data["lng"])
+            return data
 
     fallback = GEO_DATA.get(ip, {
         "country": "Unknown", "country_code": "??",
