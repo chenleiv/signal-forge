@@ -9,10 +9,19 @@
            placeholder="Search IP…" />
     <div class="filter-pills">
       @for (lvl of ['all','critical','high','medium','low']; track lvl) {
-        <button class="pill" [class.active]="levelFilter() === lvl"
+        <button class="pill pill-{{ lvl }}" [class.active]="levelFilter() === lvl"
                 (click)="levelFilter.set(lvl)">
           {{ lvl === 'all' ? 'All' : lvl }}
         </button>
+      }
+    </div>
+    <div class="export-wrap">
+      <button class="btn-export" (click)="exportOpen.update(v => !v)">↓ Export</button>
+      @if (exportOpen()) {
+        <div class="export-dropdown">
+          <button (click)="exportCsv()">CSV</button>
+          <button (click)="exportPdf()">PDF</button>
+        </div>
       }
     </div>
   </div>

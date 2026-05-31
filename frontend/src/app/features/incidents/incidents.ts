@@ -15,6 +15,7 @@ import { timer } from 'rxjs';
 import { Incident } from '../../shared/models/threat.models';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { IncidentDetailComponent } from './incident-detail/incident-detail.component';
+import { downloadCsv, downloadPdf } from '../../core/utils/export.utils';
 
 @Component({
   selector: 'app-incidents',
@@ -35,6 +36,28 @@ export class Incidents implements OnInit {
   searchText     = signal('');
   statusFilter   = signal('all');
   severityFilter = signal('all');
+
+  exportOpen = signal(false);
+
+  private readonly exportHeaders = ['ID', 'Title', 'Severity', 'Status', 'Type', 'Region', 'Events', 'Assigned', 'Created'];
+
+  private get exportRows(): string[][] {
+    return this.filtered().map(i => [
+      i.id, i.title, i.severity, i.status, i.attack_type,
+      i.source_region, String(i.event_count), i.assigned_to ?? '—',
+      new Date(i.created_at).toLocaleString(),
+    ]);
+  }
+
+  exportCsv() {
+    downloadCsv(this.exportHeaders, this.exportRows, 'incidents.csv');
+    this.exportOpen.set(false);
+  }
+
+  exportPdf() {
+    downloadPdf('SignalForge — Incident Report', this.exportHeaders, this.exportRows, 'incidents.pdf');
+    this.exportOpen.set(false);
+  }
 
   readonly filtered = computed(() => {
     const search   = this.searchText().toLowerCase();
@@ -111,6 +134,13 @@ export class Incidents implements OnInit {
     this.dragStartWidth = this.drawerWidth();
     e.preventDefault();
     e.stopPropagation();
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocClick(e: MouseEvent) {
+    if (!(e.target as HTMLElement).closest('.export-wrap')) {
+      this.exportOpen.set(false);
+    }
   }
 
   @HostListener('document:mousemove', ['$event'])
