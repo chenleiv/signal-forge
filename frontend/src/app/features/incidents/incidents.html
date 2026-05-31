@@ -2,7 +2,29 @@
 
   <div class="table-head-row">
     <h1 class="page-title">Incidents</h1>
-    <span class="count-badge">{{ incidents().length }} total</span>
+    <span class="count-badge">{{ filtered().length }} / {{ incidents().length }}</span>
+  </div>
+
+  <div class="filter-bar">
+    <input class="filter-input" [value]="searchText()"
+           (input)="searchText.set($any($event.target).value)"
+           placeholder="Search title or ID…" />
+    <div class="filter-pills">
+      @for (s of ['all','open','investigating','contained','closed']; track s) {
+        <button class="pill pill-status pill-{{ s }}" [class.active]="statusFilter() === s"
+                (click)="statusFilter.set(s)">
+          {{ s === 'all' ? 'All Status' : s }}
+        </button>
+      }
+    </div>
+    <div class="filter-pills">
+      @for (sev of ['all','critical','high','medium','low']; track sev) {
+        <button class="pill pill-sev pill-{{ sev }}" [class.active]="severityFilter() === sev"
+                (click)="severityFilter.set(sev)">
+          {{ sev === 'all' ? 'All Sev' : sev }}
+        </button>
+      }
+    </div>
   </div>
 
   <div class="table-wrap">
@@ -21,7 +43,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (inc of incidents(); track inc.id) {
+        @for (inc of filtered(); track inc.id) {
           <tr class="inc-row" (click)="open(inc)" [class.row-selected]="selected()?.id === inc.id">
             <td class="id-cell mono">{{ inc.id }}</td>
             <td>

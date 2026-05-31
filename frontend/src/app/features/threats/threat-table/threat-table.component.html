@@ -1,7 +1,20 @@
 <div class="threat-table-wrapper">
   <div class="table-header">
     <span class="table-title">Threat Intelligence — IP Index</span>
-    <span class="table-sub">{{ rows.length }} tracked IPs · click row for details</span>
+    <span class="table-sub">{{ filteredRows().length }} / {{ allRows().length }} IPs</span>
+  </div>
+  <div class="filter-bar">
+    <input class="filter-input" [value]="searchIp()"
+           (input)="searchIp.set($any($event.target).value)"
+           placeholder="Search IP…" />
+    <div class="filter-pills">
+      @for (lvl of ['all','critical','high','medium','low']; track lvl) {
+        <button class="pill" [class.active]="levelFilter() === lvl"
+                (click)="levelFilter.set(lvl)">
+          {{ lvl === 'all' ? 'All' : lvl }}
+        </button>
+      }
+    </div>
   </div>
 
   @if (loading) {
@@ -19,7 +32,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (row of rows; track row.ip; let i = $index) {
+        @for (row of filteredRows(); track row.ip; let i = $index) {
           <tr class="ip-row" (click)="selectIp(row.ip)" [class.row-selected]="row.ip === selectedIp()">
             <td class="cell-idx">{{ i + 1 }}</td>
             <td class="cell-ip">{{ row.ip }}</td>

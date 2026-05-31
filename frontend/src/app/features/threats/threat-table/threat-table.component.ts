@@ -1,4 +1,4 @@
-import { Component, OnInit, output, input, inject, DestroyRef } from '@angular/core';
+import { Component, OnInit, output, input, inject, signal, computed, DestroyRef } from '@angular/core';
 import { NgClass, TitleCasePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
@@ -22,8 +22,20 @@ export class ThreatTableComponent implements OnInit {
   private destroyRef = inject(DestroyRef);
   protected readonly http = inject(HttpClient);
 
-  rows: IpRow[] = [];
+  protected allRows = signal<IpRow[]>([]);
   loading = true;
+
+  searchIp    = signal('');
+  levelFilter = signal('all');
+
+  readonly filteredRows = computed(() => {
+    const search = this.searchIp().toLowerCase();
+    const level  = this.levelFilter();
+    return this.allRows().filter(r =>
+      (!search || r.ip.toLowerCase().includes(search)) &&
+      (level === 'all' || r.threat_level === level)
+    );
+  });
 
   selectedIp = input<string | null>(null);
   ipSelected = output<string>();
@@ -34,7 +46,7 @@ export class ThreatTableComponent implements OnInit {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (stats) => {
-          this.rows = stats.top_ips;
+          this.allRows.set(stats.top_ips);
           this.loading = false;
         },
         error: () => {

@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   OnInit,
   ChangeDetectionStrategy,
   DestroyRef,
@@ -29,7 +30,22 @@ export class Incidents implements OnInit {
   private route = inject(ActivatedRoute);
 
   incidents = signal<Incident[]>([]);
-  selected = signal<Incident | null>(null);
+  selected  = signal<Incident | null>(null);
+
+  searchText     = signal('');
+  statusFilter   = signal('all');
+  severityFilter = signal('all');
+
+  readonly filtered = computed(() => {
+    const search   = this.searchText().toLowerCase();
+    const status   = this.statusFilter();
+    const severity = this.severityFilter();
+    return this.incidents().filter(i =>
+      (!search   || i.title.toLowerCase().includes(search) || i.id.toLowerCase().includes(search)) &&
+      (status   === 'all' || i.status   === status) &&
+      (severity === 'all' || i.severity === severity)
+    );
+  });
   drawerWidth = signal(500);
   toast = signal<string | null>(null);
 

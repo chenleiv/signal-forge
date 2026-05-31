@@ -35,6 +35,62 @@ $accent: #3b82f6;
   letter-spacing: 0.2px;
 }
 
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 20px 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  border-bottom: 1px solid $border;
+}
+
+.filter-input {
+  background: #0d1018;
+  border: 1px solid $border;
+  color: $text;
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 11px;
+  outline: none;
+  width: 180px;
+
+  &::placeholder { color: $muted; }
+  &:focus { border-color: rgba(59,130,246,0.4); }
+}
+
+.filter-pills {
+  display: flex;
+  gap: 4px;
+}
+
+.pill {
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid $border;
+  background: transparent;
+  color: $muted;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: capitalize;
+
+  &:hover { color: $secondary; border-color: rgba(255,255,255,0.15); }
+
+  &.active {
+    &.pill-all          { background: rgba(59,130,246,0.15);  color: $accent;  border-color: rgba(59,130,246,0.4); }
+    &.pill-open         { background: rgba(239,68,68,0.12);   color: #ef4444;  border-color: rgba(239,68,68,0.35); }
+    &.pill-investigating{ background: rgba(249,115,22,0.12);  color: #f97316;  border-color: rgba(249,115,22,0.35); }
+    &.pill-contained    { background: rgba(245,158,11,0.12);  color: #f59e0b;  border-color: rgba(245,158,11,0.35); }
+    &.pill-closed       { background: rgba(107,114,128,0.15); color: #9ca3af;  border-color: rgba(107,114,128,0.35); }
+    &.pill-critical     { background: rgba(239,68,68,0.12);   color: #ef4444;  border-color: rgba(239,68,68,0.35); }
+    &.pill-high         { background: rgba(249,115,22,0.12);  color: #f97316;  border-color: rgba(249,115,22,0.35); }
+    &.pill-medium       { background: rgba(245,158,11,0.12);  color: #f59e0b;  border-color: rgba(245,158,11,0.35); }
+    &.pill-low          { background: rgba(96,165,250,0.12);  color: #60a5fa;  border-color: rgba(96,165,250,0.35); }
+  }
+}
+
 .count-badge {
   font-size: 10px;
   color: $muted;
