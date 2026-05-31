@@ -5,10 +5,11 @@ import {
   computed,
   ChangeDetectionStrategy,
   DestroyRef,
+  OnInit,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { HuntQuery, HuntResult, SavedHunt } from '../../shared/models/threat.models';
@@ -24,9 +25,10 @@ const REGIONS      = ['US', 'EU', 'RU', 'CN', 'IL', 'BR'];
   styleUrl:    './threat-hunting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ThreatHuntingComponent {
+export class ThreatHuntingComponent implements OnInit {
   private store      = inject(ThreatStoreService);
   private router     = inject(Router);
+  private route      = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
 
   readonly attackTypes = ATTACK_TYPES;
@@ -60,6 +62,15 @@ export class ThreatHuntingComponent {
     this.store.getSavedHunts()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(h => this.savedHunts.set(h));
+  }
+
+  ngOnInit() {
+    const ip = this.route.snapshot.queryParamMap.get('ip');
+    if (ip) {
+      this.ip.set(ip);
+      this.router.navigate([], { queryParams: {}, replaceUrl: true });
+      this.run();
+    }
   }
 
   run() {

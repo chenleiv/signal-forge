@@ -6,7 +6,6 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { DetectionRule, RuleCondition, RuleAction } from '../../shared/models/threat.models';
@@ -24,7 +23,7 @@ const REGIONS      = ['US', 'EU', 'RU', 'CN', 'IL', 'BR'];
 @Component({
   selector: 'app-rules',
   standalone: true,
-  imports: [DatePipe],
+  imports: [],
   templateUrl: './rules.component.html',
   styleUrl: './rules.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -45,6 +44,7 @@ export class RulesComponent {
   readonly operatorsFor = (field: string) => OPERATORS[field] ?? ['='];
   readonly attackTypes  = ATTACK_TYPES;
   readonly regions      = REGIONS;
+  readonly allActions: RuleAction[] = ['alert', 'incident', 'block'];
 
   readonly queryPreview = computed(() => {
     const parts = this.editConditions().map(c => `${c.field}${c.operator}${c.value}`);

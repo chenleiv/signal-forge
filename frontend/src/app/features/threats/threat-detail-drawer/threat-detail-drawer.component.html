@@ -167,32 +167,40 @@
       <!-- Related IPs -->
       @if (relatedIps().length > 0) {
         <div class="section">
-          <span class="section-title">RELATED THREATS</span>
-          <div class="related-list">
-            @for (r of relatedIps(); track r.ip) {
-              <div class="related-item" (click)="selectRelated(r.ip)">
-                <div class="related-left">
-                  <span class="related-ip">{{ r.ip }}</span>
-                  <div class="related-attacks">
-                    @for (a of r.shared_attacks; track a) {
-                      <span class="attack-chip">{{ a }}</span>
-                    }
+          <button class="section-toggle" (click)="relatedOpen.update(v => !v)">
+            <span class="section-title">RELATED THREATS ({{ relatedIps().length }})</span>
+            <span class="toggle-chevron" [class.open]="relatedOpen()">›</span>
+          </button>
+          @if (relatedOpen()) {
+            <div class="related-list">
+              @for (r of relatedIps(); track r.ip) {
+                <div class="related-item" (click)="selectRelated(r.ip)">
+                  <div class="related-left">
+                    <span class="related-ip">{{ r.ip }}</span>
+                    <div class="related-attacks">
+                      @for (a of r.shared_attacks; track a) {
+                        <span class="attack-chip">{{ a }}</span>
+                      }
+                    </div>
+                  </div>
+                  <div class="related-right">
+                    <span class="related-score" [style.color]="scoreColor(r.score)">{{ r.score }}</span>
+                    <span class="related-events">{{ r.event_count }} events</span>
                   </div>
                 </div>
-                <div class="related-right">
-                  <span class="related-score" [style.color]="scoreColor(r.score)">{{ r.score }}</span>
-                  <span class="related-events">{{ r.event_count }} events</span>
-                </div>
-              </div>
-            }
-          </div>
+              }
+            </div>
+          }
         </div>
       }
 
       <!-- Raw Events -->
       <div class="section">
-        <div class="events-header">
+        <button class="section-toggle" (click)="eventsOpen.update(v => !v)">
           <span class="section-title">RAW EVENTS ({{ filteredEvents().length }})</span>
+          <span class="toggle-chevron" [class.open]="eventsOpen()">›</span>
+        </button>
+        @if (eventsOpen()) {
           <div class="event-filters">
             <input class="filter-input" [value]="eventFilter()"
               placeholder="Search…" (input)="eventFilter.set($any($event.target).value)" />
@@ -203,31 +211,31 @@
               }
             </select>
           </div>
-        </div>
-        <div class="events-table-wrap">
-          <table class="events-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Type</th>
-                <th>Score</th>
-                <th>Region</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (e of filteredEvents(); track e.timestamp + e.score) {
+          <div class="events-table-wrap">
+            <table class="events-table">
+              <thead>
                 <tr>
-                  <td class="mono muted">{{ e.timestamp | date:'HH:mm:ss' }}</td>
-                  <td>{{ e.attack_type }}</td>
-                  <td class="mono" [style.color]="scoreColor(e.score)">{{ e.score }}</td>
-                  <td class="mono muted">{{ e.region }}</td>
+                  <th>Time</th>
+                  <th>Type</th>
+                  <th>Score</th>
+                  <th>Region</th>
                 </tr>
-              } @empty {
-                <tr><td colspan="4" class="empty-td">No events match filter</td></tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                @for (e of filteredEvents(); track e.timestamp + e.score) {
+                  <tr>
+                    <td class="mono muted">{{ e.timestamp | date:'HH:mm:ss' }}</td>
+                    <td>{{ e.attack_type }}</td>
+                    <td class="mono" [style.color]="scoreColor(e.score)">{{ e.score }}</td>
+                    <td class="mono muted">{{ e.region }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="4" class="empty-td">No events match filter</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </div>
 
     </div>

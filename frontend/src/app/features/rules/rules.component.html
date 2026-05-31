@@ -106,7 +106,7 @@
         <div class="editor-section">
           <label class="field-label">ACTIONS</label>
           <div class="actions-row">
-            @for (action of (['alert', 'incident', 'block'] as const); track action) {
+            @for (action of allActions; track action) {
               <label class="action-chip" [class.checked]="editActions().has(action)">
                 <input type="checkbox" [checked]="editActions().has(action)"
                        (change)="toggleAction(action)" />

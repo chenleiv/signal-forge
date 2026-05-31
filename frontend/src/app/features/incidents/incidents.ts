@@ -37,16 +37,10 @@ export class Incidents {
   private dragStartWidth = 0;
 
   ngOnInit() {
-    timer(0, 30_000)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.load());
-  }
-
-  private load() {
     const targetId = this.route.snapshot.queryParamMap.get('id');
     const isExisting = this.route.snapshot.queryParamMap.get('existing') === '1';
-    this.store
-      .fetchIncidents()
+
+    this.store.fetchIncidents()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((d) => {
         this.incidents.set(d);
@@ -55,10 +49,25 @@ export class Incidents {
           if (match) {
             this.selected.set(match);
             if (isExisting) this.showToast(`Case ${targetId} already exists — opened existing`);
-            return;
           }
         }
-        if (!this.selected() && d.length > 0) this.selected.set(d[0]);
+      });
+
+    timer(30_000, 30_000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshList());
+  }
+
+  private refreshList() {
+    this.store.fetchIncidents()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((d) => {
+        this.incidents.set(d);
+        const sel = this.selected();
+        if (sel) {
+          const updated = d.find(i => i.id === sel.id);
+          if (updated) this.selected.set(updated);
+        }
       });
   }
 

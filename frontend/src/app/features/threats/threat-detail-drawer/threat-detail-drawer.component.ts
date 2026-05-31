@@ -39,6 +39,8 @@ export class ThreatDetailDrawerComponent {
   aiLoading   = signal(false);
   geoData     = signal<IpGeo | null>(null);
   relatedIps  = signal<RelatedIp[]>([]);
+  relatedOpen = signal(false);
+  eventsOpen  = signal(true);
   isBlocked       = signal(false);
   existingCaseId  = signal<string | null>(null);
   eventFilter     = signal('');
@@ -68,6 +70,8 @@ export class ThreatDetailDrawerComponent {
       this.history.set(null);
       this.geoData.set(null);
       this.relatedIps.set([]);
+      this.relatedOpen.set(false);
+      this.eventsOpen.set(true);
       this.loading.set(true);
       this.aiSummary.set(null);
       this.existingCaseId.set(null);
@@ -120,7 +124,7 @@ export class ThreatDetailDrawerComponent {
 
   huntIp() {
     const ip = this.ip();
-    if (ip) this.router.navigate(['/threats'], { queryParams: { ip } });
+    if (ip) this.router.navigate(['/hunting'], { queryParams: { ip } });
   }
 
   createCase() {

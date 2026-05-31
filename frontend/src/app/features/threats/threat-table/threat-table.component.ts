@@ -36,9 +36,6 @@ export class ThreatTableComponent implements OnInit {
         next: (stats) => {
           this.rows = stats.top_ips;
           this.loading = false;
-          if (stats.top_ips.length > 0 && !this.selectedIp()) {
-            this.ipSelected.emit(stats.top_ips[0].ip);
-          }
         },
         error: () => {
           this.loading = false;

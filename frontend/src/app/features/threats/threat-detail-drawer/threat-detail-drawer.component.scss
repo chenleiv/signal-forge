@@ -161,7 +161,8 @@ $accent: #3b82f6;
 .section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+  padding: 4px 0;
 }
 
 .section-title {
@@ -169,9 +170,40 @@ $accent: #3b82f6;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: $muted;
-  border-bottom: 1px solid $border;
-  padding-bottom: 6px;
   font-weight: 600;
+}
+
+.section-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  border-bottom: 1px solid $border;
+  padding: 4px 6px 8px 0;
+  margin-bottom: 2px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  border-radius: 3px 3px 0 0;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255,255,255,0.03);
+    .section-title { color: $secondary; }
+    .toggle-chevron { color: $secondary; }
+  }
+}
+
+.toggle-chevron {
+  color: $muted;
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.2s;
+  transform: rotate(0deg);
+  flex-shrink: 0;
+
+  &.open { transform: rotate(90deg); }
 }
 
 // MITRE tags

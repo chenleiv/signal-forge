@@ -1,5 +1,5 @@
 import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ThreatTableComponent } from './threat-table/threat-table.component';
 import { ThreatDetailDrawerComponent } from './threat-detail-drawer/threat-detail-drawer.component';
 
@@ -11,7 +11,8 @@ import { ThreatDetailDrawerComponent } from './threat-detail-drawer/threat-detai
   styleUrl: './threats.scss',
 })
 export class Threats implements OnInit {
-  private route = inject(ActivatedRoute);
+  private route  = inject(ActivatedRoute);
+  private router = inject(Router);
 
   selectedIp = signal<string | null>(null);
   drawerWidth = signal(500);
@@ -22,7 +23,10 @@ export class Threats implements OnInit {
 
   ngOnInit() {
     const ip = this.route.snapshot.queryParamMap.get('ip');
-    if (ip) this.selectedIp.set(ip);
+    if (ip) {
+      this.selectedIp.set(ip);
+      this.router.navigate([], { queryParams: {}, replaceUrl: true });
+    }
   }
 
   openDrawer(ip: string) {
