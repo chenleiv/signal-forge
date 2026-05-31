@@ -38,6 +38,10 @@ export class ThreatDetailDrawerComponent {
   aiLoading   = signal(false);
   geoData     = signal<IpGeo | null>(null);
   relatedIps  = signal<RelatedIp[]>([]);
+  geoOpen     = signal(true);
+  abuseOpen   = signal(false);
+  aiOpen      = signal(false);
+  mitreOpen   = signal(false);
   relatedOpen = signal(false);
   eventsOpen  = signal(true);
   isBlocked       = signal(false);
@@ -69,6 +73,10 @@ export class ThreatDetailDrawerComponent {
       this.history.set(null);
       this.geoData.set(null);
       this.relatedIps.set([]);
+      this.geoOpen.set(true);
+      this.abuseOpen.set(false);
+      this.aiOpen.set(false);
+      this.mitreOpen.set(false);
       this.relatedOpen.set(false);
       this.eventsOpen.set(true);
       this.loading.set(true);

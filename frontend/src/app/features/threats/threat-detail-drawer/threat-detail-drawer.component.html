@@ -82,78 +82,97 @@
 
       @if (geoData()) {
         <div class="section">
-          <span class="section-title">GEO INTELLIGENCE</span>
-          <div class="geo-grid">
-            <div class="geo-item">
-              <span class="meta-label">Country</span>
-              <span class="meta-val">{{ countryFlag(geoData()!.country_code) }} {{ geoData()!.country }}</span>
+          <button class="section-toggle" (click)="geoOpen.update(v => !v)">
+            <span class="section-title">GEO INTELLIGENCE</span>
+            <span class="toggle-chevron" [class.open]="geoOpen()">›</span>
+          </button>
+          @if (geoOpen()) {
+            <div class="geo-grid">
+              <div class="geo-item">
+                <span class="meta-label">Country</span>
+                <span class="meta-val">{{ countryFlag(geoData()!.country_code) }} {{ geoData()!.country }}</span>
+              </div>
+              <div class="geo-item">
+                <span class="meta-label">City</span>
+                <span class="meta-val">{{ geoData()!.city }}</span>
+              </div>
+              <div class="geo-item">
+                <span class="meta-label">Organization</span>
+                <span class="meta-val org-val">{{ geoData()!.org }}</span>
+              </div>
+              <div class="geo-item">
+                <span class="meta-label">ASN</span>
+                <span class="meta-val mono">{{ geoData()!.asn }}</span>
+              </div>
+              <div class="geo-item">
+                <span class="meta-label">Timezone</span>
+                <span class="meta-val mono">{{ geoData()!.timezone }}</span>
+              </div>
             </div>
-            <div class="geo-item">
-              <span class="meta-label">City</span>
-              <span class="meta-val">{{ geoData()!.city }}</span>
-            </div>
-            <div class="geo-item">
-              <span class="meta-label">Organization</span>
-              <span class="meta-val org-val">{{ geoData()!.org }}</span>
-            </div>
-            <div class="geo-item">
-              <span class="meta-label">ASN</span>
-              <span class="meta-val mono">{{ geoData()!.asn }}</span>
-            </div>
-            <div class="geo-item">
-              <span class="meta-label">Timezone</span>
-              <span class="meta-val mono">{{ geoData()!.timezone }}</span>
-            </div>
-          </div>
+          }
         </div>
       }
 
       @let abuseConfidence = history()?.abuse_confidence;
       @if (abuseConfidence !== undefined) {
         <div class="section">
-          <span class="section-title">ABUSEIPDB INTEL</span>
-          <div class="enrichment-grid">
-            <div class="enrich-item">
-              <span class="meta-label">Abuse Score</span>
-              <span class="abuse-badge" [class.danger]="abuseConfidence > 50" [class.warning]="abuseConfidence > 20 && abuseConfidence <= 50">
-                {{ abuseConfidence }}%
-              </span>
+          <button class="section-toggle" (click)="abuseOpen.update(v => !v)">
+            <span class="section-title">ABUSEIPDB INTEL</span>
+            <span class="toggle-chevron" [class.open]="abuseOpen()">›</span>
+          </button>
+          @if (abuseOpen()) {
+            <div class="enrichment-grid">
+              <div class="enrich-item">
+                <span class="meta-label">Abuse Score</span>
+                <span class="abuse-badge" [class.danger]="abuseConfidence > 50" [class.warning]="abuseConfidence > 20 && abuseConfidence <= 50">
+                  {{ abuseConfidence }}%
+                </span>
+              </div>
+              <div class="enrich-item">
+                <span class="meta-label">ISP</span>
+                <span class="meta-val">{{ history()?.isp ?? '—' }}</span>
+              </div>
+              <div class="enrich-item">
+                <span class="meta-label">Reports</span>
+                <span class="meta-val">{{ history()?.total_reports ?? '—' }}</span>
+              </div>
             </div>
-            <div class="enrich-item">
-              <span class="meta-label">ISP</span>
-              <span class="meta-val">{{ history()?.isp ?? '—' }}</span>
-            </div>
-            <div class="enrich-item">
-              <span class="meta-label">Reports</span>
-              <span class="meta-val">{{ history()?.total_reports ?? '—' }}</span>
-            </div>
-          </div>
+          }
         </div>
       }
 
-      @if (aiLoading()) {
+      @if (aiLoading() || aiSummary()) {
         <div class="section">
-          <span class="section-title">AI ANALYSIS</span>
-          <div class="ai-loading">
-            <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-            Analyzing threat intelligence...
-          </div>
-        </div>
-      } @else if (aiSummary()) {
-        <div class="section">
-          <span class="section-title">AI ANALYSIS</span>
-          <p class="ai-summary">{{ aiSummary() }}</p>
+          <button class="section-toggle" (click)="aiOpen.update(v => !v)">
+            <span class="section-title">AI ANALYSIS</span>
+            <span class="toggle-chevron" [class.open]="aiOpen()">›</span>
+          </button>
+          @if (aiOpen()) {
+            @if (aiLoading()) {
+              <div class="ai-loading">
+                <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+                Analyzing threat intelligence...
+              </div>
+            } @else {
+              <p class="ai-summary">{{ aiSummary() }}</p>
+            }
+          }
         </div>
       }
 
       @if ((history()?.mitre_tags?.length ?? 0) > 0) {
         <div class="section">
-          <span class="section-title">MITRE ATT&CK</span>
-          <div class="tags">
-            @for (tag of history()?.mitre_tags ?? []; track tag) {
-              <span class="mitre-tag">{{ tag }}</span>
-            }
-          </div>
+          <button class="section-toggle" (click)="mitreOpen.update(v => !v)">
+            <span class="section-title">MITRE ATT&CK ({{ history()?.mitre_tags?.length }})</span>
+            <span class="toggle-chevron" [class.open]="mitreOpen()">›</span>
+          </button>
+          @if (mitreOpen()) {
+            <div class="tags">
+              @for (tag of history()?.mitre_tags ?? []; track tag) {
+                <span class="mitre-tag">{{ tag }}</span>
+              }
+            </div>
+          }
         </div>
       }
 
