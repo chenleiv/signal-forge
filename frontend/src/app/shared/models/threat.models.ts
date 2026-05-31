@@ -30,7 +30,83 @@ export interface IpHistory {
   total_reports?: number;
 }
 
+export interface IpGeo {
+  country: string;
+  country_code: string;
+  city: string;
+  org: string;
+  asn: string;
+  timezone: string;
+}
+
+export interface RelatedIp {
+  ip: string;
+  shared_attacks: string[];
+  score: number;
+  threat_level: ThreatLevel;
+  event_count: number;
+}
+
+export interface NetworkNode {
+  id: string;
+  type: 'ip' | 'attack';
+  score?: number;
+  threat_level?: ThreatLevel;
+  event_count?: number;
+}
+
+export interface NetworkLink {
+  source: string;
+  target: string;
+  value: number;
+}
+
+export interface HuntQuery {
+  ip?: string;
+  attack_type?: string;
+  region?: string;
+  min_score?: number;
+  max_score?: number;
+}
+
+export interface SavedHunt {
+  id: string;
+  name: string;
+  query: HuntQuery;
+  created_at: string;
+  result_count: number;
+}
+
+export interface HuntResult extends ThreatEvent {
+  ip: string;
+}
+
+export interface RuleCondition {
+  field: 'score' | 'attack_type' | 'region' | 'ip';
+  operator: '>' | '<' | '=' | 'contains';
+  value: string | number;
+}
+
+export type RuleAction = 'alert' | 'incident' | 'block';
+
+export interface DetectionRule {
+  id: string;
+  name: string;
+  enabled: boolean;
+  conditions: RuleCondition[];
+  logic: 'AND' | 'OR';
+  actions: RuleAction[];
+  created_at: string;
+  match_count: number;
+}
+
 export type IncidentStatus = 'open' | 'investigating' | 'contained' | 'closed';
+
+export interface IncidentNote {
+  author: string;
+  text: string;
+  at: string;
+}
 
 export interface Incident {
   id: string;
@@ -38,10 +114,13 @@ export interface Incident {
   severity: ThreatLevel;
   status: IncidentStatus;
   attack_type: AttackType;
+  source_ip?: string;
   source_region: string;
   event_count: number;
   assigned_to: string | null;
   created_at: string;
   updated_at: string;
   mitre_tags: string[];
+  notes: IncidentNote[];
+  completed_tasks: number[];
 }

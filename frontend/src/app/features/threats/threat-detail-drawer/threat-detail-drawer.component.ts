@@ -4,34 +4,61 @@ import {
   inject,
   ChangeDetectionStrategy,
   signal,
+  computed,
   input,
   effect,
   DestroyRef,
 } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import { DatePipe, NgClass } from '@angular/common';
+import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
-import { IpHistory } from '../../../shared/models/threat.models';
+import { IpHistory, IpGeo, RelatedIp } from '../../../shared/models/threat.models';
 
 @Component({
   selector: 'app-threat-detail-drawer',
   standalone: true,
-  imports: [DatePipe],
+  imports: [DatePipe, NgClass, FormsModule],
   templateUrl: './threat-detail-drawer.component.html',
   styleUrl: './threat-detail-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ThreatDetailDrawerComponent {
   ip = input<string | null>(null);
-  closed = output<void>();
+  closed  = output<void>();
+  ipChange = output<string>();
 
-  private store = inject(ThreatStoreService);
+  private store      = inject(ThreatStoreService);
+  private router     = inject(Router);
   private destroyRef = inject(DestroyRef);
 
-  history = signal<IpHistory | null>(null);
-  loading = signal(false);
-  aiSummary = signal<string | null>(null);
-  aiLoading = signal(false);
+  history     = signal<IpHistory | null>(null);
+  loading     = signal(false);
+  aiSummary   = signal<string | null>(null);
+  aiLoading   = signal(false);
+  geoData     = signal<IpGeo | null>(null);
+  relatedIps  = signal<RelatedIp[]>([]);
+  isBlocked       = signal(false);
+  existingCaseId  = signal<string | null>(null);
+  eventFilter     = signal('');
+  typeFilter      = signal('all');
+
+  private summaryCache = new Map<string, string | null>();
+
+  readonly filteredEvents = computed(() => {
+    const events = this.history()?.events ?? [];
+    const q      = this.eventFilter().toLowerCase();
+    const type   = this.typeFilter();
+    return events.filter(e =>
+      (type === 'all' || e.attack_type === type) &&
+      (!q || e.attack_type.toLowerCase().includes(q) || e.score.toString().includes(q))
+    );
+  });
+
+  readonly attackTypes = computed(() =>
+    [...new Set((this.history()?.events ?? []).map(e => e.attack_type))]
+  );
 
   constructor() {
     effect(() => {
@@ -39,36 +66,91 @@ export class ThreatDetailDrawerComponent {
       if (!ip) return;
 
       this.history.set(null);
+      this.geoData.set(null);
+      this.relatedIps.set([]);
       this.loading.set(true);
       this.aiSummary.set(null);
-      this.aiLoading.set(true);
+      this.existingCaseId.set(null);
+      this.eventFilter.set('');
+      this.typeFilter.set('all');
 
-      this.store
-        .fetchIpHistory(ip)
+      // history
+      this.store.fetchIpHistory(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (h) => {
-            this.history.set(h);
-            this.loading.set(false);
-          },
-          error: () => this.loading.set(false),
-        });
+        .subscribe({ next: h => { this.history.set(h); this.loading.set(false); }, error: () => this.loading.set(false) });
 
-      this.store
-        .fetchAiSummary(ip)
+      // ai summary (cached)
+      const cached = this.summaryCache.get(ip);
+      if (cached !== undefined) {
+        this.aiSummary.set(cached);
+        this.aiLoading.set(false);
+      } else {
+        this.aiLoading.set(true);
+        this.store.fetchAiSummary(ip)
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: res => { this.summaryCache.set(ip, res.summary); this.aiSummary.set(res.summary); this.aiLoading.set(false); },
+            error: () => this.aiLoading.set(false),
+          });
+      }
+
+      // geo
+      this.store.fetchIpGeo(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (res) => {
-            this.aiSummary.set(res.summary);
-            this.aiLoading.set(false);
-          },
-          error: () => this.aiLoading.set(false),
-        });
+        .subscribe({ next: g => this.geoData.set(g), error: () => {} });
+
+      // related
+      this.store.fetchRelatedIps(ip)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: r => this.relatedIps.set(r.related), error: () => {} });
+
+      // block status
+      this.store.getBlockStatus(ip)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: r => this.isBlocked.set(r.blocked), error: () => {} });
+
+      // existing case
+      this.store.getIpCase(ip)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({ next: r => this.existingCaseId.set(r.case_id), error: () => {} });
     });
   }
 
-  close() {
-    this.closed.emit();
+  close() { this.closed.emit(); }
+
+  huntIp() {
+    const ip = this.ip();
+    if (ip) this.router.navigate(['/threats'], { queryParams: { ip } });
+  }
+
+  createCase() {
+    const ip = this.ip();
+    if (!ip) return;
+    const existingId = this.existingCaseId();
+    if (existingId) {
+      this.router.navigate(['/incidents'], { queryParams: { id: existingId } });
+      return;
+    }
+    this.store.createCaseFromIp(ip)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(res => {
+        this.existingCaseId.set(res.id);
+        this.router.navigate(['/incidents'], { queryParams: { id: res.id } });
+      });
+  }
+
+  toggleBlock() {
+    const ip = this.ip();
+    if (!ip) return;
+    const action = this.isBlocked()
+      ? this.store.unblockIp(ip)
+      : this.store.blockIp(ip);
+    action.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(r => this.isBlocked.set(r.blocked));
+  }
+
+  selectRelated(ip: string) {
+    this.ipChange.emit(ip);
   }
 
   scoreColor(score: number): string {
@@ -76,5 +158,11 @@ export class ThreatDetailDrawerComponent {
     if (score >= 60) return '#f97316';
     if (score >= 40) return '#f59e0b';
     return '#60a5fa';
+  }
+
+  countryFlag(code: string): string {
+    return code.toUpperCase().replace(/./g, c =>
+      String.fromCodePoint(0x1F1E6 - 65 + c.charCodeAt(0))
+    );
   }
 }

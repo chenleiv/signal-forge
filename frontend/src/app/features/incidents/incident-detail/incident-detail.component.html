@@ -1,0 +1,155 @@
+@if (!incident()) {
+  <div class="empty-state">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+      <path d="M9 12h6m-3-3v6M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z" stroke="#4b5563" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    <p>Select an incident to investigate</p>
+  </div>
+} @else {
+
+  <!-- Header -->
+  <div class="detail-header">
+    <div class="header-left">
+      <span class="inc-id">{{ incident()!.id }}</span>
+      <span class="sev-badge" [style.background]="severityColor(incident()!.severity) + '18'"
+            [style.color]="severityColor(incident()!.severity)"
+            [style.borderColor]="severityColor(incident()!.severity) + '40'">
+        {{ incident()!.severity.toUpperCase() }}
+      </span>
+    </div>
+    <button class="close-btn" (click)="close()">✕</button>
+  </div>
+
+  <div class="detail-title">{{ incident()!.title }}</div>
+
+  <!-- Status workflow -->
+  <div class="status-bar">
+    @for (s of statusFlow; track s) {
+      <button class="status-btn"
+              [class.active]="incident()!.status === s"
+              [class.past]="statusFlow.indexOf(s) < statusFlow.indexOf(incident()!.status)"
+              (click)="updateStatus(s)">
+        {{ s }}
+      </button>
+      @if (!$last) {
+        <div class="status-arrow">›</div>
+      }
+    }
+  </div>
+
+  <!-- Meta -->
+  <div class="meta-grid">
+    <div class="meta-item">
+      <span class="meta-label">Attack</span>
+      <span class="meta-val mono">{{ incident()!.attack_type }}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Region</span>
+      <span class="meta-val mono">{{ incident()!.source_region }}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Events</span>
+      <span class="meta-val mono">{{ incident()!.event_count }}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Assigned</span>
+      <select class="assignee-select" [value]="incident()!.assigned_to ?? ''"
+              (change)="updateAssignee($any($event.target).value)">
+        <option value="">Unassigned</option>
+        @for (a of analysts; track a) {
+          <option [value]="a">{{ a }}</option>
+        }
+      </select>
+    </div>
+    @if (incident()!.source_ip) {
+      <div class="meta-item">
+        <span class="meta-label">Source IP</span>
+        <button class="ip-link" (click)="investigateIp(incident()!.source_ip!)">
+          {{ incident()!.source_ip }}
+        </button>
+      </div>
+    }
+    <div class="meta-item">
+      <span class="meta-label">Created</span>
+      <span class="meta-val mono">{{ incident()!.created_at | date:'MM/dd HH:mm' }}</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">Updated</span>
+      <span class="meta-val mono">{{ incident()!.updated_at | date:'MM/dd HH:mm' }}</span>
+    </div>
+  </div>
+
+  <div class="detail-body">
+
+    <!-- Response Tasks -->
+    <div class="section">
+      <span class="section-title">RESPONSE TASKS ({{ completedTasks().size }}/{{ tasks().length }})</span>
+      <div class="tasks-list">
+        @for (task of tasks(); track $index) {
+          <div class="task-item" (click)="toggleTask($index)" [class.done]="completedTasks().has($index)">
+            <div class="task-check">
+              @if (completedTasks().has($index)) {
+                <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
+                  <path d="M2 6l3 3 5-5" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              }
+            </div>
+            <span class="task-label">{{ task }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div class="section">
+      <span class="section-title">NOTES ({{ notes().length }})</span>
+      <div class="note-input-row">
+        <input class="note-input" [value]="newNote()" (input)="newNote.set($any($event.target).value)"
+               placeholder="Add investigation note…" (keydown.enter)="addNote()" />
+        <button class="note-add-btn" (click)="addNote()" [disabled]="!newNote().trim()">Add</button>
+      </div>
+      @if (notes().length > 0) {
+        <div class="notes-list">
+          @for (note of notes(); track note.at) {
+            <div class="note-item">
+              <div class="note-meta">
+                <span class="note-author">{{ note.author }}</span>
+                <span class="note-time">{{ note.at | date:'HH:mm:ss' }}</span>
+              </div>
+              <p class="note-text">{{ note.text }}</p>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Timeline -->
+    <div class="section">
+      <span class="section-title">TIMELINE</span>
+      <div class="timeline">
+        @for (entry of timeline(); track entry.at) {
+          <div class="tl-item">
+            <div class="tl-dot tl-{{ entry.type }}"></div>
+            <div class="tl-content">
+              <span class="tl-label">{{ entry.label }}</span>
+              <span class="tl-time">{{ entry.at | date:'HH:mm:ss' }}</span>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- MITRE ATT&CK -->
+    @if (incident()!.mitre_tags.length > 0) {
+      <div class="section">
+        <span class="section-title">MITRE ATT&CK</span>
+        <div class="tags">
+          @for (tag of incident()!.mitre_tags; track tag) {
+            <span class="mitre-tag">{{ tag }}</span>
+          }
+        </div>
+      </div>
+    }
+
+  </div>
+}

@@ -1,120 +1,62 @@
 <div class="incidents-page">
 
-    <div class="incidents-split">
+  <div class="table-head-row">
+    <h1 class="page-title">Incidents</h1>
+    <span class="count-badge">{{ incidents().length }} total</span>
+  </div>
 
-        <!-- Left: table -->
-        <div class="split-table" [class.full-width]="!selected()">
-            <div class="table-head-row">
-                <h1 class="page-title">Incidents</h1>
-                <span class="count-badge">{{ incidents().length }} total</span>
-            </div>
-            <div class="table-wrap">
-                <table class="inc-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Sev</th>
-                            <th>Title</th>
-                            <th>Status</th>
-                            <th>Type</th>
-                            <th>Source</th>
-                            <th>Events</th>
-                            <th>Assigned To</th>
-                            <th>Created</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (inc of incidents(); track inc.id) {
-                        <tr class="inc-row" (click)="open(inc)" [class.row-selected]="selected()?.id === inc.id">
-                            <td class="id-cell">{{ inc.id }}</td>
-                            <td>
-                              <div class="sev-cell">
-                                <span class="sev-dot sev-{{ inc.severity }}"></span>
-                                <span class="sev-label">{{ inc.severity | titlecase }}</span>
-                              </div>
-                            </td>
-                            <td class="title-cell">{{ inc.title }}</td>
-                            <td class="status-text status-{{ inc.status }}">{{ inc.status }}</td>
-                            <td class="mono">{{ inc.attack_type }}</td>
-                            <td class="mono">{{ inc.source_region }}</td>
-                            <td class="mono">{{ inc.event_count }}</td>
-                            <td>{{ inc.assigned_to ?? '—' }}</td>
-                            <td class="mono">{{ inc.created_at | date:'HH:mm:ss' }}</td>
-                        </tr>
-                        } @empty {
-                        <tr>
-                            <td colspan="9" class="empty">No incidents yet — waiting for data...</td>
-                        </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        @if (selected()) {
-          <div class="resize-handle" (mousedown)="startResize($event)">
-            <div class="handle-bar"></div>
-          </div>
+  <div class="table-wrap">
+    <table class="inc-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Sev</th>
+          <th>Title</th>
+          <th>Status</th>
+          <th>Type</th>
+          <th>Source</th>
+          <th>Events</th>
+          <th>Assigned To</th>
+          <th>Created</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (inc of incidents(); track inc.id) {
+          <tr class="inc-row" (click)="open(inc)" [class.row-selected]="selected()?.id === inc.id">
+            <td class="id-cell mono">{{ inc.id }}</td>
+            <td>
+              <span class="sev-dot" [style.background]="severityColor(inc.severity)"></span>
+            </td>
+            <td class="title-cell">{{ inc.title }}</td>
+            <td class="status-text status-{{ inc.status }}">{{ inc.status }}</td>
+            <td class="mono">{{ inc.attack_type }}</td>
+            <td class="mono">{{ inc.source_region }}</td>
+            <td class="mono">{{ inc.event_count }}</td>
+            <td class="mono">{{ inc.assigned_to ?? '—' }}</td>
+            <td class="mono">{{ inc.created_at | date:'HH:mm:ss' }}</td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="9" class="empty">No incidents yet — waiting for data...</td>
+          </tr>
         }
+      </tbody>
+    </table>
+  </div>
 
-        <!-- Right: detail panel -->
-        <div class="split-detail" [style.width.px]="selected() ? detailWidth() : 0">
-            @if (selected()) {
-                <div class="detail-header">
-                    <div class="detail-id-row">
-                        <span class="detail-id">{{ selected()!.id }}</span>
-                        <div class="sev-cell">
-                          <span class="sev-dot sev-{{ selected()!.severity }}"></span>
-                          <span class="sev-label">{{ selected()!.severity | titlecase }}</span>
-                        </div>
-                    </div>
-                    <button class="close-btn" (click)="close()">✕</button>
-                </div>
+  @if (toast()) {
+    <div class="toast">{{ toast() }}</div>
+  }
 
-                <div class="detail-body">
-                    <h3 class="detail-title">{{ selected()!.title }}</h3>
-
-                    <div class="detail-meta">
-                        <div class="meta-row">
-                            <span class="meta-label">Status</span>
-                            <span class="status-text status-{{ selected()!.status }}">{{ selected()!.status }}</span>
-                        </div>
-                        <div class="meta-row">
-                            <span class="meta-label">Attack Type</span>
-                            <span class="meta-val">{{ selected()!.attack_type }}</span>
-                        </div>
-                        <div class="meta-row">
-                            <span class="meta-label">Source Region</span>
-                            <span class="meta-val">{{ selected()!.source_region }}</span>
-                        </div>
-                        <div class="meta-row">
-                            <span class="meta-label">Events</span>
-                            <span class="meta-val">{{ selected()!.event_count }}</span>
-                        </div>
-                        <div class="meta-row">
-                            <span class="meta-label">Assigned To</span>
-                            <span class="meta-val">{{ selected()!.assigned_to ?? 'Unassigned' }}</span>
-                        </div>
-                        <div class="meta-row">
-                            <span class="meta-label">Created</span>
-                            <span class="meta-val">{{ selected()!.created_at | date:'HH:mm:ss' }}</span>
-                        </div>
-                    </div>
-
-                    @if (selected()!.mitre_tags.length > 0) {
-                        <div class="mitre-section">
-                            <span class="section-label">MITRE ATT&CK</span>
-                            <div class="mitre-tags">
-                                @for (tag of selected()!.mitre_tags; track tag) {
-                                <span class="mitre-tag">{{ tag }}</span>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
-            }
-        </div>
-
+  <div class="drawer-backdrop" [class.active]="selected()" (click)="close()"></div>
+  <div class="drawer-overlay" [class.open]="selected()" [style.width.px]="drawerWidth()">
+    <div class="resize-handle" (mousedown)="startResize($event)">
+      <div class="handle-bar"></div>
     </div>
+    <app-incident-detail
+      [incident]="selected()"
+      (closed)="close()"
+      (incidentChange)="onIncidentChange($event)" />
+  </div>
 
 </div>

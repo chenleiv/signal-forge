@@ -1,17 +1,17 @@
 // ── Palette ──────────────────────────────────────────────────
-$bg:       #0f1117;
+$bg: #0f1117;
 $panel-bg: #13171f;
-$border:   #1e2535;
+$border: #1e2535;
 
-$red:    #ef4444;
+$red: #ef4444;
 $orange: #f97316;
 $yellow: #f59e0b;
-$blue:   #60a5fa;
-$green:  #22c55e;
+$blue: #60a5fa;
+$green: #22c55e;
 $purple: #a855f7;
 $accent: #3b82f6;
-$text:   #e5e7eb;
-$muted:  #4b5563;
+$text: #e5e7eb;
+$muted: #4b5563;
 $secondary: #9ca3af;
 
 // ── Host ─────────────────────────────────────────────────────
@@ -98,14 +98,46 @@ $secondary: #9ca3af;
   justify-content: center;
   flex-shrink: 0;
 
-  svg { width: 18px; height: 18px; }
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 
-  &.tracked  { background: rgba($green,  0.1); color: $green;  border: 1px solid rgba($green,  0.2); }
-  &.events   { background: rgba($accent, 0.1); color: $accent; border: 1px solid rgba($accent, 0.2); }
-  &.epm      { background: rgba($purple, 0.1); color: $purple; border: 1px solid rgba($purple, 0.2); }
-  &.regions  { background: rgba($blue,   0.1); color: $blue;   border: 1px solid rgba($blue,   0.2); }
-  &.high     { background: rgba($orange, 0.1); color: $orange; border: 1px solid rgba($orange, 0.2); }
-  &.critical { background: rgba($red,    0.1); color: $red;    border: 1px solid rgba($red,    0.2); }
+  &.tracked {
+    background: rgba($green, 0.1);
+    color: $green;
+    border: 1px solid rgba($green, 0.2);
+  }
+
+  &.events {
+    background: rgba($accent, 0.1);
+    color: $accent;
+    border: 1px solid rgba($accent, 0.2);
+  }
+
+  &.epm {
+    background: rgba($purple, 0.1);
+    color: $purple;
+    border: 1px solid rgba($purple, 0.2);
+  }
+
+  &.regions {
+    background: rgba($blue, 0.1);
+    color: $blue;
+    border: 1px solid rgba($blue, 0.2);
+  }
+
+  &.high {
+    background: rgba($orange, 0.1);
+    color: $orange;
+    border: 1px solid rgba($orange, 0.2);
+  }
+
+  &.critical {
+    background: rgba($red, 0.1);
+    color: $red;
+    border: 1px solid rgba($red, 0.2);
+  }
 }
 
 .kpi-value {
@@ -115,7 +147,9 @@ $secondary: #9ca3af;
   line-height: 1;
   color: $text;
 
-  &.critical-val { color: $red; }
+  &.critical-val {
+    color: $red;
+  }
 }
 
 .kpi-label {
@@ -160,16 +194,16 @@ $secondary: #9ca3af;
   height: 220px;
 }
 
-// ── Bottom Row ───────────────────────────────────────────────
-.bottom-row {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
+// ── middle Row ───────────────────────────────────────────────
+.middle-row {
+  display: flex;
   gap: 10px;
   flex: 1;
   min-height: 0;
 }
 
 .stream-panel {
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -211,6 +245,10 @@ $secondary: #9ca3af;
 .panel-meta {
   font-size: 10px;
   color: $muted;
+  text-decoration: none;
+  transition: color 0.15s;
+
+  &:hover { color: $accent; }
 }
 
 .header-right {
@@ -245,7 +283,9 @@ $secondary: #9ca3af;
   letter-spacing: 1px;
   color: $green;
 
-  &.paused { color: $secondary; }
+  &.paused {
+    color: $secondary;
+  }
 }
 
 .live-dot {
@@ -262,8 +302,15 @@ $secondary: #9ca3af;
 }
 
 @keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.3; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
 }
 
 .freeze-btn {
@@ -278,8 +325,15 @@ $secondary: #9ca3af;
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover          { border-color: $accent; color: $accent; }
-  &.frozen         { border-color: $yellow; color: $yellow; }
+  &:hover {
+    border-color: $accent;
+    color: $accent;
+  }
+
+  &.frozen {
+    border-color: $yellow;
+    color: $yellow;
+  }
 }
 
 // ── Event Table ──────────────────────────────────────────────
@@ -324,14 +378,29 @@ $secondary: #9ca3af;
 
   tr.event-row {
     transition: background 0.1s;
-    &:hover { background: rgba(255,255,255,0.02); }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
   }
 }
 
-.cell-ts    { color: $muted !important; }
-.cell-ip    { color: $text !important; }
-.cell-event { color: $secondary !important; }
-.cell-score { color: $text !important; font-weight: 600; }
+.cell-ts {
+  color: $muted !important;
+}
+
+.cell-ip {
+  color: $text !important;
+}
+
+.cell-event {
+  color: $secondary !important;
+}
+
+.cell-score {
+  color: $text !important;
+  font-weight: 600;
+}
 
 .sev-badge {
   display: inline-flex;
@@ -344,14 +413,30 @@ $secondary: #9ca3af;
   border-radius: 3px;
   color: #fff;
 
-  &.sev-critical { background: $red; }
-  &.sev-high     { background: $orange; }
-  &.sev-medium   { background: $yellow; }
-  &.sev-low      { background: $blue; }
+  &.sev-critical {
+    background: $red;
+  }
+
+  &.sev-high {
+    background: $orange;
+  }
+
+  &.sev-medium {
+    background: $yellow;
+  }
+
+  &.sev-low {
+    background: $blue;
+  }
 }
 
-tr.row-critical td { background: rgba(239,68,68,0.04); }
-tr.row-high td     { background: rgba(249,115,22,0.03); }
+tr.row-critical td {
+  background: rgba(239, 68, 68, 0.04);
+}
+
+tr.row-high td {
+  background: rgba(249, 115, 22, 0.03);
+}
 
 .empty-row {
   text-align: center;
@@ -361,8 +446,15 @@ tr.row-high td     { background: rgba(249,115,22,0.03); }
 }
 
 @keyframes rowFlash {
-  0%   { background: rgba(239,68,68,0.18); }
-  100% { background: transparent; }
+  0% {
+    background: rgba(239, 68, 68, 0.18);
+  }
+
+  100% {
+    background: transparent;
+  }
 }
 
-.row-critical { animation: rowFlash 1.5s ease-out; }
+.row-critical {
+  animation: rowFlash 1.5s ease-out;
+}

@@ -2,10 +2,20 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
   IpHistory,
+  IpGeo,
+  RelatedIp,
   ThreatEvent,
   ThreatLevel,
   ThreatStats,
   Incident,
+  IncidentNote,
+  IncidentStatus,
+  NetworkNode,
+  NetworkLink,
+  HuntQuery,
+  SavedHunt,
+  HuntResult,
+  DetectionRule,
 } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
 
@@ -52,7 +62,7 @@ export class ThreatStoreService {
   }
 
   refreshStats() {
-    this.http.get<ThreatStats>('/api/stats').subscribe((s) => this.stats.set(s));
+    return this.http.get<ThreatStats>('/api/stats');
   }
 
   fetchIpHistory(ip: string) {
@@ -63,6 +73,26 @@ export class ThreatStoreService {
     return this.http.get<{ summary: string | null }>(`/api/ip/${ip}/ai-summary`);
   }
 
+  fetchIpGeo(ip: string) {
+    return this.http.get<IpGeo>(`/api/ip/${ip}/geo`);
+  }
+
+  fetchRelatedIps(ip: string) {
+    return this.http.get<{ related: RelatedIp[] }>(`/api/ip/${ip}/related`);
+  }
+
+  getBlockStatus(ip: string) {
+    return this.http.get<{ blocked: boolean; ip: string }>(`/api/ip/${ip}/block`);
+  }
+
+  blockIp(ip: string) {
+    return this.http.post<{ blocked: boolean; ip: string }>(`/api/ip/${ip}/block`, {});
+  }
+
+  unblockIp(ip: string) {
+    return this.http.delete<{ blocked: boolean; ip: string }>(`/api/ip/${ip}/block`);
+  }
+
   executeCommand(command: string) {
     return this.http.post<{ output: string }>('/api/command', { command });
   }
@@ -71,7 +101,66 @@ export class ThreatStoreService {
     return this.http.get<Incident[]>('/api/incidents');
   }
 
+  patchIncident(id: string, patch: { status?: IncidentStatus; assigned_to?: string | null }) {
+    return this.http.patch<Incident>(`/api/incidents/${id}`, patch);
+  }
+
+  addIncidentNote(id: string, text: string, author = 'analyst1') {
+    return this.http.post<IncidentNote>(`/api/incidents/${id}/notes`, { text, author });
+  }
+
+  updateIncidentTasks(id: string, completed_tasks: number[]) {
+    return this.http.patch<{ completed_tasks: number[] }>(`/api/incidents/${id}/tasks`, { completed_tasks });
+  }
+
+  getIpCase(ip: string) {
+    return this.http.get<{ case_id: string | null }>(`/api/ip/${ip}/case`);
+  }
+
+  fetchNetwork() {
+    return this.http.get<{ nodes: NetworkNode[]; links: NetworkLink[] }>('/api/network');
+  }
+
+  runHunt(query: HuntQuery) {
+    const params = Object.fromEntries(
+      Object.entries(query).filter(([, v]) => v !== undefined && v !== '' && v !== null)
+    ) as Record<string, string>;
+    return this.http.get<{ results: HuntResult[]; total: number }>('/api/hunt', { params });
+  }
+
+  getSavedHunts() {
+    return this.http.get<SavedHunt[]>('/api/hunts');
+  }
+
+  saveHunt(name: string, query: HuntQuery, result_count: number) {
+    return this.http.post<SavedHunt>('/api/hunts', { name, query, result_count });
+  }
+
+  deleteHunt(id: string) {
+    return this.http.delete<{ ok: boolean }>(`/api/hunts/${id}`);
+  }
+
+  createCaseFromIp(ip: string) {
+    return this.http.post<Incident & { existing: boolean }>('/api/incidents/from-ip', { ip });
+  }
+
   setSimulation(active: boolean) {
     return this.http.post('/api/simulation', { active });
+  }
+
+  getRules() {
+    return this.http.get<DetectionRule[]>('/api/rules');
+  }
+
+  createRule(rule: Partial<DetectionRule>) {
+    return this.http.post<DetectionRule>('/api/rules', rule);
+  }
+
+  updateRule(id: string, patch: Partial<DetectionRule>) {
+    return this.http.patch<DetectionRule>(`/api/rules/${id}`, patch);
+  }
+
+  deleteRule(id: string) {
+    return this.http.delete<{ ok: boolean }>(`/api/rules/${id}`);
   }
 }

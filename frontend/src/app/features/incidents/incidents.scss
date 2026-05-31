@@ -1,341 +1,231 @@
-$bg:      #0f1117;
-$panel:   #13171f;
-$border:  #1e2535;
-$text:    #e5e7eb;
-$muted:   #9ca3af;
-$accent:  #3b82f6;
-$secondary: #6b7280;
-
-$sev-critical: #ef4444;
-$sev-high:     #f97316;
-$sev-medium:   #f59e0b;
-$sev-low:      #60a5fa;
+$border: #1e2535;
+$panel: #13171f;
+$text: #e5e7eb;
+$secondary: #9ca3af;
+$muted: #4b5563;
+$accent: #3b82f6;
 
 :host {
-    display: block;
-    height: 100%;
-    overflow: hidden;
+  display: block;
+  height: 100%;
+  overflow: hidden;
 }
 
 .incidents-page {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
 }
 
-// ── Split layout ──────────────────────────────────────────────
-.incidents-split {
-    flex: 1;
-    display: flex;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.split-table {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-// ── Resize handle ─────────────────────────────────────────────
-.resize-handle {
-    flex-shrink: 0;
-    width: 5px;
-    cursor: col-resize;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
-    transition: background 0.15s;
-    z-index: 10;
-
-    &:hover {
-        background: rgba($accent, 0.15);
-
-        .handle-bar { background: $accent; }
-    }
-}
-
-.handle-bar {
-    width: 1px;
-    height: 40px;
-    background: $border;
-    border-radius: 2px;
-    transition: background 0.15s;
-}
-
-// ── Detail panel ──────────────────────────────────────────────
-.split-detail {
-    flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    background: $panel;
-    border-left: 1px solid $border;
-}
-
-// ── Table header row ──────────────────────────────────────────
+// ── Header row ────────────────────────────────────────────────
 .table-head-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 16px 20px 12px;
-    border-bottom: 1px solid $border;
-    flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px 10px;
+  flex-shrink: 0;
 }
 
 .page-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: $text;
-    margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: $text;
+  margin: 0;
+  letter-spacing: 0.2px;
 }
 
 .count-badge {
-    font-size: 11px;
-    color: $muted;
-    background: #1e2535;
-    padding: 2px 8px;
-    border-radius: 10px;
+  font-size: 10px;
+  color: $muted;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $border;
+  border-radius: 3px;
+  padding: 2px 8px;
 }
 
 // ── Table ─────────────────────────────────────────────────────
 .table-wrap {
-    flex: 1;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: $border transparent;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: $border transparent;
 }
 
 .inc-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
 
-    th {
-        position: sticky;
-        top: 0;
-        background: #0d1018;
-        color: $muted;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 10px;
-        letter-spacing: 0.05em;
-        padding: 8px 12px;
-        text-align: left;
-        border-bottom: 1px solid $border;
-    }
+  thead tr {
+    position: sticky;
+    top: 0;
+    background: #0d1018;
+    z-index: 1;
+    border-bottom: 1px solid $border;
+  }
 
-    td {
-        padding: 9px 12px;
-        border-bottom: 1px solid #151c2b;
-        color: $text;
-    }
-}
-
-.inc-row {
-    cursor: pointer;
-    transition: background 0.12s;
-
-    &:hover { background: #1a2035; }
-    &.row-selected td { background: rgba(59, 130, 246, 0.07); }
-    &.row-selected { border-left: 2px solid $accent; }
-}
-
-.id-cell {
-    color: $accent;
-    font-family: monospace;
-    font-weight: 600;
-}
-
-.title-cell {
-    max-width: 240px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.mono {
-    font-family: monospace;
+  th {
+    padding: 8px 14px;
+    text-align: left;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
     color: $muted;
-}
+    font-weight: 600;
+    white-space: nowrap;
+  }
 
-.empty {
+  tbody tr {
+    border-bottom: 1px solid rgba(30, 37, 53, 0.6);
+    cursor: pointer;
+    transition: background 0.1s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    &.row-selected {
+      background: rgba(59, 130, 246, 0.07);
+      border-left: 2px solid $accent;
+    }
+  }
+
+  td {
+    padding: 8px 14px;
+    color: $text;
+    white-space: nowrap;
+  }
+
+  .empty {
     text-align: center;
     color: $muted;
     padding: 40px;
+    font-size: 12px;
+  }
 }
 
-// ── Severity: dot + plain label ───────────────────────────────
-.sev-cell {
-    display: flex;
-    align-items: center;
-    gap: 7px;
+.id-cell {
+  color: $secondary;
+}
+
+.title-cell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mono {
+  font-family: monospace;
+  font-size: 11px;
 }
 
 .sev-dot {
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    flex-shrink: 0;
-
-    &.sev-critical { background: $sev-critical; }
-    &.sev-high     { background: $sev-high; }
-    &.sev-medium   { background: $sev-medium; }
-    &.sev-low      { background: $sev-low; }
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
 }
 
-.sev-label {
-    font-size: 12px;
-    color: $text;
-    font-weight: 400;
-}
-
-// ── Status: plain text ────────────────────────────────────────
 .status-text {
-    font-size: 11px;
-    color: $muted;
-    text-transform: capitalize;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 
-    &.status-open         { color: rgba($sev-critical, 0.8); }
-    &.status-investigating { color: rgba($sev-high, 0.8); }
-    &.status-contained    { color: #22c55e; }
-    &.status-closed       { color: $secondary; }
+  &.status-open {
+    color: #60a5fa;
+  }
+
+  &.status-investigating {
+    color: #f59e0b;
+  }
+
+  &.status-contained {
+    color: #a855f7;
+  }
+
+  &.status-closed {
+    color: #4b5563;
+  }
 }
 
-// ── Detail panel ──────────────────────────────────────────────
-.detail-empty {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    padding: 24px;
-
-    p {
-        font-size: 12px;
-        color: #4b5563;
-        text-align: center;
-    }
+// ── Toast ─────────────────────────────────────────────────────
+.toast {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e2535;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  font-size: 11px;
+  padding: 8px 16px;
+  border-radius: 5px;
+  z-index: 50;
+  white-space: nowrap;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: fade-in 0.2s ease;
 }
 
-.detail-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 20px;
-    border-bottom: 1px solid $border;
-    background: #0d1018;
-    flex-shrink: 0;
+@keyframes fade-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
-.detail-id-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+// ── Backdrop ──────────────────────────────────────────────────
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  cursor: default;
+  pointer-events: none;
+
+  &.active { pointer-events: auto; }
 }
 
-.detail-id {
-    font-family: monospace;
-    font-size: 14px;
-    color: $accent;
-    font-weight: 700;
+// ── Overlay drawer ────────────────────────────────────────────
+.drawer-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid $border;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.55);
+  transform: translateX(100%);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+  &.open { transform: translateX(0); }
 }
 
-.close-btn {
-    background: none;
-    border: 1px solid $border;
-    color: $muted;
-    width: 26px;
-    height: 26px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 11px;
-    transition: all 0.15s;
+// ── Resize handle ─────────────────────────────────────────────
+.resize-handle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
-    &:hover { background: $border; color: $text; }
+  &:hover .handle-bar,
+  &:active .handle-bar {
+    background: $accent;
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+  }
 }
 
-.detail-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    scrollbar-width: thin;
-    scrollbar-color: $border transparent;
-}
-
-.detail-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: $text;
-    margin: 0;
-    line-height: 1.4;
-}
-
-.detail-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.meta-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #151c2b;
-
-    &:last-child { border-bottom: none; }
-}
-
-.meta-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    color: $muted;
-    letter-spacing: 0.05em;
-}
-
-.meta-val {
-    font-size: 12px;
-    color: $text;
-    font-family: monospace;
-}
-
-.mitre-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.section-label {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: $muted;
-    font-weight: 600;
-    border-bottom: 1px solid $border;
-    padding-bottom: 6px;
-}
-
-.mitre-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-}
-
-.mitre-tag {
-    font-size: 10px;
-    font-family: monospace;
-    padding: 2px 8px;
-    border: 1px solid rgba(59, 130, 246, 0.25);
-    color: $accent;
-    border-radius: 3px;
-    background: rgba(59, 130, 246, 0.08);
+.handle-bar {
+  width: 1px;
+  height: 70px;
+  background: #2a3347;
+  border-radius: 2px;
+  transition: all 0.15s;
 }

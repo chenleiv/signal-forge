@@ -6,7 +6,7 @@ import asyncio
 import json
 import random
 from collections import defaultdict, deque
-from typing import Any
+from typing import Any, Optional
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
@@ -54,9 +54,9 @@ THREAT_IPS = [
     "45.33.32.156",
     "104.21.33.14",
     "77.88.8.8",
-    "198.51.100.23",
-    "192.0.2.88",
-    "203.0.113.5",
+    "80.82.77.139",
+    "5.188.206.14",
+    "194.165.16.11",
     "91.108.4.1",
     "185.159.82.45",
     "51.15.193.47",
@@ -67,6 +67,105 @@ THREAT_IPS = [
 ATTACK_TYPES = ["SQLi", "DDoS", "BruteForce", "PortScan", "Malware"]
 
 REGIONS = ["US", "EU", "RU", "CN", "IL", "BR"]
+
+GEO_DATA: dict[str, dict] = {
+    "185.220.101.47": {
+        "country": "Germany",
+        "country_code": "DE",
+        "city": "Frankfurt",
+        "org": "Tor Exit Relay",
+        "asn": "AS24940",
+        "timezone": "Europe/Berlin",
+    },
+    "45.33.32.156": {
+        "country": "USA",
+        "country_code": "US",
+        "city": "Atlanta",
+        "org": "Akamai Technologies",
+        "asn": "AS63949",
+        "timezone": "America/New_York",
+    },
+    "104.21.33.14": {
+        "country": "USA",
+        "country_code": "US",
+        "city": "San Jose",
+        "org": "Cloudflare Inc",
+        "asn": "AS13335",
+        "timezone": "America/Los_Angeles",
+    },
+    "77.88.8.8": {
+        "country": "Russia",
+        "country_code": "RU",
+        "city": "Moscow",
+        "org": "Yandex LLC",
+        "asn": "AS13238",
+        "timezone": "Europe/Moscow",
+    },
+    "80.82.77.139": {
+        "country": "Netherlands",
+        "country_code": "NL",
+        "city": "Amsterdam",
+        "org": "Shodan Monitoring",
+        "asn": "AS60557",
+        "timezone": "Europe/Amsterdam",
+    },
+    "5.188.206.14": {
+        "country": "Russia",
+        "country_code": "RU",
+        "city": "Moscow",
+        "org": "Inferno Solutions",
+        "asn": "AS57523",
+        "timezone": "Europe/Moscow",
+    },
+    "194.165.16.11": {
+        "country": "Iceland",
+        "country_code": "IS",
+        "city": "Reykjavik",
+        "org": "1984 ehf",
+        "asn": "AS44925",
+        "timezone": "Atlantic/Reykjavik",
+    },
+    "91.108.4.1": {
+        "country": "Netherlands",
+        "country_code": "NL",
+        "city": "Amsterdam",
+        "org": "Telegram Messenger",
+        "asn": "AS62041",
+        "timezone": "Europe/Amsterdam",
+    },
+    "185.159.82.45": {
+        "country": "Romania",
+        "country_code": "RO",
+        "city": "Bucharest",
+        "org": "M247 Europe SRL",
+        "asn": "AS49327",
+        "timezone": "Europe/Bucharest",
+    },
+    "51.15.193.47": {
+        "country": "France",
+        "country_code": "FR",
+        "city": "Paris",
+        "org": "Online S.A.S.",
+        "asn": "AS12876",
+        "timezone": "Europe/Paris",
+    },
+    "167.99.247.3": {
+        "country": "Germany",
+        "country_code": "DE",
+        "city": "Frankfurt",
+        "org": "DigitalOcean LLC",
+        "asn": "AS14061",
+        "timezone": "Europe/Berlin",
+    },
+    "64.225.32.100": {
+        "country": "USA",
+        "country_code": "US",
+        "city": "New York",
+        "org": "DigitalOcean LLC",
+        "asn": "AS14061",
+        "timezone": "America/New_York",
+    },
+}
 
 MITRE_MAP: dict[str, list[str]] = {
     "SQLi": ["T1190", "T1059"],
@@ -98,8 +197,6 @@ minute_buckets: deque = deque(maxlen=15)
 _current_minute: str = ""
 _current_bucket_count: int = 0
 incidents_store: deque = deque(maxlen=50)
-_event_counter: int = 0
-_next_incident_at: int = random.randint(8, 12)
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -156,22 +253,61 @@ def _create_incident(trigger: dict) -> None:
             "created_at": now,
             "updated_at": now,
             "mitre_tags": MITRE_MAP.get(attack_type, []),
+            "notes": [],
+            "completed_tasks": [],
         }
     )
 
 
-def _record_event(event: dict) -> None:
-    global _event_counter, _next_incident_at
-    _event_counter += 1
-    if _event_counter >= _next_incident_at:
-        _event_counter = 0
-        _next_incident_at = random.randint(8, 12)
-        _create_incident(event)
+def _eval_condition(cond: dict, event: dict) -> bool:
+    field = cond.get("field", "")
+    op    = cond.get("operator", "=")
+    val   = cond.get("value", "")
+    ev    = event.get(field)
+    if ev is None:
+        return False
+    if op == ">":
+        try:
+            return float(ev) > float(val)
+        except (ValueError, TypeError):
+            return False
+    if op == "<":
+        try:
+            return float(ev) < float(val)
+        except (ValueError, TypeError):
+            return False
+    if op == "=":
+        return str(ev).lower() == str(val).lower()
+    if op == "contains":
+        return str(val).lower() in str(ev).lower()
+    return False
 
-    """Write event into ip_store and update minute_buckets."""
+
+def _execute_actions(rule: dict, event: dict) -> None:
+    if "incident" in rule["actions"]:
+        _create_incident(event)
+    if "block" in rule["actions"]:
+        _blocked_ips.add(event["ip"])
+
+
+def _evaluate_rules(event: dict) -> None:
+    for rule in _rules:
+        if not rule["enabled"]:
+            continue
+        results = [_eval_condition(c, event) for c in rule["conditions"]]
+        if not results:
+            continue
+        matched = all(results) if rule["logic"] == "AND" else any(results)
+        if matched:
+            rule["match_count"] += 1
+            _execute_actions(rule, event)
+
+
+def _record_event(event: dict) -> None:
     global _current_minute, _current_bucket_count
 
     ip_store[event["ip"]].append(event)
+    _evaluate_rules(event)
 
     minute = _current_minute_str()
     if minute != _current_minute:
@@ -272,10 +408,14 @@ async def get_stats(request: Request, _=Depends(verify_token)):
         ip_counts[ip] = len(events)
         avg = sum(e["score"] for e in events) / len(events)
         ip_scores[ip] = avg
-        if avg >= 80:   ip_levels[ip] = "critical"
-        elif avg >= 60: ip_levels[ip] = "high"
-        elif avg >= 40: ip_levels[ip] = "medium"
-        else:           ip_levels[ip] = "low"
+        if avg >= 80:
+            ip_levels[ip] = "critical"
+        elif avg >= 60:
+            ip_levels[ip] = "high"
+        elif avg >= 40:
+            ip_levels[ip] = "medium"
+        else:
+            ip_levels[ip] = "low"
         for e in events:
             level = e.get("threat_level", "low")
             if level in severity_counts:
@@ -286,7 +426,12 @@ async def get_stats(request: Request, _=Depends(verify_token)):
 
     top_ips = sorted(
         [
-            {"ip": ip, "count": ip_counts[ip], "score": int(ip_scores[ip]), "threat_level": ip_levels[ip]}
+            {
+                "ip": ip,
+                "count": ip_counts[ip],
+                "score": int(ip_scores[ip]),
+                "threat_level": ip_levels[ip],
+            }
             for ip in ip_counts
         ],
         key=lambda x: x["count"],
@@ -308,7 +453,7 @@ async def get_stats(request: Request, _=Depends(verify_token)):
 # ── REST: per-IP history ──────────────────────────────────────
 
 
-async def enrich_ip(ip: str) -> dict | None:
+async def enrich_ip(ip: str) -> Optional[dict]:
     if ip in _abuse_cache:
         return _abuse_cache[ip]
     if not ABUSEIPDB_API_KEY:
@@ -350,8 +495,16 @@ async def get_ip_history(
             "mitre_tags": [],
         }
 
-    score = max(e["score"] for e in events)
-    level = max(events, key=lambda e: e["score"])["threat_level"]
+    avg = sum(e["score"] for e in events) / len(events)
+    score = int(avg)
+    if avg >= 80:
+        level = "critical"
+    elif avg >= 60:
+        level = "high"
+    elif avg >= 40:
+        level = "medium"
+    else:
+        level = "low"
     regions = list({e.get("region", "US") for e in events})
     mitre_tags = list(
         {tag for e in events for tag in MITRE_MAP.get(e.get("attack_type", ""), [])}
@@ -464,6 +617,100 @@ async def run_command(request: Request, body: dict, _=Depends(verify_token)):
         }
 
 
+# ── REST: geo intelligence ────────────────────────────────────
+
+
+@app.get("/api/ip/{ip}/geo")
+@limiter.limit("30/minute")
+async def get_ip_geo(
+    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+):
+    geo = GEO_DATA.get(
+        ip,
+        {
+            "country": "Unknown",
+            "country_code": "??",
+            "city": "Unknown",
+            "org": "Unknown",
+            "asn": "Unknown",
+            "timezone": "UTC",
+        },
+    )
+    return geo
+
+
+# ── REST: related IPs ─────────────────────────────────────────
+
+
+@app.get("/api/ip/{ip}/related")
+@limiter.limit("30/minute")
+async def get_related_ips(
+    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+):
+    target_events = list(ip_store.get(ip, []))
+    if not target_events:
+        return {"related": []}
+
+    target_types = {e["attack_type"] for e in target_events}
+    related = []
+    for other_ip, events in ip_store.items():
+        if other_ip == ip or not events:
+            continue
+        other_types = {e["attack_type"] for e in events}
+        overlap = target_types & other_types
+        if not overlap:
+            continue
+        avg = sum(e["score"] for e in events) / len(events)
+        if avg >= 80:
+            lvl = "critical"
+        elif avg >= 60:
+            lvl = "high"
+        elif avg >= 40:
+            lvl = "medium"
+        else:
+            lvl = "low"
+        related.append(
+            {
+                "ip": other_ip,
+                "shared_attacks": sorted(overlap),
+                "score": int(avg),
+                "threat_level": lvl,
+                "event_count": len(events),
+            }
+        )
+    related.sort(key=lambda x: x["score"], reverse=True)
+    return {"related": related[:5]}
+
+
+# ── REST: block / unblock ─────────────────────────────────────
+
+
+@app.get("/api/ip/{ip}/block")
+@limiter.limit("30/minute")
+async def get_block_status(
+    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+):
+    return {"blocked": ip in _blocked_ips, "ip": ip}
+
+
+@app.post("/api/ip/{ip}/block")
+@limiter.limit("20/minute")
+async def block_ip(
+    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+):
+    _blocked_ips.add(ip)
+    return {"blocked": True, "ip": ip}
+
+
+@app.delete("/api/ip/{ip}/block")
+@limiter.limit("20/minute")
+async def unblock_ip(
+    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+):
+    _blocked_ips.discard(ip)
+    return {"blocked": False, "ip": ip}
+
+
 # ── REST: incidents ────────────────────────────────────────────
 
 
@@ -472,7 +719,248 @@ async def get_incidents(_=Depends(verify_token)):
     return list(incidents_store)
 
 
+@app.patch("/api/incidents/{incident_id}")
+async def patch_incident(incident_id: str, body: dict, _=Depends(verify_token)):
+    for inc in incidents_store:
+        if inc["id"] == incident_id:
+            if "status" in body:
+                inc["status"] = body["status"]
+            if "assigned_to" in body:
+                inc["assigned_to"] = body["assigned_to"]
+            inc["updated_at"] = datetime.now(timezone.utc).isoformat()
+            return inc
+    raise HTTPException(status_code=404, detail="Incident not found")
+
+
+@app.get("/api/ip/{ip}/case")
+async def get_ip_case(ip: str = Depends(validate_ip), _=Depends(verify_token)):
+    for inc in incidents_store:
+        if inc.get("source_ip") == ip and inc["status"] != "closed":
+            return {"case_id": inc["id"]}
+    return {"case_id": None}
+
+
+@app.post("/api/incidents/from-ip")
+async def create_incident_from_ip(body: dict, _=Depends(verify_token)):
+    global _incident_counter
+    ip = body.get("ip", "unknown")
+
+    # Return existing active case if one already exists for this IP
+    for inc in incidents_store:
+        if inc.get("source_ip") == ip and inc["status"] != "closed":
+            return {**inc, "existing": True}
+
+    events = list(ip_store.get(ip, deque()))
+    attack_types = list({e["attack_type"] for e in events})
+    attack_type = attack_types[0] if attack_types else "PortScan"
+    scores = [e["score"] for e in events]
+    avg_score = int(sum(scores) / len(scores)) if scores else 50
+    if avg_score >= 80:
+        level = "critical"
+    elif avg_score >= 60:
+        level = "high"
+    elif avg_score >= 40:
+        level = "medium"
+    else:
+        level = "low"
+    regions = list({e["region"] for e in events})
+    now = datetime.now(timezone.utc).isoformat()
+    _incident_counter += 1
+    incident = {
+        "id": f"INC-{1000 + _incident_counter:04d}",
+        "title": f"{INCIDENT_TITLES.get(attack_type, 'Threat')} on {ip}",
+        "severity": level,
+        "status": "open",
+        "attack_type": attack_type,
+        "source_ip": ip,
+        "source_region": regions[0] if regions else "Unknown",
+        "event_count": len(events),
+        "assigned_to": None,
+        "created_at": now,
+        "updated_at": now,
+        "mitre_tags": list(
+            {t for e in events for t in MITRE_MAP.get(e["attack_type"], [])}
+        ),
+        "notes": [],
+        "completed_tasks": [],
+    }
+    incidents_store.appendleft(incident)
+    return {**incident, "existing": False}
+
+
+@app.patch("/api/incidents/{incident_id}/tasks")
+async def update_tasks(incident_id: str, body: dict, _=Depends(verify_token)):
+    for inc in incidents_store:
+        if inc["id"] == incident_id:
+            inc["completed_tasks"] = body.get("completed_tasks", [])
+            inc["updated_at"] = datetime.now(timezone.utc).isoformat()
+            return {"completed_tasks": inc["completed_tasks"]}
+    raise HTTPException(status_code=404, detail="Incident not found")
+
+
+@app.post("/api/incidents/{incident_id}/notes")
+async def add_note(incident_id: str, body: dict, _=Depends(verify_token)):
+    for inc in incidents_store:
+        if inc["id"] == incident_id:
+            note = {
+                "author": body.get("author", "analyst1"),
+                "text": body.get("text", "").strip(),
+                "at": datetime.now(timezone.utc).isoformat(),
+            }
+            if not note["text"]:
+                raise HTTPException(status_code=400, detail="Note text is required")
+            inc["notes"].append(note)
+            inc["updated_at"] = note["at"]
+            return note
+    raise HTTPException(status_code=404, detail="Incident not found")
+
+
 # ── Health check ──────────────────────────────────────────────
+
+
+# ── REST: network graph ───────────────────────────────────────
+
+
+@app.get("/api/network")
+async def get_network(_=Depends(verify_token)):
+    nodes: list[dict] = []
+    links: list[dict] = []
+    seen_attacks: set[str] = set()
+
+    for ip, events in ip_store.items():
+        ev = list(events)
+        if not ev:
+            continue
+        scores = [e["score"] for e in ev]
+        avg = sum(scores) / len(scores)
+        score = int(avg)
+        if avg >= 80:
+            level = "critical"
+        elif avg >= 60:
+            level = "high"
+        elif avg >= 40:
+            level = "medium"
+        else:
+            level = "low"
+
+        attack_counts: dict[str, int] = {}
+        for e in ev:
+            attack_counts[e["attack_type"]] = attack_counts.get(e["attack_type"], 0) + 1
+
+        nodes.append({
+            "id": ip, "type": "ip",
+            "score": score, "threat_level": level,
+            "event_count": len(ev),
+        })
+
+        for attack, count in attack_counts.items():
+            seen_attacks.add(attack)
+            links.append({"source": ip, "target": attack, "value": count})
+
+    for attack in seen_attacks:
+        nodes.append({"id": attack, "type": "attack"})
+
+    return {"nodes": nodes, "links": links}
+
+
+# ── REST: threat hunting ──────────────────────────────────────
+
+_saved_hunts: list[dict] = []
+
+_rules: list[dict] = []
+
+
+@app.get("/api/hunt")
+async def run_hunt(
+    ip: Optional[str] = None,
+    attack_type: Optional[str] = None,
+    region: Optional[str] = None,
+    min_score: int = 0,
+    max_score: int = 100,
+    limit: int = 200,
+    _=Depends(verify_token),
+):
+    results = []
+    for ip_addr, events in ip_store.items():
+        if ip and ip.lower() not in ip_addr.lower():
+            continue
+        for e in events:
+            if attack_type and e["attack_type"] != attack_type:
+                continue
+            if region and e["region"] != region:
+                continue
+            if not (min_score <= e["score"] <= max_score):
+                continue
+            results.append({**e, "ip": ip_addr})
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return {"results": results[:limit], "total": len(results)}
+
+
+@app.get("/api/hunts")
+async def get_saved_hunts(_=Depends(verify_token)):
+    return _saved_hunts
+
+
+@app.post("/api/hunts")
+async def save_hunt(body: dict, _=Depends(verify_token)):
+    hunt = {
+        "id": str(uuid4())[:8],
+        "name": body.get("name", "Unnamed hunt"),
+        "query": body.get("query", {}),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "result_count": body.get("result_count", 0),
+    }
+    _saved_hunts.insert(0, hunt)
+    return hunt
+
+
+@app.delete("/api/hunts/{hunt_id}")
+async def delete_hunt(hunt_id: str, _=Depends(verify_token)):
+    global _saved_hunts
+    _saved_hunts = [h for h in _saved_hunts if h["id"] != hunt_id]
+    return {"ok": True}
+
+
+# ── REST: detection rules ─────────────────────────────────────
+
+
+@app.get("/api/rules")
+async def get_rules(_=Depends(verify_token)):
+    return _rules
+
+
+@app.post("/api/rules")
+async def create_rule(body: dict, _=Depends(verify_token)):
+    rule = {
+        "id": str(uuid4())[:8],
+        "name": body.get("name", "Unnamed Rule"),
+        "enabled": body.get("enabled", True),
+        "conditions": body.get("conditions", []),
+        "logic": body.get("logic", "AND"),
+        "actions": body.get("actions", ["alert"]),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "match_count": 0,
+    }
+    _rules.append(rule)
+    return rule
+
+
+@app.patch("/api/rules/{rule_id}")
+async def update_rule(rule_id: str, body: dict, _=Depends(verify_token)):
+    for rule in _rules:
+        if rule["id"] == rule_id:
+            for key in ["name", "enabled", "conditions", "logic", "actions"]:
+                if key in body:
+                    rule[key] = body[key]
+            return rule
+    raise HTTPException(status_code=404, detail="Rule not found")
+
+
+@app.delete("/api/rules/{rule_id}")
+async def delete_rule(rule_id: str, _=Depends(verify_token)):
+    global _rules
+    _rules = [r for r in _rules if r["id"] != rule_id]
+    return {"ok": True}
 
 
 @app.api_route("/health", methods=["GET", "HEAD"])

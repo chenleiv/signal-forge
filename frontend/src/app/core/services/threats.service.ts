@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Subscription, timer, switchMap, catchError, EMPTY } from 'rxjs';
 import { ThreatStoreService } from './threat-store.service';
 import { ThreatEvent } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
@@ -6,7 +7,7 @@ import { SettingsService } from './settings.service';
 @Injectable({ providedIn: 'root' })
 export class ThreatsService {
   private socket!: WebSocket;
-  private statsInterval!: ReturnType<typeof setInterval>;
+  private statsSub?: Subscription;
   private store = inject(ThreatStoreService);
   private settingsService = inject(SettingsService);
 
@@ -15,6 +16,8 @@ export class ThreatsService {
   readonly status = signal<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
 
   connect() {
+    this.statsSub?.unsubscribe();
+    this.socket?.close();
     this.destroyed = false;
     this.status.set('reconnecting');
     const token = localStorage.getItem('sf_token') ?? '';
@@ -37,14 +40,15 @@ export class ThreatsService {
       }
     };
 
-    this.store.refreshStats();
-    this.statsInterval = setInterval(() => this.store.refreshStats(), 5000);
+    this.statsSub = timer(0, 5000).pipe(
+      switchMap(() => this.store.refreshStats().pipe(catchError(() => EMPTY))),
+    ).subscribe((s) => this.store.stats.set(s));
   }
 
   disconnect() {
     this.destroyed = true;
     this.status.set('disconnected');
     this.socket?.close();
-    clearInterval(this.statsInterval);
+    this.statsSub?.unsubscribe();
   }
 }

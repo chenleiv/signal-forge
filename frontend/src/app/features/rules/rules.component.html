@@ -1,0 +1,137 @@
+<div class="rules-page">
+
+  <!-- Left: rules list -->
+  <div class="rules-sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">DETECTION RULES</span>
+      <button class="btn-new" (click)="newRule()">+ New</button>
+    </div>
+
+    @if (rules().length === 0 && !isNew()) {
+      <div class="sidebar-empty">
+        <p>No rules yet</p>
+      </div>
+    }
+
+    <div class="rules-list">
+      @for (rule of rules(); track rule.id) {
+        <div class="rule-item" [class.active]="selected()?.id === rule.id" (click)="selectRule(rule)">
+          <button class="rule-toggle" [class.on]="rule.enabled"
+                  (click)="toggleEnabled(rule, $event)"
+                  [title]="rule.enabled ? 'Disable' : 'Enable'">
+            <span class="toggle-dot"></span>
+          </button>
+          <div class="rule-info">
+            <span class="rule-name">{{ rule.name }}</span>
+            <span class="rule-meta">{{ rule.match_count }} hits · {{ rule.actions.join(' + ') }}</span>
+          </div>
+          <button class="rule-del" (click)="deleteRule(rule, $event)">✕</button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Right: editor -->
+  <div class="rules-editor">
+    @if (!selected() && !isNew()) {
+      <div class="editor-empty">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
+          <path d="M12 4l8 4v8l-8 4-8-4V8l8-4z" stroke="#4b5563" stroke-width="1.2" stroke-linejoin="round"/>
+          <path d="M12 12v4M12 8v.5" stroke="#4b5563" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <p>Select a rule or create a new one</p>
+      </div>
+    } @else {
+      <div class="editor-body">
+
+        <!-- Name -->
+        <div class="editor-section">
+          <label class="field-label">RULE NAME</label>
+          <input class="field-input" [value]="editName()"
+                 (input)="editName.set($any($event.target).value)"
+                 placeholder="e.g. High Score Russia" />
+        </div>
+
+        <!-- Conditions -->
+        <div class="editor-section">
+          <div class="conditions-header">
+            <label class="field-label">CONDITIONS</label>
+            <div class="logic-toggle">
+              <button [class.active]="editLogic() === 'AND'" (click)="editLogic.set('AND')">AND</button>
+              <button [class.active]="editLogic() === 'OR'"  (click)="editLogic.set('OR')">OR</button>
+            </div>
+          </div>
+
+          <div class="conditions-list">
+            @for (cond of editConditions(); track $index) {
+              <div class="cond-row">
+                <select class="cond-select" [value]="cond.field"
+                        (change)="updateConditionField($index, $any($event.target).value)">
+                  <option value="score">score</option>
+                  <option value="attack_type">attack_type</option>
+                  <option value="region">region</option>
+                  <option value="ip">ip</option>
+                </select>
+
+                <select class="cond-select cond-op" [value]="cond.operator"
+                        (change)="updateConditionOp($index, $any($event.target).value)">
+                  @for (op of operatorsFor(cond.field); track op) {
+                    <option [value]="op">{{ op }}</option>
+                  }
+                </select>
+
+                @if (valueOptions(cond.field).length > 0) {
+                  <select class="cond-select cond-val" [value]="cond.value"
+                          (change)="updateConditionValue($index, $any($event.target).value)">
+                    <option value="">— select —</option>
+                    @for (v of valueOptions(cond.field); track v) {
+                      <option [value]="v">{{ v }}</option>
+                    }
+                  </select>
+                } @else {
+                  <input class="cond-input" [value]="cond.value"
+                         (input)="updateConditionValue($index, $any($event.target).value)"
+                         [placeholder]="cond.field === 'score' ? '0–100' : 'value'" />
+                }
+
+                <button class="cond-del" (click)="removeCondition($index)"
+                        [disabled]="editConditions().length === 1">✕</button>
+              </div>
+            }
+          </div>
+          <button class="btn-add-cond" (click)="addCondition()">+ Add Condition</button>
+        </div>
+
+        <!-- Actions -->
+        <div class="editor-section">
+          <label class="field-label">ACTIONS</label>
+          <div class="actions-row">
+            @for (action of (['alert', 'incident', 'block'] as const); track action) {
+              <label class="action-chip" [class.checked]="editActions().has(action)">
+                <input type="checkbox" [checked]="editActions().has(action)"
+                       (change)="toggleAction(action)" />
+                {{ action }}
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- Query preview -->
+        <div class="editor-section">
+          <label class="field-label">QUERY PREVIEW</label>
+          <div class="query-preview">{{ queryPreview() }}</div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="editor-footer">
+          <button class="btn-cancel" (click)="cancel()">Cancel</button>
+          <button class="btn-save" (click)="save()" [disabled]="!editName().trim()">
+            {{ isNew() ? 'Create Rule' : 'Save Changes' }}
+          </button>
+        </div>
+
+      </div>
+    }
+  </div>
+
+</div>

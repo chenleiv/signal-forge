@@ -99,9 +99,10 @@ $accent: #3b82f6;
 
 // Score section
 .score-section {
-  display: flex;
-  gap: 20px;
+  display: grid;
+  gap: 4px;
   align-items: center;
+  grid-template-columns: 100px 1fr;
 }
 
 .score-ring {
@@ -259,8 +260,13 @@ $accent: #3b82f6;
   background: #60a5fa;
   color: #fff;
 
-  &.warning { background: #f97316; }
-  &.danger  { background: #ef4444; }
+  &.warning {
+    background: #f97316;
+  }
+
+  &.danger {
+    background: #ef4444;
+  }
 }
 
 // AI Summary
@@ -291,11 +297,313 @@ $accent: #3b82f6;
   background: $accent;
   animation: pulse-dot 1.2s ease-in-out infinite;
 
-  &:nth-child(2) { animation-delay: 0.2s; }
-  &:nth-child(3) { animation-delay: 0.4s; }
+  &:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 0.4s;
+  }
 }
 
 @keyframes pulse-dot {
-  0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
-  40%           { opacity: 1;   transform: scale(1);   }
+
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.8);
+  }
+
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+// ── Action Bar ────────────────────────────────────────────────
+.action-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 20px;
+  border-bottom: 1px solid $border;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 4px;
+  border: 1px solid $border;
+  background: transparent;
+  color: $secondary;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.02em;
+
+  svg {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    color: $text;
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+
+  &.hunt {
+    color: #3b82f6;
+    border-color: rgba(59, 130, 246, 0.3);
+
+    &:hover {
+      background: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.5);
+    }
+  }
+
+  &.block {
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+  }
+
+  &.unblock {
+    color: #22c55e;
+    border-color: rgba(34, 197, 94, 0.3);
+
+    &:hover {
+      background: rgba(34, 197, 94, 0.08);
+      border-color: rgba(34, 197, 94, 0.5);
+    }
+  }
+
+  &.case {
+    color: #a855f7;
+    border-color: rgba(168, 85, 247, 0.3);
+
+    &:hover {
+      background: rgba(168, 85, 247, 0.08);
+      border-color: rgba(168, 85, 247, 0.5);
+    }
+  }
+}
+
+// ── Blocked chip ──────────────────────────────────────────────
+.blocked-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+// ── Geo Intelligence ──────────────────────────────────────────
+.geo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.geo-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.org-val {
+  font-size: 11px;
+  word-break: break-word;
+}
+
+.mono {
+  font-family: monospace;
+}
+
+.muted {
+  color: $secondary;
+}
+
+// ── Related Threats ───────────────────────────────────────────
+.related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.related-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 4px;
+  border: 1px solid $border;
+  background: rgba(255, 255, 255, 0.015);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.04);
+  }
+}
+
+.related-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.related-ip {
+  font-family: monospace;
+  font-size: 12px;
+  color: $text;
+  font-weight: 600;
+}
+
+.related-attacks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.attack-chip {
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: rgba(168, 85, 247, 0.08);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  color: #a855f7;
+  font-size: 9px;
+  font-family: monospace;
+}
+
+.related-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.related-score {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.related-events {
+  font-size: 9px;
+  color: $muted;
+}
+
+// ── Raw Events Table ──────────────────────────────────────────
+.events-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.event-filters {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.filter-input,
+.filter-select {
+  background: #0d1018;
+  border: 1px solid $border;
+  color: $text;
+  border-radius: 3px;
+  padding: 3px 8px;
+  font-size: 10px;
+  outline: none;
+
+  &:focus {
+    border-color: rgba(59, 130, 246, 0.4);
+  }
+}
+
+.filter-input {
+  width: 90px;
+
+  &::placeholder {
+    color: $muted;
+  }
+}
+
+.filter-select {
+  cursor: pointer;
+}
+
+.events-table-wrap {
+  overflow-x: auto;
+  border: 1px solid $border;
+  border-radius: 4px;
+}
+
+.events-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+
+  thead tr {
+    background: #0d1018;
+    border-bottom: 1px solid $border;
+  }
+
+  th {
+    padding: 6px 10px;
+    text-align: left;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: $muted;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(30, 37, 53, 0.5);
+    transition: background 0.1s;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+  }
+
+  td {
+    padding: 5px 10px;
+    color: $text;
+    white-space: nowrap;
+  }
+
+  .empty-td {
+    color: $muted;
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+  }
 }

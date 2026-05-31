@@ -8,11 +8,14 @@ import { CommandConsole } from '../../features/command-console/command-console';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Live Operations',
-  '/threats': 'Threat Intelligence',
-  '/alerts': 'Alerts',
+  '/threats':   'Threat Intelligence',
+  '/alerts':    'Alerts',
   '/incidents': 'Incidents',
-  '/map': 'Threat Map',
-  '/settings': 'Settings',
+  '/map':       'Threat Map',
+  '/network':   'Network Graph',
+  '/hunting':   'Threat Hunting',
+  '/rules':     'Detection Rules',
+  '/settings':  'Settings',
 };
 
 @Component({

@@ -1,0 +1,154 @@
+<div class="hunt-page">
+
+  <!-- Left: query builder + saved hunts -->
+  <div class="hunt-sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-title">THREAT HUNT</span>
+    </div>
+
+    <!-- Query builder -->
+    <div class="query-section">
+      <span class="section-label">QUERY</span>
+
+      <div class="field">
+        <label>IP Address</label>
+        <input [value]="ip()" (input)="ip.set($any($event.target).value)"
+               placeholder="e.g. 185.220" class="field-input" />
+      </div>
+
+      <div class="field">
+        <label>Attack Type</label>
+        <select class="field-input" [value]="attack_type()" (change)="attack_type.set($any($event.target).value)">
+          <option value="">All types</option>
+          @for (t of attackTypes; track t) {
+            <option [value]="t">{{ t }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Region</label>
+        <select class="field-input" [value]="region()" (change)="region.set($any($event.target).value)">
+          <option value="">All regions</option>
+          @for (r of regions; track r) {
+            <option [value]="r">{{ r }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Score Range</label>
+        <div class="score-range">
+          <input type="number" class="field-input range-input" [value]="min_score()"
+                 (input)="min_score.set(+$any($event.target).value)" min="0" max="100" placeholder="Min" />
+          <span class="range-sep">—</span>
+          <input type="number" class="field-input range-input" [value]="max_score()"
+                 (input)="max_score.set(+$any($event.target).value)" min="0" max="100" placeholder="Max" />
+        </div>
+      </div>
+
+      <div class="query-actions">
+        <button class="btn-run" (click)="run()" [disabled]="running()">
+          @if (running()) { Hunting... } @else { ▶ Run Hunt }
+        </button>
+        <button class="btn-clear" (click)="clear()">Clear</button>
+      </div>
+
+      @if (hasRun() && !showSave()) {
+        <button class="btn-save" (click)="showSave.set(true)">
+          + Save Hunt
+        </button>
+      }
+
+      @if (showSave()) {
+        <div class="save-row">
+          <input class="field-input" [value]="saveName()" (input)="saveName.set($any($event.target).value)"
+                 placeholder="Hunt name…" (keydown.enter)="saveHunt()" />
+          <button class="btn-run" (click)="saveHunt()" [disabled]="!saveName().trim()">Save</button>
+          <button class="btn-clear" (click)="showSave.set(false)">✕</button>
+        </div>
+      }
+    </div>
+
+    <!-- Saved hunts -->
+    @if (savedHunts().length > 0) {
+      <div class="saved-section">
+        <span class="section-label">SAVED HUNTS</span>
+        <div class="saved-list">
+          @for (hunt of savedHunts(); track hunt.id) {
+            <div class="saved-item" (click)="loadHunt(hunt)">
+              <div class="saved-left">
+                <span class="saved-name">{{ hunt.name }}</span>
+                <span class="saved-meta">{{ hunt.result_count }} results · {{ hunt.created_at | date:'HH:mm' }}</span>
+              </div>
+              <button class="saved-del" (click)="deleteHunt(hunt.id, $event)">✕</button>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Right: results -->
+  <div class="hunt-results">
+    @if (!hasRun()) {
+      <div class="results-empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+          <circle cx="11" cy="11" r="8" stroke="#4b5563" stroke-width="1.2"/>
+          <path d="M21 21l-4.35-4.35" stroke="#4b5563" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M11 8v6M8 11h6" stroke="#4b5563" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <p>Build a query and run the hunt</p>
+      </div>
+    } @else {
+      <div class="results-header">
+        <span class="results-title">RESULTS</span>
+        <span class="results-count">{{ total() }} events found
+          @if (total() > results().length) {
+            <span class="results-limit">(showing {{ results().length }})</span>
+          }
+        </span>
+      </div>
+
+      @if (results().length === 0) {
+        <div class="results-empty">
+          <p>No events match this query</p>
+        </div>
+      } @else {
+        <div class="results-table-wrap">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>IP</th>
+                <th>Score</th>
+                <th>Type</th>
+                <th>Region</th>
+                <th>Level</th>
+                <th>Timestamp</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of results(); track r.timestamp + r.ip) {
+                <tr>
+                  <td class="mono ip-cell">{{ r.ip }}</td>
+                  <td class="mono" [style.color]="scoreColor(r.score)">{{ r.score }}</td>
+                  <td class="mono">{{ r.attack_type }}</td>
+                  <td class="mono muted">{{ r.region }}</td>
+                  <td>
+                    <span class="level-badge level-{{ r.threat_level }}">{{ r.threat_level }}</span>
+                  </td>
+                  <td class="mono muted">{{ r.timestamp | date:'HH:mm:ss' }}</td>
+                  <td>
+                    <button class="investigate-btn" (click)="investigateIp(r.ip)">→</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+  </div>
+
+</div>
