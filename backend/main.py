@@ -6,7 +6,7 @@ import asyncio
 import json
 import random
 from collections import defaultdict, deque
-from typing import Any, Optional
+from typing import Optional
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
@@ -232,6 +232,23 @@ def _current_minute_str() -> str:
     return datetime.now(timezone.utc).strftime("%H:%M")
 
 
+def _score_to_level(avg: float) -> str:
+    if avg >= 80:
+        return "critical"
+    if avg >= 60:
+        return "high"
+    if avg >= 40:
+        return "medium"
+    return "low"
+
+
+def _find_incident(incident_id: str) -> dict:
+    for inc in incidents_store:
+        if inc["id"] == incident_id:
+            return inc
+    raise HTTPException(status_code=404, detail="Incident not found")
+
+
 def _create_incident(trigger: dict) -> None:
     global _incident_counter
     _incident_counter += 1
@@ -408,14 +425,7 @@ async def get_stats(request: Request, _=Depends(verify_token)):
         ip_counts[ip] = len(events)
         avg = sum(e["score"] for e in events) / len(events)
         ip_scores[ip] = avg
-        if avg >= 80:
-            ip_levels[ip] = "critical"
-        elif avg >= 60:
-            ip_levels[ip] = "high"
-        elif avg >= 40:
-            ip_levels[ip] = "medium"
-        else:
-            ip_levels[ip] = "low"
+        ip_levels[ip] = _score_to_level(avg)
         for e in events:
             level = e.get("threat_level", "low")
             if level in severity_counts:
@@ -497,14 +507,7 @@ async def get_ip_history(
 
     avg = sum(e["score"] for e in events) / len(events)
     score = int(avg)
-    if avg >= 80:
-        level = "critical"
-    elif avg >= 60:
-        level = "high"
-    elif avg >= 40:
-        level = "medium"
-    else:
-        level = "low"
+    level = _score_to_level(avg)
     regions = list({e.get("region", "US") for e in events})
     mitre_tags = list(
         {tag for e in events for tag in MITRE_MAP.get(e.get("attack_type", ""), [])}
@@ -661,20 +664,12 @@ async def get_related_ips(
         if not overlap:
             continue
         avg = sum(e["score"] for e in events) / len(events)
-        if avg >= 80:
-            lvl = "critical"
-        elif avg >= 60:
-            lvl = "high"
-        elif avg >= 40:
-            lvl = "medium"
-        else:
-            lvl = "low"
         related.append(
             {
                 "ip": other_ip,
                 "shared_attacks": sorted(overlap),
                 "score": int(avg),
-                "threat_level": lvl,
+                "threat_level": _score_to_level(avg),
                 "event_count": len(events),
             }
         )
@@ -721,15 +716,13 @@ async def get_incidents(_=Depends(verify_token)):
 
 @app.patch("/api/incidents/{incident_id}")
 async def patch_incident(incident_id: str, body: dict, _=Depends(verify_token)):
-    for inc in incidents_store:
-        if inc["id"] == incident_id:
-            if "status" in body:
-                inc["status"] = body["status"]
-            if "assigned_to" in body:
-                inc["assigned_to"] = body["assigned_to"]
-            inc["updated_at"] = datetime.now(timezone.utc).isoformat()
-            return inc
-    raise HTTPException(status_code=404, detail="Incident not found")
+    inc = _find_incident(incident_id)
+    if "status" in body:
+        inc["status"] = body["status"]
+    if "assigned_to" in body:
+        inc["assigned_to"] = body["assigned_to"]
+    inc["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return inc
 
 
 @app.get("/api/ip/{ip}/case")
@@ -754,15 +747,8 @@ async def create_incident_from_ip(body: dict, _=Depends(verify_token)):
     attack_types = list({e["attack_type"] for e in events})
     attack_type = attack_types[0] if attack_types else "PortScan"
     scores = [e["score"] for e in events]
-    avg_score = int(sum(scores) / len(scores)) if scores else 50
-    if avg_score >= 80:
-        level = "critical"
-    elif avg_score >= 60:
-        level = "high"
-    elif avg_score >= 40:
-        level = "medium"
-    else:
-        level = "low"
+    avg_score = sum(scores) / len(scores) if scores else 50
+    level = _score_to_level(avg_score)
     regions = list({e["region"] for e in events})
     now = datetime.now(timezone.utc).isoformat()
     _incident_counter += 1
@@ -790,32 +776,25 @@ async def create_incident_from_ip(body: dict, _=Depends(verify_token)):
 
 @app.patch("/api/incidents/{incident_id}/tasks")
 async def update_tasks(incident_id: str, body: dict, _=Depends(verify_token)):
-    for inc in incidents_store:
-        if inc["id"] == incident_id:
-            inc["completed_tasks"] = body.get("completed_tasks", [])
-            inc["updated_at"] = datetime.now(timezone.utc).isoformat()
-            return {"completed_tasks": inc["completed_tasks"]}
-    raise HTTPException(status_code=404, detail="Incident not found")
+    inc = _find_incident(incident_id)
+    inc["completed_tasks"] = body.get("completed_tasks", [])
+    inc["updated_at"] = datetime.now(timezone.utc).isoformat()
+    return {"completed_tasks": inc["completed_tasks"]}
 
 
 @app.post("/api/incidents/{incident_id}/notes")
 async def add_note(incident_id: str, body: dict, _=Depends(verify_token)):
-    for inc in incidents_store:
-        if inc["id"] == incident_id:
-            note = {
-                "author": body.get("author", "analyst1"),
-                "text": body.get("text", "").strip(),
-                "at": datetime.now(timezone.utc).isoformat(),
-            }
-            if not note["text"]:
-                raise HTTPException(status_code=400, detail="Note text is required")
-            inc["notes"].append(note)
-            inc["updated_at"] = note["at"]
-            return note
-    raise HTTPException(status_code=404, detail="Incident not found")
-
-
-# ── Health check ──────────────────────────────────────────────
+    inc = _find_incident(incident_id)
+    note = {
+        "author": body.get("author", "analyst1"),
+        "text": body.get("text", "").strip(),
+        "at": datetime.now(timezone.utc).isoformat(),
+    }
+    if not note["text"]:
+        raise HTTPException(status_code=400, detail="Note text is required")
+    inc["notes"].append(note)
+    inc["updated_at"] = note["at"]
+    return note
 
 
 # ── REST: network graph ───────────────────────────────────────
@@ -834,14 +813,7 @@ async def get_network(_=Depends(verify_token)):
         scores = [e["score"] for e in ev]
         avg = sum(scores) / len(scores)
         score = int(avg)
-        if avg >= 80:
-            level = "critical"
-        elif avg >= 60:
-            level = "high"
-        elif avg >= 40:
-            level = "medium"
-        else:
-            level = "low"
+        level = _score_to_level(avg)
 
         attack_counts: dict[str, int] = {}
         for e in ev:

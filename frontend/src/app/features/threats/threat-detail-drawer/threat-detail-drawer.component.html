@@ -8,7 +8,6 @@
   </div>
 } @else {
 
-  <!-- Header -->
   <div class="detail-header">
     <div>
       <span class="drawer-label">THREAT INTELLIGENCE</span>
@@ -17,7 +16,6 @@
     <button class="close-btn" (click)="close()">✕</button>
   </div>
 
-  <!-- Action Bar -->
   <div class="action-bar">
     <button class="action-btn hunt" (click)="huntIp()">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -58,7 +56,6 @@
   @if (history()) {
     <div class="detail-body">
 
-      <!-- Score + meta -->
       <div class="score-section">
         <div class="score-ring" [style.borderColor]="scoreColor(history()?.score ?? 0)">
           <span class="score-value" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.score }}</span>
@@ -83,7 +80,6 @@
         </div>
       </div>
 
-      <!-- Geo Intelligence -->
       @if (geoData()) {
         <div class="section">
           <span class="section-title">GEO INTELLIGENCE</span>
@@ -112,7 +108,6 @@
         </div>
       }
 
-      <!-- AbuseIPDB -->
       @let abuseConfidence = history()?.abuse_confidence;
       @if (abuseConfidence !== undefined) {
         <div class="section">
@@ -136,7 +131,6 @@
         </div>
       }
 
-      <!-- AI Summary -->
       @if (aiLoading()) {
         <div class="section">
           <span class="section-title">AI ANALYSIS</span>
@@ -152,7 +146,6 @@
         </div>
       }
 
-      <!-- MITRE Tags -->
       @if ((history()?.mitre_tags?.length ?? 0) > 0) {
         <div class="section">
           <span class="section-title">MITRE ATT&CK</span>
@@ -164,7 +157,6 @@
         </div>
       }
 
-      <!-- Related IPs -->
       @if (relatedIps().length > 0) {
         <div class="section">
           <button class="section-toggle" (click)="relatedOpen.update(v => !v)">
@@ -194,7 +186,6 @@
         </div>
       }
 
-      <!-- Raw Events -->
       <div class="section">
         <button class="section-toggle" (click)="eventsOpen.update(v => !v)">
           <span class="section-title">RAW EVENTS ({{ filteredEvents().length }})</span>

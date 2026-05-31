@@ -1,6 +1,5 @@
 <div class="rules-page">
 
-  <!-- Left: rules list -->
   <div class="rules-sidebar">
     <div class="sidebar-header">
       <span class="sidebar-title">DETECTION RULES</span>
@@ -31,7 +30,6 @@
     </div>
   </div>
 
-  <!-- Right: editor -->
   <div class="rules-editor">
     @if (!selected() && !isNew()) {
       <div class="editor-empty">
@@ -44,7 +42,6 @@
     } @else {
       <div class="editor-body">
 
-        <!-- Name -->
         <div class="editor-section">
           <label class="field-label">RULE NAME</label>
           <input class="field-input" [value]="editName()"
@@ -52,7 +49,6 @@
                  placeholder="e.g. High Score Russia" />
         </div>
 
-        <!-- Conditions -->
         <div class="editor-section">
           <div class="conditions-header">
             <label class="field-label">CONDITIONS</label>
@@ -102,7 +98,6 @@
           <button class="btn-add-cond" (click)="addCondition()">+ Add Condition</button>
         </div>
 
-        <!-- Actions -->
         <div class="editor-section">
           <label class="field-label">ACTIONS</label>
           <div class="actions-row">
@@ -116,13 +111,11 @@
           </div>
         </div>
 
-        <!-- Query preview -->
         <div class="editor-section">
           <label class="field-label">QUERY PREVIEW</label>
           <div class="query-preview">{{ queryPreview() }}</div>
         </div>
 
-        <!-- Buttons -->
         <div class="editor-footer">
           <button class="btn-cancel" (click)="cancel()">Cancel</button>
           <button class="btn-save" (click)="save()" [disabled]="!editName().trim()">

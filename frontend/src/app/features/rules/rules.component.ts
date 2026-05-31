@@ -57,22 +57,23 @@ export class RulesComponent {
       .subscribe(r => this.rules.set(r));
   }
 
+  private loadEditor(rule?: DetectionRule) {
+    this.editName.set(rule?.name ?? '');
+    this.editLogic.set(rule?.logic ?? 'AND');
+    this.editConditions.set(rule ? rule.conditions.map(c => ({ ...c })) : [{ field: 'score', operator: '>', value: 75 }]);
+    this.editActions.set(new Set<RuleAction>(rule?.actions ?? ['alert']));
+  }
+
   newRule() {
     this.selected.set(null);
     this.isNew.set(true);
-    this.editName.set('');
-    this.editLogic.set('AND');
-    this.editConditions.set([{ field: 'score', operator: '>', value: 75 }]);
-    this.editActions.set(new Set<RuleAction>(['alert']));
+    this.loadEditor();
   }
 
   selectRule(rule: DetectionRule) {
     this.selected.set(rule);
     this.isNew.set(false);
-    this.editName.set(rule.name);
-    this.editLogic.set(rule.logic);
-    this.editConditions.set(rule.conditions.map(c => ({ ...c })));
-    this.editActions.set(new Set<RuleAction>(rule.actions));
+    this.loadEditor(rule);
   }
 
   addCondition() {
@@ -83,25 +84,21 @@ export class RulesComponent {
     this.editConditions.update(cs => cs.filter((_, idx) => idx !== i));
   }
 
+  private updateCondition(i: number, patch: Partial<RuleCondition>) {
+    this.editConditions.update(cs => cs.map((c, idx) => idx === i ? { ...c, ...patch } : c));
+  }
+
   updateConditionField(i: number, field: string) {
     const ops = OPERATORS[field] ?? ['='];
-    this.editConditions.update(cs =>
-      cs.map((c, idx) => idx === i
-        ? { ...c, field: field as RuleCondition['field'], operator: ops[0] as RuleCondition['operator'], value: '' }
-        : c)
-    );
+    this.updateCondition(i, { field: field as RuleCondition['field'], operator: ops[0] as RuleCondition['operator'], value: '' });
   }
 
   updateConditionOp(i: number, operator: string) {
-    this.editConditions.update(cs =>
-      cs.map((c, idx) => idx === i ? { ...c, operator: operator as RuleCondition['operator'] } : c)
-    );
+    this.updateCondition(i, { operator: operator as RuleCondition['operator'] });
   }
 
   updateConditionValue(i: number, value: string) {
-    this.editConditions.update(cs =>
-      cs.map((c, idx) => idx === i ? { ...c, value } : c)
-    );
+    this.updateCondition(i, { value });
   }
 
   toggleAction(action: RuleAction) {

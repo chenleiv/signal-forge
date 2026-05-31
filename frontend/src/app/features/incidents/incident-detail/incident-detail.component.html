@@ -7,7 +7,6 @@
   </div>
 } @else {
 
-  <!-- Header -->
   <div class="detail-header">
     <div class="header-left">
       <span class="inc-id">{{ incident()!.id }}</span>
@@ -22,7 +21,6 @@
 
   <div class="detail-title">{{ incident()!.title }}</div>
 
-  <!-- Status workflow -->
   <div class="status-bar">
     @for (s of statusFlow; track s) {
       <button class="status-btn"
@@ -37,7 +35,6 @@
     }
   </div>
 
-  <!-- Meta -->
   <div class="meta-grid">
     <div class="meta-item">
       <span class="meta-label">Attack</span>
@@ -81,7 +78,6 @@
 
   <div class="detail-body">
 
-    <!-- Response Tasks -->
     <div class="section">
       <span class="section-title">RESPONSE TASKS ({{ completedTasks().size }}/{{ tasks().length }})</span>
       <div class="tasks-list">
@@ -100,7 +96,6 @@
       </div>
     </div>
 
-    <!-- Notes -->
     <div class="section">
       <span class="section-title">NOTES ({{ notes().length }})</span>
       <div class="note-input-row">
@@ -123,7 +118,6 @@
       }
     </div>
 
-    <!-- Timeline -->
     <div class="section">
       <span class="section-title">TIMELINE</span>
       <div class="timeline">
@@ -139,7 +133,6 @@
       </div>
     </div>
 
-    <!-- MITRE ATT&CK -->
     @if (incident()!.mitre_tags.length > 0) {
       <div class="section">
         <span class="section-title">MITRE ATT&CK</span>

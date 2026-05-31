@@ -1,12 +1,10 @@
 <div class="hunt-page">
 
-  <!-- Left: query builder + saved hunts -->
   <div class="hunt-sidebar">
     <div class="sidebar-header">
       <span class="sidebar-title">THREAT HUNT</span>
     </div>
 
-    <!-- Query builder -->
     <div class="query-section">
       <span class="section-label">QUERY</span>
 
@@ -70,7 +68,6 @@
       }
     </div>
 
-    <!-- Saved hunts -->
     @if (savedHunts().length > 0) {
       <div class="saved-section">
         <span class="section-label">SAVED HUNTS</span>
@@ -89,7 +86,6 @@
     }
   </div>
 
-  <!-- Right: results -->
   <div class="hunt-results">
     @if (!hasRun()) {
       <div class="results-empty">

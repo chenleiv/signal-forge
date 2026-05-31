@@ -12,14 +12,13 @@ import {
 import { DatePipe, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormsModule } from '@angular/forms';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
 import { IpHistory, IpGeo, RelatedIp } from '../../../shared/models/threat.models';
 
 @Component({
   selector: 'app-threat-detail-drawer',
   standalone: true,
-  imports: [DatePipe, NgClass, FormsModule],
+  imports: [DatePipe, NgClass],
   templateUrl: './threat-detail-drawer.component.html',
   styleUrl: './threat-detail-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

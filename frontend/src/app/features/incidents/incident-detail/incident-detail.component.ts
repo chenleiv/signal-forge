@@ -76,35 +76,27 @@ export class IncidentDetailComponent {
 
   close() { this.closed.emit(); }
 
-  updateStatus(status: IncidentStatus) {
+  private patchAndEmit(patch: Parameters<ThreatStoreService['patchIncident']>[1], timelineLabel: string, timelineType: TimelineEntry['type']) {
     const inc = this.incident();
-    if (!inc || inc.status === status) return;
-    this.store.patchIncident(inc.id, { status })
+    if (!inc) return;
+    this.store.patchIncident(inc.id, patch)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(updated => {
         this.incidentChange.emit(updated);
-        this.timeline.update(tl => [
-          { label: `Status → ${status}`, at: updated.updated_at, type: 'status' },
-          ...tl,
-        ]);
+        this.timeline.update(tl => [{ label: timelineLabel, at: updated.updated_at, type: timelineType }, ...tl]);
       });
+  }
+
+  updateStatus(status: IncidentStatus) {
+    if (this.incident()?.status === status) return;
+    this.patchAndEmit({ status }, `Status → ${status}`, 'status');
   }
 
   readonly analysts = ['analyst1', 'analyst2', 'analyst3', 'analyst4', 'analyst5'];
 
   updateAssignee(value: string) {
-    const inc = this.incident();
-    if (!inc) return;
     const assigned_to = value || null;
-    this.store.patchIncident(inc.id, { assigned_to })
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(updated => {
-        this.incidentChange.emit(updated);
-        this.timeline.update(tl => [
-          { label: `Assigned → ${assigned_to ?? 'Unassigned'}`, at: updated.updated_at, type: 'assign' },
-          ...tl,
-        ]);
-      });
+    this.patchAndEmit({ assigned_to }, `Assigned → ${assigned_to ?? 'Unassigned'}`, 'assign');
   }
 
   toggleTask(index: number) {

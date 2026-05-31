@@ -1,5 +1,4 @@
 // ── Palette ──────────────────────────────────────────────────
-$bg: #0f1117;
 $panel-bg: #13171f;
 $border: #1e2535;
 
@@ -57,23 +56,6 @@ $secondary: #9ca3af;
   color: $secondary;
 }
 
-.live-chip {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.8px;
-  color: $green;
-}
-
-.chip-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: $green;
-  animation: blink 1.5s ease-in-out infinite;
-}
 
 .summary-stats {
   display: flex;
@@ -209,11 +191,6 @@ $secondary: #9ca3af;
   min-height: 0;
 }
 
-.epm-panel {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
 
 // ── Panel ────────────────────────────────────────────────────
 .panel {
@@ -269,37 +246,6 @@ $secondary: #9ca3af;
   height: 100%;
 }
 
-.epm-body {
-  padding: 4px 0;
-}
-
-// ── Live indicator ───────────────────────────────────────────
-.live-indicator {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 1px;
-  color: $green;
-
-  &.paused {
-    color: $secondary;
-  }
-}
-
-.live-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: $green;
-  animation: blink 1.5s ease-in-out infinite;
-
-  .paused & {
-    background: $secondary;
-    animation: none;
-  }
-}
 
 @keyframes blink {
 

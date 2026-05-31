@@ -77,9 +77,7 @@ export interface SavedHunt {
   result_count: number;
 }
 
-export interface HuntResult extends ThreatEvent {
-  ip: string;
-}
+export type HuntResult = ThreatEvent;
 
 export interface RuleCondition {
   field: 'score' | 'attack_type' | 'region' | 'ip';

@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  OnInit,
   ChangeDetectionStrategy,
   DestroyRef,
   HostListener,
@@ -22,7 +23,7 @@ import { IncidentDetailComponent } from './incident-detail/incident-detail.compo
   styleUrl: './incidents.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Incidents {
+export class Incidents implements OnInit {
   private destroyRef = inject(DestroyRef);
   private store = inject(ThreatStoreService);
   private route = inject(ActivatedRoute);
