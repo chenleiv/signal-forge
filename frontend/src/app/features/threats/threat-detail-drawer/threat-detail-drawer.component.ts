@@ -72,9 +72,9 @@ export class ThreatDetailDrawerComponent {
   }
 
   scoreColor(score: number): string {
-    if (score >= 80) return '#ff2d55';
-    if (score >= 60) return '#ff6b00';
-    if (score >= 40) return '#ffcc00';
-    return '#00d4ff';
+    if (score >= 80) return '#ef4444';
+    if (score >= 60) return '#f97316';
+    if (score >= 40) return '#f59e0b';
+    return '#60a5fa';
   }
 }

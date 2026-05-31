@@ -1,62 +1,111 @@
+$bg:      #0a0c12;
+$card:    #0f1420;
+$border:  #1e2d45;
+$text:    #e5e7eb;
+$muted:   #4b5563;
+$secondary: #6b7280;
+$accent:  #3b82f6;
+
+// ── Page ─────────────────────────────────────────────────────
 .login-page {
     min-height: 100vh;
-    background: #080f1e;
+    background: $bg;
+    background-image:
+        radial-gradient(ellipse at 20% 30%, rgba(59,  130, 246, 0.06) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 70%, rgba(168, 85,  247, 0.05) 0%, transparent 50%),
+        radial-gradient(ellipse at 75% 15%, rgba(239, 68,  68,  0.03) 0%, transparent 45%);
     display: flex;
     align-items: center;
     justify-content: center;
-    background-image:
-        radial-gradient(ellipse at 20% 50%, rgba(59, 130, 246, 0.04) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 50%, rgba(0, 212, 255, 0.04) 0%, transparent 60%);
 }
 
+// ── Card ─────────────────────────────────────────────────────
 .login-card {
     width: 360px;
-    background: #0d1526;
-    border: 1px solid #1e3a5f;
-    border-radius: 12px;
-    padding: 40px;
+    background: $card;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 32px 36px 28px;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    gap: 20px;
+    box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.04),
+        0 24px 64px rgba(0, 0, 0, 0.6);
 }
 
+// ── Logo row ─────────────────────────────────────────────────
 .login-logo {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 8px;
+    gap: 12px;
 }
 
-.login-brand {
-    font-size: 18px;
+.logo-ring {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.1);
+}
+
+.logo-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.logo-name {
+    font-size: 15px;
     font-weight: 700;
-    color: #e5e7eb;
-    letter-spacing: 0.3px;
+    color: $text;
+    letter-spacing: 0.2px;
+}
+
+.logo-sub {
+    font-size: 10px;
+    color: $muted;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+// ── Divider ──────────────────────────────────────────────────
+.login-divider {
+    height: 1px;
+    background: $border;
+    margin: -4px 0;
+}
+
+// ── Heading ──────────────────────────────────────────────────
+.login-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .login-title {
-    font-size: 16px;
+    font-size: 18px;
     font-weight: 600;
-    color: #e5e7eb;
+    color: $text;
     margin: 0;
 }
 
 .login-sub {
-    font-size: 11px;
-    color: #4a6a8a;
-    margin: 0 0 16px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
+    font-size: 12px;
+    color: $secondary;
+    margin: 0;
 }
 
+// ── Form ─────────────────────────────────────────────────────
 .login-form {
-    width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    margin-top: 8px;
+    gap: 14px;
 }
 
 .field {
@@ -67,81 +116,119 @@
 
 .field-label {
     font-size: 10px;
-    color: #4a6a8a;
-    letter-spacing: 0.08em;
+    color: $secondary;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
+.input-wrap {
+    position: relative;
+}
+
+.input-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: $muted;
+    pointer-events: none;
+}
+
 .field-input {
-    background: #060d1a;
-    border: 1px solid #1e3a5f;
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid $border;
     border-radius: 6px;
-    padding: 10px 12px;
-    color: #e5e7eb;
+    padding: 10px 12px 10px 34px;
+    color: $text;
     font-size: 13px;
     outline: none;
-    transition: border-color 0.15s;
+    transition: border-color 0.15s, box-shadow 0.15s;
 
-    &::placeholder {
-        color: #2a4a6a;
-    }
+    &::placeholder { color: $muted; }
 
     &:focus {
-        border-color: #00d4ff50;
+        border-color: rgba($accent, 0.5);
+        box-shadow: 0 0 0 3px rgba($accent, 0.07);
     }
 }
 
+// ── Error ────────────────────────────────────────────────────
 .login-error {
+    display: flex;
+    align-items: center;
+    gap: 7px;
     font-size: 12px;
-    color: #ff2d55;
-    text-align: center;
-    padding: 8px;
-    background: #ff2d5510;
-    border: 1px solid #ff2d5530;
+    color: #ef4444;
+    padding: 9px 12px;
+    background: rgba(239, 68, 68, 0.07);
+    border: 1px solid rgba(239, 68, 68, 0.2);
     border-radius: 6px;
 }
 
+// ── Buttons ──────────────────────────────────────────────────
 .login-btn {
-    background: rgba(59, 130, 246, 0.1);
-    border: 1px solid rgba(59, 130, 246, 0.4);
+    width: 100%;
+    background: $accent;
+    border: none;
     border-radius: 6px;
-    color: #3b82f6;
+    color: #fff;
     font-size: 13px;
     font-weight: 600;
     padding: 11px;
     cursor: pointer;
-    transition: all 0.15s;
-    margin-top: 4px;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 2px;
 
-    &:hover:not(:disabled) {
-        background: rgba(59, 130, 246, 0.18);
-        border-color: rgba(59, 130, 246, 0.7);
-    }
+    &:hover:not(:disabled) { background: #2563eb; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
 
-    &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-    }
+.btn-spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 .demo-btn {
     width: 100%;
-    background: rgba(0, 212, 255, 0.06);
-    border: 1px solid rgba(0, 212, 255, 0.35);
+    background: transparent;
+    border: 1px solid $border;
     border-radius: 6px;
-    color: #00d4ff;
+    color: $secondary;
     font-size: 12px;
     font-family: monospace;
-    font-weight: 600;
-    padding: 10px 16px;
+    padding: 9px 16px;
     cursor: pointer;
     transition: all 0.15s;
-    margin-top: 4px;
-    letter-spacing: 0.03em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
 
     &:hover {
-        background: rgba(0, 212, 255, 0.12);
-        border-color: rgba(0, 212, 255, 0.6);
-        box-shadow: 0 0 12px rgba(0, 212, 255, 0.2);
+        border-color: rgba($accent, 0.4);
+        color: $text;
     }
+}
+
+.demo-hint {
+    font-size: 10px;
+    color: $muted;
+    letter-spacing: 0.03em;
 }

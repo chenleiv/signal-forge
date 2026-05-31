@@ -1,52 +1,181 @@
 <div class="dashboard">
 
-  <div class="summary-row">
-    <div class="summary-card critical">
-      <span class="summary-label">Critical</span>
-      <span class="summary-value">{{ store.criticalCount() }}</span>
-      <span class="summary-delta">▲ Active</span>
+  <!-- ── KPI Summary ──────────────────────────────────────────── -->
+  <div class="summary-panel">
+    <div class="summary-header">
+      <span class="summary-title">SOC Monitoring Summary</span>
+      <span class="live-chip"><span class="chip-dot"></span>Live</span>
     </div>
-    <div class="summary-card high">
-      <span class="summary-label">High</span>
-      <span class="summary-value">{{ store.highCount() }}</span>
-      <span class="summary-delta">Last 60s</span>
+    <div class="summary-stats">
+
+      <div class="kpi-stat">
+        <div class="kpi-icon-wrap tracked">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="10"/>
+            <circle cx="12" cy="10" r="3"/>
+            <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/>
+          </svg>
+        </div>
+        <span class="kpi-value">{{ store.trackedIPs() }}</span>
+        <span class="kpi-label">Tracked IPs</span>
+      </div>
+
+      <div class="kpi-arrow">
+        <span class="arrow-line"></span>
+        <span class="arrow-dot"></span>
+        <span class="arrow-line"></span>
+      </div>
+
+      <div class="kpi-stat">
+        <div class="kpi-icon-wrap events">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+          </svg>
+        </div>
+        <span class="kpi-value">{{ store.events().length }}</span>
+        <span class="kpi-label">Processed Events</span>
+      </div>
+
+      <div class="kpi-arrow">
+        <span class="arrow-line"></span>
+        <span class="arrow-dot"></span>
+        <span class="arrow-line"></span>
+      </div>
+
+      <div class="kpi-stat">
+        <div class="kpi-icon-wrap epm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <span class="kpi-value">{{ store.eventsPerMinute() }}</span>
+        <span class="kpi-label">Events / Min</span>
+      </div>
+
+      <div class="kpi-arrow">
+        <span class="arrow-line"></span>
+        <span class="arrow-dot"></span>
+        <span class="arrow-line"></span>
+      </div>
+
+      <div class="kpi-stat">
+        <div class="kpi-icon-wrap regions">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </div>
+        <span class="kpi-value">{{ store.activeRegions() }}</span>
+        <span class="kpi-label">Active Regions</span>
+      </div>
+
+      <div class="kpi-arrow">
+        <span class="arrow-line"></span>
+        <span class="arrow-dot"></span>
+        <span class="arrow-line"></span>
+      </div>
+
+      <div class="kpi-stat">
+        <div class="kpi-icon-wrap high">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+            <polyline points="17 6 23 6 23 12"/>
+          </svg>
+        </div>
+        <span class="kpi-value">{{ store.highCount() }}</span>
+        <span class="kpi-label">High Severity</span>
+      </div>
+
+      <div class="kpi-arrow">
+        <span class="arrow-line"></span>
+        <span class="arrow-dot"></span>
+        <span class="arrow-line"></span>
+      </div>
+
+      <div class="kpi-stat">
+        <div class="kpi-icon-wrap critical">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <span class="kpi-value critical-val">{{ store.criticalCount() }}</span>
+        <span class="kpi-label">Critical Alerts</span>
+      </div>
+
     </div>
-    <div class="summary-card events">
-      <span class="summary-label">Events</span>
-      <span class="summary-value">{{ store.events().length }}</span>
-      <span class="summary-delta">Processed</span>
+  </div>
+
+  <!-- ── Chart Row ────────────────────────────────────────────── -->
+  <div class="chart-row">
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Threats by Severity</span>
+        <span class="panel-meta">See details →</span>
+      </div>
+      <div class="chart-body">
+        @if (severityChart()) {
+          <div echarts [options]="severityChart()!" class="echart"></div>
+        }
+      </div>
     </div>
-    <div class="summary-card tracked">
-      <span class="summary-label">Tracked IPs</span>
-      <span class="summary-value">{{ store.trackedIPs() }}</span>
-      <span class="summary-delta">Monitored</span>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Attack Types</span>
+        <span class="panel-meta">See details →</span>
+      </div>
+      <div class="chart-body">
+        @if (attackChart()) {
+          <div echarts [options]="attackChart()!" class="echart"></div>
+        }
+      </div>
     </div>
-    <div class="summary-card epm">
-      <span class="summary-label">Events/Min</span>
-      <span class="summary-value">{{ store.eventsPerMinute() }}</span>
-      <span class="summary-delta">Live</span>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">By Region</span>
+        <span class="panel-meta">See details →</span>
+      </div>
+      <div class="chart-body">
+        @if (regionChart()) {
+          <div echarts [options]="regionChart()!" class="echart"></div>
+        }
+      </div>
     </div>
-    <div class="summary-card regions">
-      <span class="summary-label">Active Regions</span>
-      <span class="summary-value">{{ store.activeRegions() }}</span>
-      <span class="summary-delta">Worldwide</span>
+
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Top Attacking IPs</span>
+        <span class="panel-meta">See details →</span>
+      </div>
+      <div class="chart-body">
+        @if (topIpsChart()) {
+          <div echarts [options]="topIpsChart()!" class="echart"></div>
+        }
+      </div>
     </div>
 
   </div>
 
-  <!-- ── 4-Column Main Grid ─────────────────────────────────── -->
-  <div class="main-grid">
+  <!-- ── Bottom Row: Stream + EPM ─────────────────────────────── -->
+  <div class="bottom-row">
 
-    <!-- Col 1: Live Event Stream -->
     <div class="panel stream-panel">
       <div class="panel-header">
         <span class="panel-title">Live SOC Stream</span>
-        <button class="freeze-btn" [class.frozen]="store.frozen()" (click)="store.toggleFreeze()">
-          {{ store.frozen() ? '▶ Resume' : '⏸ Freeze' }}
-        </button>
-        <span class="live-indicator" [class.paused]="store.frozen()">
-          <span class="live-dot"></span>{{ store.frozen() ? 'PAUSED' : 'LIVE' }}
-        </span>
+        <div class="header-right">
+          <button class="freeze-btn" [class.frozen]="store.frozen()" (click)="store.toggleFreeze()">
+            {{ store.frozen() ? '▶ Resume' : '⏸ Freeze' }}
+          </button>
+          <span class="live-indicator" [class.paused]="store.frozen()">
+            <span class="live-dot"></span>{{ store.frozen() ? 'PAUSED' : 'LIVE' }}
+          </span>
+        </div>
       </div>
       <div class="table-wrapper">
         <table class="event-table">
@@ -61,63 +190,37 @@
           </thead>
           <tbody>
             @for (event of store.events(); track event.ip + event.timestamp) {
-
-            <tr class="event-row" [class]="'row-' + event.threat_level">
-              <td class="cell-ts">{{ event.timestamp | date:'HH:mm:ss' }}</td>
-              <td class="cell-ip">{{ event.ip }}</td>
-              <td class="cell-event">{{ getEventLabel(event.attack_type) }}</td>
-              <td class="cell-score">{{ event.score }}</td>
-              <td class="cell-sev">
-                <span class="sev-badge" [class]="getSeverityClass(event.threat_level)">
-                  {{ event.threat_level[0].toUpperCase() }}
-                </span>
-              </td>
-            </tr>
+              <tr class="event-row" [class]="'row-' + event.threat_level">
+                <td class="cell-ts">{{ event.timestamp | date:'HH:mm:ss' }}</td>
+                <td class="cell-ip">{{ event.ip }}</td>
+                <td class="cell-event">{{ getEventLabel(event.attack_type) }}</td>
+                <td class="cell-score">{{ event.score }}</td>
+                <td>
+                  <span class="sev-badge" [ngClass]="getSeverityClass(event.threat_level)">
+                    {{ event.threat_level[0].toUpperCase() }}
+                  </span>
+                </td>
+              </tr>
             } @empty {
-            <tr>
-              <td colspan="5" class="empty-row">Connecting to stream…</td>
-            </tr>
+              <tr><td colspan="5" class="empty-row">Connecting to stream…</td></tr>
             }
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- Col 2: Charts Left (Severity + Attack Types) -->
-    <app-charts-column [column]="'left'" />
-
-    <!-- Col 3: Charts Right (EPM + Top IPs) -->
-    <app-charts-column [column]="'right'" />
-
-    <!-- Col 4: Alerts Panel -->
-    <div class="panel alerts-panel">
+    <div class="panel epm-panel">
       <div class="panel-header">
-        <span class="panel-title">Critical Alerts</span>
-        @let criticalCount = store.criticalCount();
-        @if (criticalCount > 0) {
-        <span class="alert-badge">{{ criticalCount }}</span>
+        <span class="panel-title">Detection Rate Trend</span>
+        <span class="panel-meta">Events / min</span>
+      </div>
+      <div class="chart-body epm-body">
+        @if (epmChart()) {
+          <div echarts [options]="epmChart()!" class="echart"></div>
         }
       </div>
-      <div class="alerts-list">
-        @for (event of criticalEvents(); track event.timestamp) {
-        <div class="alert-item">
-          <div class="alert-indicator"></div>
-          <div class="alert-body">
-            <span class="alert-title">{{ event.attack_type }} Detected</span>
-            <span class="alert-detail">{{ event.ip }}</span>
-            <span class="alert-score">Score: {{ event.score }}</span>
-            <span class="alert-time">{{ event.timestamp | date:'HH:mm:ss' }}</span>
-          </div>
-        </div>
-        } @empty {
-        <div class="no-alerts">
-          <span class="no-alerts-dot"></span>
-          No critical alerts
-        </div>
-        }
-      </div>
-
     </div>
 
   </div>
+
 </div>

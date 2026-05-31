@@ -169,36 +169,14 @@ $accent: #3b82f6;
     border-radius: 50%;
     flex-shrink: 0;
 
-    &.critical {
-        background: #dc2626;
-    }
-
-    &.high {
-        background: #ea580c;
-    }
-
-    &.medium {
-        background: #d97706;
-    }
+    &.critical { background: #ef4444; }
+    &.high     { background: #f97316; }
+    &.medium   { background: #f59e0b; }
 }
 
-.label-critical {
-    font-size: 12px;
-    color: #dc2626;
-    font-weight: 500;
-}
-
-.label-high {
-    font-size: 12px;
-    color: #ea580c;
-    font-weight: 500;
-}
-
-.label-medium {
-    font-size: 12px;
-    color: #d97706;
-    font-weight: 500;
-}
+.label-critical { font-size: 12px; color: #ef4444; font-weight: 500; }
+.label-high     { font-size: 12px; color: #f97316; font-weight: 500; }
+.label-medium   { font-size: 12px; color: #f59e0b; font-weight: 500; }
 
 .threshold-op {
     font-size: 14px;

@@ -13,20 +13,49 @@
 
 .threats-split {
   flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 420px;
+  display: flex;
   min-height: 0;
   overflow: hidden;
 }
 
 .split-table {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid #1e2535;
 }
 
+// ── Resize handle ─────────────────────────────────────────────
+.resize-handle {
+  flex-shrink: 0;
+  width: 5px;
+  cursor: col-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 10;
+
+  &:hover {
+    background: rgba(59, 130, 246, 0.15);
+
+    .handle-bar { background: #3b82f6; }
+  }
+}
+
+.handle-bar {
+  width: 1px;
+  height: 40px;
+  background: #1e2535;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+
+// ── Detail panel ──────────────────────────────────────────────
 .split-detail {
+  flex-shrink: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;

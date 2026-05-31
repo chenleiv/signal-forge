@@ -44,25 +44,10 @@
     color: #3b82f6;
   }
 
-  &.critical.active {
-    border-color: #dc2626;
-    color: #dc2626;
-  }
-
-  &.high.active {
-    border-color: #ea580c;
-    color: #ea580c;
-  }
-
-  &.medium.active {
-    border-color: #d97706;
-    color: #d97706;
-  }
-
-  &.low.active {
-    border-color: #2563eb;
-    color: #2563eb;
-  }
+  &.critical.active { border-color: #ef4444; color: #ef4444; }
+  &.high.active     { border-color: #f97316; color: #f97316; }
+  &.medium.active   { border-color: #f59e0b; color: #f59e0b; }
+  &.low.active      { border-color: #60a5fa; color: #60a5fa; }
 }
 
 .map-hint {

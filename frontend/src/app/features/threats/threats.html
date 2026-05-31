@@ -1,10 +1,19 @@
 <div class="threats-page">
   <div class="threats-split">
+
     <div class="split-table">
       <app-threat-table (ipSelected)="openDrawer($event)" [selectedIp]="selectedIp()" />
     </div>
-    <div class="split-detail">
+
+    @if (selectedIp()) {
+      <div class="resize-handle" (mousedown)="startResize($event)">
+        <div class="handle-bar"></div>
+      </div>
+    }
+
+    <div class="split-detail" [style.width.px]="selectedIp() ? detailWidth() : 0">
       <app-threat-detail-drawer [ip]="selectedIp()" (closed)="closeDrawer()" />
     </div>
+
   </div>
 </div>

@@ -23,12 +23,13 @@
           <tr class="ip-row" (click)="selectIp(row.ip)" [class.row-selected]="row.ip === selectedIp()">
             <td class="cell-idx">{{ i + 1 }}</td>
             <td class="cell-ip">{{ row.ip }}</td>
-            <td class="cell-score" [class]="scoreClass(row.score)">{{ row.score }}</td>
+            <td class="cell-score" [ngClass]="scoreClass(row.score)">{{ row.score }}</td>
             <td class="cell-count">{{ row.count }}</td>
             <td class="cell-level">
-              <span class="level-badge" [class]="scoreClass(row.score)">
-                {{ row.score >= 80 ? 'CRITICAL' : row.score >= 60 ? 'HIGH' : row.score >= 40 ? 'MEDIUM' : 'LOW' }}
-              </span>
+              <div class="sev-cell">
+                <span class="sev-dot" [ngClass]="'score-' + (row.threat_level ?? scoreClass(row.score).replace('score-', ''))"></span>
+                <span class="sev-label">{{ (row.threat_level ?? 'low') | titlecase }}</span>
+              </div>
             </td>
             <td class="cell-action">Details →</td>
           </tr>

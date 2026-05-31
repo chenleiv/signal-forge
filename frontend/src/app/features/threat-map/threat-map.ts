@@ -162,11 +162,11 @@ export class ThreatMap {
 
   private severityColor(level: string): string {
     const map: Record<string, string> = {
-      critical: '#dc2626',
-      high: '#ea580c',
-      medium: '#d97706',
-      low: '#2563eb',
+      critical: '#ef4444',
+      high: '#f97316',
+      medium: '#f59e0b',
+      low: '#60a5fa',
     };
-    return map[level] ?? '#2563eb';
+    return map[level] ?? '#60a5fa';
   }
 }

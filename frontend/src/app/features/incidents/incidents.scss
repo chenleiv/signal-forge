@@ -1,9 +1,15 @@
-$bg: #0f1117;
-$panel: #13171f;
-$border: #1e2535;
-$text: #e5e7eb;
-$muted: #9ca3af;
-$accent: #3b82f6;
+$bg:      #0f1117;
+$panel:   #13171f;
+$border:  #1e2535;
+$text:    #e5e7eb;
+$muted:   #9ca3af;
+$accent:  #3b82f6;
+$secondary: #6b7280;
+
+$sev-critical: #ef4444;
+$sev-high:     #f97316;
+$sev-medium:   #f59e0b;
+$sev-low:      #60a5fa;
 
 :host {
     display: block;
@@ -21,24 +27,54 @@ $accent: #3b82f6;
 // ── Split layout ──────────────────────────────────────────────
 .incidents-split {
     flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 360px;
+    display: flex;
     min-height: 0;
     overflow: hidden;
 }
 
 .split-table {
+    flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border-right: 1px solid $border;
 }
 
+// ── Resize handle ─────────────────────────────────────────────
+.resize-handle {
+    flex-shrink: 0;
+    width: 5px;
+    cursor: col-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: background 0.15s;
+    z-index: 10;
+
+    &:hover {
+        background: rgba($accent, 0.15);
+
+        .handle-bar { background: $accent; }
+    }
+}
+
+.handle-bar {
+    width: 1px;
+    height: 40px;
+    background: $border;
+    border-radius: 2px;
+    transition: background 0.15s;
+}
+
+// ── Detail panel ──────────────────────────────────────────────
 .split-detail {
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
     background: $panel;
+    border-left: 1px solid $border;
 }
 
 // ── Table header row ──────────────────────────────────────────
@@ -133,30 +169,41 @@ $accent: #3b82f6;
     padding: 40px;
 }
 
-.sev-badge {
-    display: inline-flex;
+// ── Severity: dot + plain label ───────────────────────────────
+.sev-cell {
+    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 20px;
-    height: 20px;
-    font-size: 10px;
-    font-weight: 700;
-    border-radius: 3px;
-
-    &.sev-critical { background: rgba(220, 38, 38, 0.2);  color: #dc2626; }
-    &.sev-high     { background: rgba(234, 88, 12, 0.2);  color: #ea580c; }
-    &.sev-medium   { background: rgba(217, 119, 6, 0.2);  color: #d97706; }
-    &.sev-low      { background: rgba(0, 212, 255, 0.15); color: #00d4ff; }
+    gap: 7px;
 }
 
-.status-badge {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    padding: 2px 7px;
-    border-radius: 3px;
-    border: 1px solid;
-    font-weight: 600;
+.sev-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.sev-critical { background: $sev-critical; }
+    &.sev-high     { background: $sev-high; }
+    &.sev-medium   { background: $sev-medium; }
+    &.sev-low      { background: $sev-low; }
+}
+
+.sev-label {
+    font-size: 12px;
+    color: $text;
+    font-weight: 400;
+}
+
+// ── Status: plain text ────────────────────────────────────────
+.status-text {
+    font-size: 11px;
+    color: $muted;
+    text-transform: capitalize;
+
+    &.status-open         { color: rgba($sev-critical, 0.8); }
+    &.status-investigating { color: rgba($sev-high, 0.8); }
+    &.status-contained    { color: #22c55e; }
+    &.status-closed       { color: $secondary; }
 }
 
 // ── Detail panel ──────────────────────────────────────────────

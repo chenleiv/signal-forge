@@ -266,10 +266,16 @@ async def get_stats(request: Request, _=Depends(verify_token)):
     attack_types = {"SQLi": 0, "DDoS": 0, "BruteForce": 0, "PortScan": 0, "Malware": 0}
     ip_counts: dict[str, int] = {}
     ip_scores: dict[str, float] = {}
+    ip_levels: dict[str, str] = {}
 
     for ip, events in ip_store.items():
         ip_counts[ip] = len(events)
-        ip_scores[ip] = max(e["score"] for e in events)
+        avg = sum(e["score"] for e in events) / len(events)
+        ip_scores[ip] = avg
+        if avg >= 80:   ip_levels[ip] = "critical"
+        elif avg >= 60: ip_levels[ip] = "high"
+        elif avg >= 40: ip_levels[ip] = "medium"
+        else:           ip_levels[ip] = "low"
         for e in events:
             level = e.get("threat_level", "low")
             if level in severity_counts:
@@ -280,7 +286,7 @@ async def get_stats(request: Request, _=Depends(verify_token)):
 
     top_ips = sorted(
         [
-            {"ip": ip, "count": ip_counts[ip], "score": int(ip_scores[ip])}
+            {"ip": ip, "count": ip_counts[ip], "score": int(ip_scores[ip]), "threat_level": ip_levels[ip]}
             for ip in ip_counts
         ],
         key=lambda x: x["count"],

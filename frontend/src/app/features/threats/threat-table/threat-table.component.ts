@@ -1,4 +1,5 @@
 import { Component, OnInit, output, input, inject, DestroyRef } from '@angular/core';
+import { NgClass, TitleCasePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
 import { ThreatStats } from '../../../shared/models/threat.models';
@@ -7,12 +8,13 @@ interface IpRow {
   ip: string;
   count: number;
   score: number;
+  threat_level?: string;
 }
 
 @Component({
   selector: 'app-threat-table',
   standalone: true,
-  imports: [],
+  imports: [NgClass, TitleCasePipe],
   templateUrl: './threat-table.component.html',
   styleUrl: './threat-table.component.scss',
 })
@@ -34,6 +36,9 @@ export class ThreatTableComponent implements OnInit {
         next: (stats) => {
           this.rows = stats.top_ips;
           this.loading = false;
+          if (stats.top_ips.length > 0 && !this.selectedIp()) {
+            this.ipSelected.emit(stats.top_ips[0].ip);
+          }
         },
         error: () => {
           this.loading = false;
