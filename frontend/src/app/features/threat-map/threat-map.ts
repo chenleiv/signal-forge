@@ -113,7 +113,9 @@ export class ThreatMap {
     if (!this.svg || !this.projection) return;
 
     const target = this.REGION_COORDS['US'];
-    const source = this.REGION_COORDS[event.region] ?? this.REGION_COORDS['EU'];
+    const source: [number, number] = (event.lng != null && event.lat != null)
+      ? [event.lng, event.lat]
+      : (this.REGION_COORDS[event.region] ?? this.REGION_COORDS['EU']);
     const color = this.severityColor(event.threat_level);
 
     const [sx, sy] = this.projection(source)!;

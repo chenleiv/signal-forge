@@ -40,11 +40,34 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 _ai_summary_cache: dict[str, str] = {}
 
 _blocked_ips: set[str] = set()
+_ip_coords: dict[str, tuple[float, float]] = {}
 
 SECRET_KEY = os.environ.get("JWT_SECRET", "threatwatcher-dev-secret")
 
 
-app = FastAPI(title="SignalForge API")
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if IPINFO_TOKEN:
+        async with httpx.AsyncClient() as client:
+            for ip in THREAT_IPS:
+                try:
+                    r = await client.get(
+                        f"https://ipinfo.io/{ip}/json",
+                        params={"token": IPINFO_TOKEN},
+                        timeout=5.0,
+                    )
+                    loc = r.json().get("loc", "")
+                    if loc:
+                        lat, lng = map(float, loc.split(","))
+                        _ip_coords[ip] = (lat, lng)
+                except Exception:
+                    pass
+    yield
+
+
+app = FastAPI(title="SignalForge API", lifespan=lifespan)
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -361,23 +384,19 @@ def generate_threat() -> dict:
     attack_type = random.choice(ATTACK_TYPES)
     region = random.choice(REGIONS)
 
-    if score >= 80:
-        level = "critical"
-    elif score >= 60:
-        level = "high"
-    elif score >= 40:
-        level = "medium"
-    else:
-        level = "low"
-
-    return {
+    event: dict = {
         "ip": ip,
         "score": score,
-        "threat_level": level,
+        "threat_level": _score_to_level(score),
         "attack_type": attack_type,
         "region": region,
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
+    if ip in _ip_coords:
+        lat, lng = _ip_coords[ip]
+        event["lat"] = lat
+        event["lng"] = lng
+    return event
 
 
 # ── REST: authentication ──────────────────────────────────────

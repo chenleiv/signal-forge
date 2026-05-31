@@ -8,6 +8,8 @@ export interface ThreatEvent {
   attack_type: AttackType;
   timestamp: string;
   region: string;
+  lat?: number;
+  lng?: number;
 }
 
 export interface ThreatStats {
