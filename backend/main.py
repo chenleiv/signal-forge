@@ -22,6 +22,20 @@ from starlette.requests import Request
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 _abuse_cache: dict[str, dict] = {}
 
+IPINFO_TOKEN = os.environ.get("IPINFO_TOKEN", "")
+_geo_cache: dict[str, dict] = {}
+
+COUNTRY_NAMES: dict[str, str] = {
+    "US": "United States", "RU": "Russia", "CN": "China",
+    "DE": "Germany", "GB": "United Kingdom", "FR": "France",
+    "NL": "Netherlands", "IL": "Israel", "BR": "Brazil",
+    "JP": "Japan", "KR": "South Korea", "IN": "India",
+    "CA": "Canada", "AU": "Australia", "SE": "Sweden",
+    "RO": "Romania", "UA": "Ukraine", "IS": "Iceland",
+    "SG": "Singapore", "TR": "Turkey", "PL": "Poland",
+    "IR": "Iran", "KP": "North Korea", "NG": "Nigeria",
+}
+
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 _ai_summary_cache: dict[str, str] = {}
 
@@ -628,18 +642,43 @@ async def run_command(request: Request, body: dict, _=Depends(verify_token)):
 async def get_ip_geo(
     request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
 ):
-    geo = GEO_DATA.get(
-        ip,
-        {
-            "country": "Unknown",
-            "country_code": "??",
-            "city": "Unknown",
-            "org": "Unknown",
-            "asn": "Unknown",
-            "timezone": "UTC",
-        },
-    )
-    return geo
+    if ip in _geo_cache:
+        return _geo_cache[ip]
+
+    if IPINFO_TOKEN:
+        try:
+            async with httpx.AsyncClient() as client:
+                r = await client.get(
+                    f"https://ipinfo.io/{ip}/json",
+                    params={"token": IPINFO_TOKEN},
+                    timeout=5.0,
+                )
+                d = r.json()
+                raw_org = d.get("org", "")
+                parts = raw_org.split(" ", 1)
+                asn = parts[0] if parts[0].startswith("AS") else "Unknown"
+                org = parts[1] if len(parts) > 1 else raw_org or "Unknown"
+                country_code = d.get("country", "??")
+                result = {
+                    "country": COUNTRY_NAMES.get(country_code, country_code),
+                    "country_code": country_code,
+                    "city": d.get("city", "Unknown"),
+                    "org": org,
+                    "asn": asn,
+                    "timezone": d.get("timezone", "UTC"),
+                }
+                _geo_cache[ip] = result
+                return result
+        except Exception:
+            pass
+
+    fallback = GEO_DATA.get(ip, {
+        "country": "Unknown", "country_code": "??",
+        "city": "Unknown", "org": "Unknown",
+        "asn": "Unknown", "timezone": "UTC",
+    })
+    _geo_cache[ip] = fallback
+    return fallback
 
 
 # ── REST: related IPs ─────────────────────────────────────────
