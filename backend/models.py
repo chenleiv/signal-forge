@@ -1,7 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 from typing import Optional
-from sqlalchemy import String, Integer, Text, ForeignKey, TIMESTAMP
+from sqlalchemy import String, Integer, Text, Boolean, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from database import Base
 
@@ -45,3 +45,16 @@ class IncidentTask(Base):
     task_index:  Mapped[int] = mapped_column(Integer, primary_key=True)
 
     incident: Mapped[Incident] = relationship("Incident", back_populates="tasks")
+
+
+class Rule(Base):
+    __tablename__ = "rules"
+
+    id:          Mapped[str]      = mapped_column(String(8), primary_key=True)
+    name:        Mapped[str]      = mapped_column(Text, nullable=False)
+    enabled:     Mapped[bool]     = mapped_column(Boolean, nullable=False, default=True)
+    conditions:  Mapped[str]      = mapped_column(Text, nullable=False, default="[]")
+    logic:       Mapped[str]      = mapped_column(String(3), nullable=False, default="AND")
+    actions:     Mapped[str]      = mapped_column(Text, nullable=False, default="[]")
+    match_count: Mapped[int]      = mapped_column(Integer, nullable=False, default=0)
+    created_at:  Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)

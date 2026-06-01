@@ -7,7 +7,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models import Incident, Note, IncidentTask
+from models import Incident, Note, IncidentTask, Rule
 
 
 def _incident_to_dict(inc: Incident) -> dict:
@@ -139,3 +139,62 @@ async def db_find_open_incident_by_ip(session: AsyncSession, ip: str) -> dict | 
     )
     inc = result.scalar_one_or_none()
     return _incident_to_dict(inc) if inc else None
+
+
+# ── Rules CRUD ────────────────────────────────────────────────
+
+
+def _rule_to_dict(rule: Rule) -> dict:
+    return {
+        "id":          rule.id,
+        "name":        rule.name,
+        "enabled":     rule.enabled,
+        "conditions":  json.loads(rule.conditions),
+        "logic":       rule.logic,
+        "actions":     json.loads(rule.actions),
+        "match_count": rule.match_count,
+        "created_at":  rule.created_at.isoformat() if isinstance(rule.created_at, datetime) else rule.created_at,
+    }
+
+
+async def db_get_rules(session: AsyncSession) -> list[dict]:
+    result = await session.execute(select(Rule).order_by(Rule.created_at))
+    return [_rule_to_dict(r) for r in result.scalars()]
+
+
+async def db_create_rule(session: AsyncSession, data: dict) -> dict:
+    rule = Rule(
+        id=data["id"],
+        name=data["name"],
+        enabled=data.get("enabled", True),
+        conditions=json.dumps(data.get("conditions", [])),
+        logic=data.get("logic", "AND"),
+        actions=json.dumps(data.get("actions", ["alert"])),
+        match_count=0,
+        created_at=datetime.fromisoformat(data["created_at"]) if isinstance(data["created_at"], str) else data["created_at"],
+    )
+    session.add(rule)
+    await session.commit()
+    await session.refresh(rule)
+    return _rule_to_dict(rule)
+
+
+async def db_update_rule(session: AsyncSession, rule_id: str, patch: dict) -> dict | None:
+    result = await session.execute(select(Rule).where(Rule.id == rule_id))
+    rule = result.scalar_one_or_none()
+    if rule is None:
+        return None
+    if "name"        in patch: rule.name        = patch["name"]
+    if "enabled"     in patch: rule.enabled     = patch["enabled"]
+    if "conditions"  in patch: rule.conditions  = json.dumps(patch["conditions"])
+    if "logic"       in patch: rule.logic       = patch["logic"]
+    if "actions"     in patch: rule.actions     = json.dumps(patch["actions"])
+    if "match_count" in patch: rule.match_count = patch["match_count"]
+    await session.commit()
+    await session.refresh(rule)
+    return _rule_to_dict(rule)
+
+
+async def db_delete_rule(session: AsyncSession, rule_id: str) -> None:
+    await session.execute(delete(Rule).where(Rule.id == rule_id))
+    await session.commit()

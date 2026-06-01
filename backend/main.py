@@ -25,6 +25,7 @@ from db_ops import (
     db_get_incidents, db_get_incident, db_create_incident,
     db_patch_incident, db_add_note, db_update_tasks,
     db_find_open_incident_by_ip,
+    db_get_rules, db_create_rule, db_update_rule, db_delete_rule,
 )
 USE_DB: bool = db_engine is not None
 
@@ -113,6 +114,12 @@ async def lifespan(app: FastAPI):
                 if _max > 0:
                     _incident_counter = _max - 1000
                     print(f"[DB] Seeded incident counter to {_incident_counter}")
+
+            # Load rules from DB into _rules for the simulation engine
+            async with AsyncSessionLocal() as _session:
+                _rules.clear()
+                _rules.extend(await db_get_rules(_session))
+                print(f"[DB] Loaded {len(_rules)} rules")
 
     # Fetch real threat IPs from AbuseIPDB (falls back to hardcoded list if no key)
     await _refresh_threat_ips()
@@ -471,6 +478,14 @@ def _evaluate_rules(event: dict) -> None:
         if matched:
             rule["match_count"] += 1
             _execute_actions(rule, event)
+            if USE_DB and AsyncSessionLocal is not None:
+                async def _bump(rid: str = rule["id"], count: int = rule["match_count"]):
+                    try:
+                        async with AsyncSessionLocal() as session:
+                            await db_update_rule(session, rid, {"match_count": count})
+                    except Exception:
+                        pass
+                asyncio.create_task(_bump())
 
 
 def _record_event(event: dict) -> None:
@@ -1094,28 +1109,38 @@ async def delete_hunt(hunt_id: str, _=Depends(verify_token)):
 
 
 @app.get("/api/rules")
-async def get_rules(_=Depends(verify_token)):
+async def get_rules(db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
+    if USE_DB and db is not None:
+        return await db_get_rules(db)
     return _rules
 
 
 @app.post("/api/rules")
-async def create_rule(body: dict, _=Depends(verify_token)):
-    rule = {
-        "id": str(uuid4())[:8],
-        "name": body.get("name", "Unnamed Rule"),
-        "enabled": body.get("enabled", True),
+async def create_rule(body: dict, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
+    now = datetime.now(timezone.utc).isoformat()
+    rule_data = {
+        "id":         str(uuid4())[:8],
+        "name":       body.get("name", "Unnamed Rule"),
+        "enabled":    body.get("enabled", True),
         "conditions": body.get("conditions", []),
-        "logic": body.get("logic", "AND"),
-        "actions": body.get("actions", ["alert"]),
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "logic":      body.get("logic", "AND"),
+        "actions":    body.get("actions", ["alert"]),
+        "created_at": now,
         "match_count": 0,
     }
-    _rules.append(rule)
-    return rule
+    if USE_DB and db is not None:
+        return await db_create_rule(db, rule_data)
+    _rules.append(rule_data)
+    return rule_data
 
 
 @app.patch("/api/rules/{rule_id}")
-async def update_rule(rule_id: str, body: dict, _=Depends(verify_token)):
+async def update_rule(rule_id: str, body: dict, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
+    if USE_DB and db is not None:
+        updated = await db_update_rule(db, rule_id, body)
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        return updated
     for rule in _rules:
         if rule["id"] == rule_id:
             for key in ["name", "enabled", "conditions", "logic", "actions"]:
@@ -1126,7 +1151,10 @@ async def update_rule(rule_id: str, body: dict, _=Depends(verify_token)):
 
 
 @app.delete("/api/rules/{rule_id}")
-async def delete_rule(rule_id: str, _=Depends(verify_token)):
+async def delete_rule(rule_id: str, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
+    if USE_DB and db is not None:
+        await db_delete_rule(db, rule_id)
+        return {"ok": True}
     global _rules
     _rules = [r for r in _rules if r["id"] != rule_id]
     return {"ok": True}
