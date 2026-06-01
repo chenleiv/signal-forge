@@ -124,3 +124,17 @@ export interface Incident {
   notes: IncidentNote[];
   completed_tasks: number[];
 }
+
+export interface OtxPulse {
+  name: string;
+  tags: string[];
+  author: string;
+  created: string;
+}
+
+export interface OtxData {
+  pulse_count: number;
+  reputation: number;
+  pulses: OtxPulse[];
+  malware_families: string[];
+}

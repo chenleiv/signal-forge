@@ -16,6 +16,7 @@ import {
   SavedHunt,
   HuntResult,
   DetectionRule,
+  OtxData,
 } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
 
@@ -75,6 +76,10 @@ export class ThreatStoreService {
 
   fetchIpGeo(ip: string) {
     return this.http.get<IpGeo>(`/api/ip/${ip}/geo`);
+  }
+
+  fetchOtxData(ip: string) {
+    return this.http.get<OtxData>(`/api/ip/${encodeURIComponent(ip)}/otx`);
   }
 
   fetchRelatedIps(ip: string) {
