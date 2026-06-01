@@ -118,14 +118,15 @@ async def db_add_note(session: AsyncSession, incident_id: str, text: str, author
     return {"id": note.id, "text": note.text, "author": note.author, "at": now.isoformat()}
 
 
-async def db_update_tasks(session: AsyncSession, incident_id: str, task_indices: list[int]) -> list[int]:
+async def db_update_tasks(session: AsyncSession, incident_id: str, task_indices: list[int]) -> list[int] | None:
+    result = await session.execute(select(Incident).where(Incident.id == incident_id))
+    inc = result.scalar_one_or_none()
+    if inc is None:
+        return None
     await session.execute(delete(IncidentTask).where(IncidentTask.incident_id == incident_id))
     for idx in task_indices:
         session.add(IncidentTask(incident_id=incident_id, task_index=idx))
-    result = await session.execute(select(Incident).where(Incident.id == incident_id))
-    inc = result.scalar_one_or_none()
-    if inc:
-        inc.updated_at = datetime.now(timezone.utc)
+    inc.updated_at = datetime.now(timezone.utc)
     await session.commit()
     return task_indices
 

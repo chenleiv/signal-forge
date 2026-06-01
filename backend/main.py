@@ -101,6 +101,19 @@ async def lifespan(app: FastAPI):
         else:
             print("[Alembic] Migrations up to date")
 
+        # Seed _incident_counter from DB max to avoid primary key collisions on restart
+        if AsyncSessionLocal is not None:
+            from sqlalchemy import text as _sa_text
+            global _incident_counter
+            async with AsyncSessionLocal() as _session:
+                _row = await _session.execute(
+                    _sa_text("SELECT COALESCE(MAX(CAST(SUBSTRING(id, 5) AS INTEGER)), 0) FROM incidents")
+                )
+                _max = _row.scalar() or 0
+                if _max > 0:
+                    _incident_counter = _max - 1000
+                    print(f"[DB] Seeded incident counter to {_incident_counter}")
+
     # Fetch real threat IPs from AbuseIPDB (falls back to hardcoded list if no key)
     await _refresh_threat_ips()
 
@@ -182,6 +195,7 @@ async def _refresh_threat_ips() -> None:
                 params={"confidenceMinimum": 90, "limit": 100},
                 timeout=10.0,
             )
+            r.raise_for_status()
             entries = r.json().get("data", [])
             ips = [e["ipAddress"] for e in entries if e.get("ipAddress")]
             if ips:
@@ -407,8 +421,11 @@ def _create_incident(trigger: dict) -> None:
 
     if USE_DB and AsyncSessionLocal is not None:
         async def _write():
-            async with AsyncSessionLocal() as session:
-                await db_create_incident(session, data)
+            try:
+                async with AsyncSessionLocal() as session:
+                    await db_create_incident(session, data)
+            except Exception as exc:
+                print(f"[DB] _create_incident write failed for {data['id']}: {exc}")
         asyncio.create_task(_write())
 
 
@@ -947,6 +964,8 @@ async def update_tasks(
     completed = body.get("completed_tasks", [])
     if USE_DB and db is not None:
         result = await db_update_tasks(db, incident_id, completed)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Incident not found")
         return {"completed_tasks": result}
     inc = _find_incident(incident_id)
     inc["completed_tasks"] = completed
