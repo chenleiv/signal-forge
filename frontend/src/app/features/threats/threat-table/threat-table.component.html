@@ -26,7 +26,7 @@
     </div>
   </div>
 
-  @if (loading) {
+  @if (loading()) {
     <div class="loading">Loading threat data…</div>
   } @else {
     <table class="threat-table">
