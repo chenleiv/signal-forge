@@ -49,9 +49,6 @@ COUNTRY_NAMES: dict[str, str] = {
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 _ai_summary_cache: dict[str, str] = {}
 
-OTX_API_KEY = os.environ.get("OTX_API_KEY", "")
-_otx_cache: dict[str, dict] = {}
-
 _blocked_ips: set[str] = set()
 _ip_coords: dict[str, tuple[float, float]] = {}
 
@@ -87,40 +84,6 @@ async def _fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
             result["lat"] = lat
             result["lng"] = lng
         return result
-    except Exception:
-        return None
-
-
-async def _fetch_otx(client: httpx.AsyncClient, ip: str) -> dict | None:
-    if not OTX_API_KEY:
-        return {"pulse_count": 0, "reputation": 0, "pulses": [], "malware_families": []}
-    try:
-        r = await client.get(
-            f"https://otx.alienvault.com/api/v1/indicators/IPv4/{ip}/general",
-            headers={"X-OTX-API-KEY": OTX_API_KEY},
-            timeout=8.0,
-        )
-        r.raise_for_status()
-        data = r.json()
-        pulse_info = data.get("pulse_info", {})
-        pulses_raw = pulse_info.get("pulses", [])
-        return {
-            "pulse_count": pulse_info.get("count", 0),
-            "reputation": data.get("reputation", 0),
-            "pulses": [
-                {
-                    "name":    p.get("name", ""),
-                    "tags":    p.get("tags", [])[:5],
-                    "author":  p.get("author", {}).get("username", ""),
-                    "created": p.get("created", ""),
-                }
-                for p in pulses_raw[:10]
-            ],
-            "malware_families": [
-                m.get("display_name", m.get("id", ""))
-                for m in data.get("malware_families", [])
-            ][:5],
-        }
     except Exception:
         return None
 
@@ -848,21 +811,6 @@ async def get_ip_geo(
     })
     _geo_cache[ip] = fallback
     return fallback
-
-
-@app.get("/api/ip/{ip}/otx")
-@limiter.limit("30/minute")
-async def get_ip_otx(
-    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
-):
-    if ip in _otx_cache:
-        return _otx_cache[ip]
-    async with httpx.AsyncClient() as client:
-        result = await _fetch_otx(client, ip)
-    if result is None:
-        result = {"pulse_count": 0, "reputation": 0, "pulses": [], "malware_families": []}
-    _otx_cache[ip] = result
-    return result
 
 
 # ── REST: related IPs ─────────────────────────────────────────
