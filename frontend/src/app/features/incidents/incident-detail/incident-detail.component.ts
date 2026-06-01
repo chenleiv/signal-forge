@@ -81,9 +81,12 @@ export class IncidentDetailComponent {
     if (!inc) return;
     this.store.patchIncident(inc.id, patch)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(updated => {
-        this.incidentChange.emit(updated);
-        this.timeline.update(tl => [{ label: timelineLabel, at: updated.updated_at, type: timelineType }, ...tl]);
+      .subscribe({
+        next: updated => {
+          this.incidentChange.emit(updated);
+          this.timeline.update(tl => [{ label: timelineLabel, at: updated.updated_at, type: timelineType }, ...tl]);
+        },
+        error: () => console.error('[IncidentDetail] patch failed'),
       });
   }
 
@@ -102,14 +105,12 @@ export class IncidentDetailComponent {
   toggleTask(index: number) {
     const inc = this.incident();
     if (!inc) return;
-    this.completedTasks.update(s => {
-      const next = new Set(s);
-      next.has(index) ? next.delete(index) : next.add(index);
-      this.store.updateIncidentTasks(inc.id, [...next])
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe();
-      return next;
-    });
+    const next = new Set(this.completedTasks());
+    next.has(index) ? next.delete(index) : next.add(index);
+    this.completedTasks.set(next);
+    this.store.updateIncidentTasks(inc.id, [...next])
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe();
   }
 
   addNote() {

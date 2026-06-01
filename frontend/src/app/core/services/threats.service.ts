@@ -29,8 +29,14 @@ export class ThreatsService {
     };
 
     this.socket.onmessage = (event) => {
-      const data: ThreatEvent = JSON.parse(event.data);
-      this.store.addEvent(data);
+      try {
+        const data: ThreatEvent = JSON.parse(event.data);
+        this.store.addEvent(data);
+      } catch { /* ignore non-JSON frames */ }
+    };
+
+    this.socket.onerror = () => {
+      this.status.set('reconnecting');
     };
 
     this.socket.onclose = () => {

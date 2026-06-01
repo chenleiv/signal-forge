@@ -146,7 +146,9 @@ export class ThreatDetailDrawerComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(res => {
         this.existingCaseId.set(res.id);
-        this.router.navigate(['/incidents'], { queryParams: { id: res.id } });
+        this.router.navigate(['/incidents'], {
+          queryParams: { id: res.id, ...(res['existing'] ? { existing: '1' } : {}) },
+        });
       });
   }
 

@@ -11,6 +11,7 @@ import { RouterLink } from '@angular/router';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { EChartsOption } from 'echarts';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
+import { ThreatStats } from '../../shared/models/threat.models';
 
 @Component({
   selector: 'app-dashboard',
@@ -162,8 +163,8 @@ export class Dashboard {
     };
   }
 
-  private buildTopIps(stats: any): EChartsOption {
-    const top = (stats.top_ips ?? []).slice(0, 6);
+  private buildTopIps(stats: ThreatStats): EChartsOption {
+    const top = stats.top_ips.slice(0, 6);
     return {
       ...this.BASE,
       title: {
@@ -181,13 +182,13 @@ export class Dashboard {
       },
       yAxis: {
         type: 'category',
-        data: top.map((x: any) => x.ip),
+        data: top.map(x => x.ip),
         axisLabel: { color: '#6b7280', fontSize: 9 },
       },
       series: [
         {
           type: 'bar',
-          data: top.map((x: any) => ({
+          data: top.map(x => ({
             value: x.count,
             itemStyle: { color: '#3b82f6', borderRadius: [0, 3, 3, 0] },
           })),
