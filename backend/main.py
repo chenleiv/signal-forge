@@ -18,6 +18,15 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from starlette.requests import Request
 
+import pathlib
+from sqlalchemy.ext.asyncio import AsyncSession
+from database import AsyncSessionLocal, engine as db_engine, Base, get_db
+from db_ops import (
+    db_get_incidents, db_get_incident, db_create_incident,
+    db_patch_incident, db_add_note, db_update_tasks,
+    db_find_open_incident_by_ip,
+)
+USE_DB: bool = db_engine is not None
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 _abuse_cache: dict[str, dict] = {}
@@ -80,15 +89,46 @@ async def _fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Run DB migrations if DB is configured
+    if USE_DB:
+        import subprocess, sys as _sys
+        result = subprocess.run(
+            [_sys.executable, "-m", "alembic", "upgrade", "head"],
+            capture_output=True, text=True, cwd=pathlib.Path(__file__).parent
+        )
+        if result.returncode != 0:
+            print(f"[Alembic] Migration failed:\n{result.stderr}")
+        else:
+            print("[Alembic] Migrations up to date")
+
+    # Fetch real threat IPs from AbuseIPDB (falls back to hardcoded list if no key)
+    await _refresh_threat_ips()
+
+    # Enrich fetched IPs with geo data via IPInfo
     if IPINFO_TOKEN:
         async with httpx.AsyncClient() as client:
-            for ip in THREAT_IPS:
+            for ip in THREAT_IPS[:20]:
                 data = await _fetch_ipinfo(client, ip)
                 if data:
                     _geo_cache[ip] = data
                     if "lat" in data:
                         _ip_coords[ip] = (data["lat"], data["lng"])
+
+    # Background AbuseIPDB refresh every 6 hours
+    async def _refresh_loop():
+        while True:
+            await asyncio.sleep(6 * 3600)
+            await _refresh_threat_ips()
+
+    refresh_task = asyncio.create_task(_refresh_loop())
+
     yield
+
+    refresh_task.cancel()
+    try:
+        await refresh_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(title="SignalForge API", lifespan=lifespan)
@@ -344,26 +384,32 @@ def _create_incident(trigger: dict) -> None:
     _incident_counter += 1
     attack_type = trigger["attack_type"]
     now = datetime.now(timezone.utc).isoformat()
-    incidents_store.appendleft(
-        {
-            "id": f"INC-{1000 + _incident_counter:04d}",
-            "title": INCIDENT_TITLES.get(attack_type, "Unknown attack"),
-            "severity": trigger["threat_level"],
-            "status": random.choices(
-                ["open", "investigating", "contained", "closed"],
-                weights=[50, 30, 15, 5],
-            )[0],
-            "attack_type": attack_type,
-            "source_region": trigger["region"],
-            "event_count": random.randint(5, 50),
-            "assigned_to": random.choice(ANALYSTS),
-            "created_at": now,
-            "updated_at": now,
-            "mitre_tags": MITRE_MAP.get(attack_type, []),
-            "notes": [],
-            "completed_tasks": [],
-        }
-    )
+    data = {
+        "id": f"INC-{1000 + _incident_counter:04d}",
+        "title": INCIDENT_TITLES.get(attack_type, "Unknown attack"),
+        "severity": trigger["threat_level"],
+        "status": random.choices(
+            ["open", "investigating", "contained", "closed"],
+            weights=[50, 30, 15, 5],
+        )[0],
+        "attack_type": attack_type,
+        "source_ip": trigger.get("ip"),
+        "source_region": trigger["region"],
+        "event_count": random.randint(5, 50),
+        "assigned_to": random.choice(ANALYSTS),
+        "created_at": now,
+        "updated_at": now,
+        "mitre_tags": MITRE_MAP.get(attack_type, []),
+        "notes": [],
+        "completed_tasks": [],
+    }
+    incidents_store.appendleft(data)
+
+    if USE_DB and AsyncSessionLocal is not None:
+        async def _write():
+            async with AsyncSessionLocal() as session:
+                await db_create_incident(session, data)
+        asyncio.create_task(_write())
 
 
 def _eval_condition(cond: dict, event: dict) -> bool:
@@ -803,12 +849,22 @@ async def unblock_ip(
 
 
 @app.get("/api/incidents")
-async def get_incidents(_=Depends(verify_token)):
+async def get_incidents(db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
+    if USE_DB and db is not None:
+        return await db_get_incidents(db)
     return list(incidents_store)
 
 
 @app.patch("/api/incidents/{incident_id}")
-async def patch_incident(incident_id: str, body: dict, _=Depends(verify_token)):
+async def patch_incident(
+    incident_id: str, body: dict,
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
+    if USE_DB and db is not None:
+        result = await db_patch_incident(db, incident_id, body)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        return result
     inc = _find_incident(incident_id)
     if "status" in body:
         inc["status"] = body["status"]
@@ -819,7 +875,13 @@ async def patch_incident(incident_id: str, body: dict, _=Depends(verify_token)):
 
 
 @app.get("/api/ip/{ip}/case")
-async def get_ip_case(ip: str = Depends(validate_ip), _=Depends(verify_token)):
+async def get_ip_case(
+    ip: str = Depends(validate_ip),
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
+    if USE_DB and db is not None:
+        inc = await db_find_open_incident_by_ip(db, ip)
+        return {"case_id": inc["id"] if inc else None}
     for inc in incidents_store:
         if inc.get("source_ip") == ip and inc["status"] != "closed":
             return {"case_id": inc["id"]}
@@ -827,14 +889,21 @@ async def get_ip_case(ip: str = Depends(validate_ip), _=Depends(verify_token)):
 
 
 @app.post("/api/incidents/from-ip")
-async def create_incident_from_ip(body: dict, _=Depends(verify_token)):
+async def create_incident_from_ip(
+    body: dict,
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
     global _incident_counter
     ip = body.get("ip", "unknown")
 
-    # Return existing active case if one already exists for this IP
-    for inc in incidents_store:
-        if inc.get("source_ip") == ip and inc["status"] != "closed":
-            return {**inc, "existing": True}
+    if USE_DB and db is not None:
+        existing = await db_find_open_incident_by_ip(db, ip)
+        if existing:
+            return {**existing, "existing": True}
+    else:
+        for inc in incidents_store:
+            if inc.get("source_ip") == ip and inc["status"] != "closed":
+                return {**inc, "existing": True}
 
     events = list(ip_store.get(ip, deque()))
     attack_types = list({e["attack_type"] for e in events})
@@ -857,34 +926,50 @@ async def create_incident_from_ip(body: dict, _=Depends(verify_token)):
         "assigned_to": None,
         "created_at": now,
         "updated_at": now,
-        "mitre_tags": list(
-            {t for e in events for t in MITRE_MAP.get(e["attack_type"], [])}
-        ),
+        "mitre_tags": list({t for e in events for t in MITRE_MAP.get(e["attack_type"], [])}),
         "notes": [],
         "completed_tasks": [],
     }
+
+    if USE_DB and db is not None:
+        saved = await db_create_incident(db, incident)
+        return {**saved, "existing": False}
+
     incidents_store.appendleft(incident)
     return {**incident, "existing": False}
 
 
 @app.patch("/api/incidents/{incident_id}/tasks")
-async def update_tasks(incident_id: str, body: dict, _=Depends(verify_token)):
+async def update_tasks(
+    incident_id: str, body: dict,
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
+    completed = body.get("completed_tasks", [])
+    if USE_DB and db is not None:
+        result = await db_update_tasks(db, incident_id, completed)
+        return {"completed_tasks": result}
     inc = _find_incident(incident_id)
-    inc["completed_tasks"] = body.get("completed_tasks", [])
+    inc["completed_tasks"] = completed
     inc["updated_at"] = datetime.now(timezone.utc).isoformat()
     return {"completed_tasks": inc["completed_tasks"]}
 
 
 @app.post("/api/incidents/{incident_id}/notes")
-async def add_note(incident_id: str, body: dict, _=Depends(verify_token)):
-    inc = _find_incident(incident_id)
-    note = {
-        "author": body.get("author", "analyst1"),
-        "text": body.get("text", "").strip(),
-        "at": datetime.now(timezone.utc).isoformat(),
-    }
-    if not note["text"]:
+async def add_note(
+    incident_id: str, body: dict,
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
+    text = body.get("text", "").strip()
+    author = body.get("author", "analyst1")
+    if not text:
         raise HTTPException(status_code=400, detail="Note text is required")
+    if USE_DB and db is not None:
+        result = await db_get_incident(db, incident_id)
+        if result is None:
+            raise HTTPException(status_code=404, detail="Incident not found")
+        return await db_add_note(db, incident_id, text=text, author=author)
+    inc = _find_incident(incident_id)
+    note = {"author": author, "text": text, "at": datetime.now(timezone.utc).isoformat()}
     inc["notes"].append(note)
     inc["updated_at"] = note["at"]
     return note
