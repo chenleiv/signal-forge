@@ -3,10 +3,8 @@ import {
   inject,
   signal,
   computed,
-  OnInit,
   ChangeDetectionStrategy,
   DestroyRef,
-  HostListener,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
@@ -24,8 +22,13 @@ import { downloadCsv, downloadPdf } from '../../core/utils/export.utils';
   templateUrl: './incidents.html',
   styleUrl: './incidents.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:click)':     'onDocClick($event)',
+    '(document:mousemove)': 'onMouseMove($event)',
+    '(document:mouseup)':   'onMouseUp()',
+  },
 })
-export class Incidents implements OnInit {
+export class Incidents {
   private destroyRef = inject(DestroyRef);
   private store = inject(ThreatStoreService);
   private route = inject(ActivatedRoute);
@@ -76,16 +79,16 @@ export class Incidents implements OnInit {
   private dragStartX = 0;
   private dragStartWidth = 0;
 
-  ngOnInit() {
-    const targetId = this.route.snapshot.queryParamMap.get('id');
+  constructor() {
+    const targetId   = this.route.snapshot.queryParamMap.get('id');
     const isExisting = this.route.snapshot.queryParamMap.get('existing') === '1';
 
     this.store.fetchIncidents()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe((d) => {
+      .subscribe(d => {
         this.incidents.set(d);
         if (targetId) {
-          const match = d.find((i) => i.id === targetId);
+          const match = d.find(i => i.id === targetId);
           if (match) {
             this.selected.set(match);
             if (isExisting) this.showToast(`Case ${targetId} already exists — opened existing`);
@@ -136,21 +139,18 @@ export class Incidents implements OnInit {
     e.stopPropagation();
   }
 
-  @HostListener('document:click', ['$event'])
   onDocClick(e: MouseEvent) {
     if (!(e.target as HTMLElement).closest('.export-wrap')) {
       this.exportOpen.set(false);
     }
   }
 
-  @HostListener('document:mousemove', ['$event'])
   onMouseMove(e: MouseEvent) {
     if (!this.dragging) return;
     const delta = this.dragStartX - e.clientX;
     this.drawerWidth.set(Math.min(700, Math.max(500, this.dragStartWidth + delta)));
   }
 
-  @HostListener('document:mouseup')
   onMouseUp() {
     this.dragging = false;
   }

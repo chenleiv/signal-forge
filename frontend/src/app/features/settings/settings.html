@@ -20,13 +20,15 @@
             <div class="field-grid">
                 <div class="field">
                     <label>Analyst Name</label>
-                    <input [ngModel]="form().analystName"
-                        (ngModelChange)="form.update(s => ({...s, analystName: $event}))" placeholder="SOC Analyst" />
+                    <input [value]="form().analystName"
+                        (input)="form.update(s => ({...s, analystName: $any($event.target).value}))"
+                        placeholder="SOC Analyst" />
                 </div>
                 <div class="field">
                     <label>Role</label>
-                    <input [ngModel]="form().analystRole"
-                        (ngModelChange)="form.update(s => ({...s, analystRole: $event}))" placeholder="Tier 1" />
+                    <input [value]="form().analystRole"
+                        (input)="form.update(s => ({...s, analystRole: $any($event.target).value}))"
+                        placeholder="Tier 1" />
                 </div>
             </div>
         </section>
@@ -46,18 +48,21 @@
             <div class="field-grid">
                 <div class="field full">
                     <label>WebSocket URL</label>
-                    <input [ngModel]="form().wsUrl" (ngModelChange)="form.update(s => ({...s, wsUrl: $event}))"
+                    <input [value]="form().wsUrl"
+                        (input)="form.update(s => ({...s, wsUrl: $any($event.target).value}))"
                         placeholder="ws://127.0.0.1:8000/ws/threats" />
                 </div>
                 <div class="field">
                     <label>Reconnect Delay (sec)</label>
-                    <input type="number" [ngModel]="form().reconnectDelay"
-                        (ngModelChange)="form.update(s => ({...s, reconnectDelay: +$event}))" min="1" max="30" />
+                    <input type="number" [value]="form().reconnectDelay"
+                        (input)="form.update(s => ({...s, reconnectDelay: +$any($event.target).value}))"
+                        min="1" max="30" />
                 </div>
                 <div class="field">
                     <label>Event Buffer Size</label>
-                    <input type="number" [ngModel]="form().bufferSize"
-                        (ngModelChange)="form.update(s => ({...s, bufferSize: +$event}))" min="10" max="500" />
+                    <input type="number" [value]="form().bufferSize"
+                        (input)="form.update(s => ({...s, bufferSize: +$any($event.target).value}))"
+                        min="10" max="500" />
                 </div>
             </div>
         </section>
@@ -79,8 +84,9 @@
                         <label class="label-critical">Critical</label>
                         <span class="threshold-op">≥</span>
                     </div>
-                    <input type="number" [ngModel]="form().criticalThreshold"
-                        (ngModelChange)="form.update(s => ({...s, criticalThreshold: +$event}))" min="1" max="100" />
+                    <input type="number" [value]="form().criticalThreshold"
+                        (input)="form.update(s => ({...s, criticalThreshold: +$any($event.target).value}))"
+                        min="1" max="100" />
                 </div>
                 <div class="threshold-field">
                     <div class="threshold-label">
@@ -88,8 +94,9 @@
                         <label class="label-high">High</label>
                         <span class="threshold-op">≥</span>
                     </div>
-                    <input type="number" [ngModel]="form().highThreshold"
-                        (ngModelChange)="form.update(s => ({...s, highThreshold: +$event}))" min="1" max="100" />
+                    <input type="number" [value]="form().highThreshold"
+                        (input)="form.update(s => ({...s, highThreshold: +$any($event.target).value}))"
+                        min="1" max="100" />
                 </div>
                 <div class="threshold-field">
                     <div class="threshold-label">
@@ -97,15 +104,14 @@
                         <label class="label-medium">Medium</label>
                         <span class="threshold-op">≥</span>
                     </div>
-                    <input type="number" [ngModel]="form().mediumThreshold"
-                        (ngModelChange)="form.update(s => ({...s, mediumThreshold: +$event}))" min="1" max="100" />
+                    <input type="number" [value]="form().mediumThreshold"
+                        (input)="form.update(s => ({...s, mediumThreshold: +$any($event.target).value}))"
+                        min="1" max="100" />
                 </div>
             </div>
         </section>
 
     </div>
-
-
 
     <!-- Actions -->
     <div class="actions">

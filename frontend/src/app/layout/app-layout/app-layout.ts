@@ -1,9 +1,9 @@
-import { Component, OnInit, OnDestroy, signal, inject, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, signal, inject, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { ThreatsService } from '../../core/services/threats.service';
 import { SettingsService } from '../../core/services/settings.service';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { CommandConsole } from '../../features/command-console/command-console';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -26,34 +26,31 @@ const PAGE_TITLES: Record<string, string> = {
   styleUrl: './app-layout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AppLayout implements OnInit, OnDestroy {
-  readonly ws = inject(ThreatsService);
-  private router = inject(Router);
+export class AppLayout {
+  readonly ws             = inject(ThreatsService);
   readonly settingsService = inject(SettingsService);
+  private router          = inject(Router);
+  private destroyRef      = inject(DestroyRef);
 
   private navTitle = toSignal(
     this.router.events.pipe(
-      filter((e) => e instanceof NavigationEnd),
-      map((e: NavigationEnd) => PAGE_TITLES[e.urlAfterRedirects] ?? 'SignalForge'),
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map(e => PAGE_TITLES[e.urlAfterRedirects] ?? 'SignalForge'),
     ),
   );
 
-  readonly pageTitle = computed(
-    () => this.navTitle() ?? PAGE_TITLES[this.router.url] ?? 'SignalForge',
-  );
+  readonly pageTitle = computed(() => this.navTitle() ?? PAGE_TITLES[this.router.url] ?? 'SignalForge');
 
   time = signal('');
-  private timer: ReturnType<typeof setInterval> | null = null;
 
-  ngOnInit() {
+  constructor() {
     this.tick();
-    this.timer = setInterval(() => this.tick(), 1000);
+    const timer = setInterval(() => this.tick(), 1000);
+    this.destroyRef.onDestroy(() => {
+      clearInterval(timer);
+      this.ws.disconnect();
+    });
     this.ws.connect();
-  }
-
-  ngOnDestroy() {
-    if (this.timer) clearInterval(this.timer);
-    this.ws.disconnect();
   }
 
   private tick() {

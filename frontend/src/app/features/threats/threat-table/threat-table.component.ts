@@ -1,4 +1,4 @@
-import { Component, OnInit, output, input, inject, signal, computed, DestroyRef, HostListener } from '@angular/core';
+import { Component, output, input, inject, signal, computed, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { NgClass, TitleCasePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
@@ -18,16 +18,21 @@ interface IpRow {
   imports: [NgClass, TitleCasePipe],
   templateUrl: './threat-table.component.html',
   styleUrl: './threat-table.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:click)': 'onDocClick($event)' },
 })
-export class ThreatTableComponent implements OnInit {
+export class ThreatTableComponent {
   private destroyRef = inject(DestroyRef);
-  protected readonly http = inject(HttpClient);
+  private http       = inject(HttpClient);
+
+  selectedIp = input<string | null>(null);
+  ipSelected = output<string>();
 
   protected allRows = signal<IpRow[]>([]);
-  loading = true;
-
-  searchIp    = signal('');
-  levelFilter = signal('all');
+  loading           = signal(true);
+  exportOpen        = signal(false);
+  searchIp          = signal('');
+  levelFilter       = signal('all');
 
   readonly filteredRows = computed(() => {
     const search = this.searchIp().toLowerCase();
@@ -38,52 +43,28 @@ export class ThreatTableComponent implements OnInit {
     );
   });
 
-  selectedIp = input<string | null>(null);
-  ipSelected = output<string>();
-
-  ngOnInit() {
-    this.http
-      .get<ThreatStats>('/api/stats')
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (stats) => {
-          this.allRows.set(stats.top_ips);
-          this.loading = false;
-        },
-        error: () => {
-          this.loading = false;
-        },
-      });
-  }
-
-  exportOpen = signal(false);
-
   private readonly exportHeaders = ['IP Address', 'Avg Score', 'Events', 'Level'];
-
   private get exportRows(): string[][] {
     return this.filteredRows().map(r => [r.ip, String(r.score), String(r.count), r.threat_level ?? '—']);
   }
 
-  exportCsv() {
-    downloadCsv(this.exportHeaders, this.exportRows, 'threats.csv');
-    this.exportOpen.set(false);
+  constructor() {
+    this.http.get<ThreatStats>('/api/stats')
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next:  stats => { this.allRows.set(stats.top_ips); this.loading.set(false); },
+        error: ()    => this.loading.set(false),
+      });
   }
 
-  exportPdf() {
-    downloadPdf('SignalForge — Threat Intelligence', this.exportHeaders, this.exportRows, 'threats.pdf');
-    this.exportOpen.set(false);
-  }
+  exportCsv() { downloadCsv(this.exportHeaders, this.exportRows, 'threats.csv');                                       this.exportOpen.set(false); }
+  exportPdf() { downloadPdf('SignalForge — Threat Intelligence', this.exportHeaders, this.exportRows, 'threats.pdf'); this.exportOpen.set(false); }
 
-  @HostListener('document:click', ['$event'])
   onDocClick(e: MouseEvent) {
-    if (!(e.target as HTMLElement).closest('.export-wrap')) {
-      this.exportOpen.set(false);
-    }
+    if (!(e.target as HTMLElement).closest('.export-wrap')) this.exportOpen.set(false);
   }
 
-  selectIp(ip: string) {
-    this.ipSelected.emit(ip);
-  }
+  selectIp(ip: string) { this.ipSelected.emit(ip); }
 
   scoreClass(score: number): string {
     if (score >= 80) return 'score-critical';

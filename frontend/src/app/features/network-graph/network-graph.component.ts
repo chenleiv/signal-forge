@@ -1,12 +1,10 @@
 import {
   Component,
   ElementRef,
-  ViewChild,
+  viewChild,
   inject,
   signal,
-  OnInit,
-  OnDestroy,
-  AfterViewInit,
+  afterNextRender,
   ChangeDetectionStrategy,
   DestroyRef,
 } from '@angular/core';
@@ -28,15 +26,14 @@ interface SimLink extends d3.SimulationLinkDatum<SimNode> {
   styleUrl: './network-graph.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
-  @ViewChild('svgContainer', { static: true }) svgRef!: ElementRef<SVGElement>;
-
+export class NetworkGraphComponent {
+  private svgRef     = viewChild.required<ElementRef<SVGElement>>('svgContainer');
   private store      = inject(ThreatStoreService);
   private router     = inject(Router);
   private destroyRef = inject(DestroyRef);
 
-  loading   = signal(true);
-  tooltip   = signal<{ x: number; y: number; node: SimNode } | null>(null);
+  loading = signal(true);
+  tooltip = signal<{ x: number; y: number; node: SimNode } | null>(null);
 
   private simulation?: d3.Simulation<SimNode, SimLink>;
   private resizeObserver?: ResizeObserver;
@@ -56,30 +53,30 @@ export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
     Malware:    '#ef4444',
   };
 
-  ngOnInit() {
+  constructor() {
     this.store.fetchNetwork()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: data => { this.loading.set(false); this.draw(data.nodes, data.links); },
-        error: () => this.loading.set(false),
+        next:  data => { this.loading.set(false); this.draw(data.nodes, data.links); },
+        error: ()   => this.loading.set(false),
       });
-  }
 
-  ngAfterViewInit() {
-    this.resizeObserver = new ResizeObserver(() => this.centerSimulation());
-    this.resizeObserver.observe(this.svgRef.nativeElement.parentElement!);
-  }
+    afterNextRender(() => {
+      this.resizeObserver = new ResizeObserver(() => this.centerSimulation());
+      this.resizeObserver.observe(this.svgRef().nativeElement.parentElement!);
+    });
 
-  ngOnDestroy() {
-    this.simulation?.stop();
-    this.resizeObserver?.disconnect();
+    this.destroyRef.onDestroy(() => {
+      this.simulation?.stop();
+      this.resizeObserver?.disconnect();
+    });
   }
 
   private draw(rawNodes: NetworkNode[], rawLinks: NetworkLink[]) {
-    const el     = this.svgRef.nativeElement as unknown as SVGSVGElement;
+    const el     = this.svgRef().nativeElement as unknown as SVGSVGElement;
     const svg    = d3.select<SVGSVGElement, unknown>(el);
-    const width  = (this.svgRef.nativeElement.parentElement?.clientWidth)  || 900;
-    const height = (this.svgRef.nativeElement.parentElement?.clientHeight) || 600;
+    const width  = (this.svgRef().nativeElement.parentElement?.clientWidth)  || 900;
+    const height = (this.svgRef().nativeElement.parentElement?.clientHeight) || 600;
 
     svg.attr('width', width).attr('height', height);
     svg.selectAll('*').remove();
@@ -90,7 +87,6 @@ export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
       .filter(l => nodeMap.has(l.source as string) && nodeMap.has(l.target as string))
       .map(l => ({ ...l, source: nodeMap.get(l.source as string)!, target: nodeMap.get(l.target as string)! }));
 
-    // Zoom layer
     const g = svg.append('g');
     svg.call(
       d3.zoom<SVGSVGElement, unknown>()
@@ -98,14 +94,12 @@ export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
         .on('zoom', e => g.attr('transform', e.transform))
     );
 
-    // Links
     const link = g.append('g').selectAll('line')
       .data(links).join('line')
       .attr('stroke', '#2a3347')
       .attr('stroke-opacity', 0.7)
       .attr('stroke-width', d => Math.sqrt(d.value) * 0.8 + 0.5);
 
-    // Node groups
     const node = g.append('g').selectAll<SVGGElement, SimNode>('g')
       .data(nodes).join('g')
       .attr('cursor', d => d.type === 'ip' ? 'pointer' : 'default')
@@ -116,7 +110,6 @@ export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
           .on('end',   (e, d) => { if (!e.active) this.simulation?.alphaTarget(0); d.fx = null; d.fy = null; })
       );
 
-    // IP nodes — circles
     node.filter(d => d.type === 'ip')
       .append('circle')
       .attr('r', d => Math.max(8, Math.min(22, (d.score ?? 50) / 5)))
@@ -124,7 +117,6 @@ export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
       .attr('stroke', d => this.SEVERITY_COLOR[d.threat_level ?? 'low'])
       .attr('stroke-width', 1.5);
 
-    // Attack nodes — diamonds
     node.filter(d => d.type === 'attack')
       .append('polygon')
       .attr('points', '0,-14 12,0 0,14 -12,0')
@@ -132,7 +124,6 @@ export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
       .attr('stroke', d => this.ATTACK_COLOR[d.id] ?? '#9ca3af')
       .attr('stroke-width', 1.5);
 
-    // Labels
     node.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', d => d.type === 'ip' ? (Math.max(8, Math.min(22, (d.score ?? 50) / 5)) + 11) : 22)
@@ -141,24 +132,16 @@ export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
       .attr('pointer-events', 'none')
       .text(d => d.id);
 
-    // Interactions
     node.filter(d => d.type === 'ip')
-      .on('mouseenter', (e, d) => {
-        this.tooltip.set({ x: e.offsetX + 12, y: e.offsetY - 10, node: d });
-      })
-      .on('mousemove', (e) => {
-        this.tooltip.update(t => t ? { ...t, x: e.offsetX + 12, y: e.offsetY - 10 } : t);
-      })
-      .on('mouseleave', () => this.tooltip.set(null))
-      .on('click', (_, d) => {
-        this.router.navigate(['/threats'], { queryParams: { ip: d.id } });
-      });
+      .on('mouseenter', (e, d) => this.tooltip.set({ x: e.offsetX + 12, y: e.offsetY - 10, node: d }))
+      .on('mousemove',  (e)    => this.tooltip.update(t => t ? { ...t, x: e.offsetX + 12, y: e.offsetY - 10 } : t))
+      .on('mouseleave', ()     => this.tooltip.set(null))
+      .on('click',      (_, d) => this.router.navigate(['/threats'], { queryParams: { ip: d.id } }));
 
-    // Simulation
     this.simulation = d3.forceSimulation<SimNode>(nodes)
-      .force('link',   d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(90))
-      .force('charge', d3.forceManyBody().strength(-220))
-      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('link',    d3.forceLink<SimNode, SimLink>(links).id(d => d.id).distance(90))
+      .force('charge',  d3.forceManyBody().strength(-220))
+      .force('center',  d3.forceCenter(width / 2, height / 2))
       .force('collide', d3.forceCollide(30))
       .on('tick', () => {
         link
@@ -171,7 +154,7 @@ export class NetworkGraphComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private centerSimulation() {
-    const el = this.svgRef.nativeElement as SVGElement;
+    const el = this.svgRef().nativeElement as SVGElement;
     const w  = el.parentElement?.clientWidth  ?? 900;
     const h  = el.parentElement?.clientHeight ?? 600;
     el.setAttribute('width',  String(w));

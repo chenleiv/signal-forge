@@ -3,7 +3,6 @@ import {
   ChangeDetectionStrategy,
   signal,
   inject,
-  HostListener,
   viewChild,
   ElementRef,
   effect,
@@ -18,6 +17,7 @@ import { ThreatStoreService } from '../../core/services/threat-store.service';
   templateUrl: './command-console.html',
   styleUrl: './command-console.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:keydown)': 'onGlobalKey($event)' },
 })
 export class CommandConsole {
   private store = inject(ThreatStoreService);
@@ -48,7 +48,6 @@ export class CommandConsole {
     });
   }
 
-  @HostListener('document:keydown', ['$event'])
   onGlobalKey(e: KeyboardEvent) {
     const tag = (document.activeElement as HTMLElement)?.tagName;
     if ((e.key === '`' || e.key === ';') && tag !== 'INPUT' && tag !== 'TEXTAREA') {
