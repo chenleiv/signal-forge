@@ -12,25 +12,24 @@ import { AuthService } from '../../../core/services/auth';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Login {
-  private auth = inject(AuthService);
-  private router = inject(Router);
-
+  // ── public signals ────────────────────────────────────────────
   username = signal('');
   password = signal('');
-  loading = signal(false);
-  error = signal<string | null>(null);
+  loading  = signal(false);
+  error    = signal<string | null>(null);
 
+  // ── private injections ────────────────────────────────────────
+  private readonly auth   = inject(AuthService);
+  private readonly router = inject(Router);
+
+  // ── public methods ────────────────────────────────────────────
   submit() {
     if (!this.username() || !this.password()) return;
     this.loading.set(true);
     this.error.set(null);
-
     this.auth.login(this.username(), this.password()).subscribe({
-      next: () => this.router.navigate(['/dashboard']),
-      error: () => {
-        this.error.set('Invalid credentials');
-        this.loading.set(false);
-      },
+      next:  () => this.router.navigate(['/dashboard']),
+      error: () => { this.error.set('Invalid credentials'); this.loading.set(false); },
     });
   }
 

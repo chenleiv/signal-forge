@@ -12,35 +12,34 @@ import { ThreatEvent, ThreatLevel } from '../../shared/models/threat.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Alerts {
-  protected readonly store = inject(ThreatStoreService);
-
-  paused = signal(false);
-  filterLevel = signal<ThreatLevel | 'all'>('all');
+  // ── public signals ────────────────────────────────────────────
+  paused       = signal(false);
+  filterLevel  = signal<ThreatLevel | 'all'>('all');
   acknowledged = signal<Set<string>>(new Set());
-  private snapshot = signal<ThreatEvent[]>([]);
 
-  filtered = computed(() => {
+  readonly filtered = computed(() => {
     const level = this.filterLevel();
-    const list = this.paused() ? this.snapshot() : this.store.events();
-    return list.filter((e) => level === 'all' || e.threat_level === level);
+    const list  = this.paused() ? this.snapshot() : this.store.events();
+    return list.filter(e => level === 'all' || e.threat_level === level);
   });
 
-  setFilter(level: ThreatLevel | 'all') {
-    this.filterLevel.set(level);
-  }
+  // ── private injections ────────────────────────────────────────
+  protected readonly store = inject(ThreatStoreService);
+
+  // ── private state ─────────────────────────────────────────────
+  private readonly snapshot = signal<ThreatEvent[]>([]);
+
+  // ── public methods ────────────────────────────────────────────
+  setFilter(level: ThreatLevel | 'all') { this.filterLevel.set(level); }
 
   acknowledge(e: ThreatEvent) {
-    this.acknowledged.update((s) => new Set([...s, e.ip + e.timestamp]));
+    this.acknowledged.update(s => new Set([...s, e.ip + e.timestamp]));
   }
 
-  isAcknowledged(e: ThreatEvent): boolean {
-    return this.acknowledged().has(e.ip + e.timestamp);
-  }
+  isAcknowledged(e: ThreatEvent): boolean { return this.acknowledged().has(e.ip + e.timestamp); }
 
   togglePause() {
-    if (!this.paused()) {
-      this.snapshot.set([...this.store.events()]);
-    }
-    this.paused.update((v) => !v);
+    if (!this.paused()) this.snapshot.set([...this.store.events()]);
+    this.paused.update(v => !v);
   }
 }

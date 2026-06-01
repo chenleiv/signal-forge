@@ -22,20 +22,20 @@ import { ThreatStats } from '../../shared/models/threat.models';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Dashboard {
-  protected readonly store = inject(ThreatStoreService);
+  // ── public signals ────────────────────────────────────────────
+  severityChart = signal<EChartsOption | null>(null);
+  attackChart   = signal<EChartsOption | null>(null);
+  regionChart   = signal<EChartsOption | null>(null);
+  topIpsChart   = signal<EChartsOption | null>(null);
 
   readonly criticalEvents = computed(() =>
-    this.store
-      .events()
-      .filter((e) => e.threat_level === 'critical')
-      .slice(0, 30),
+    this.store.events().filter(e => e.threat_level === 'critical').slice(0, 30)
   );
 
-  severityChart = signal<EChartsOption | null>(null);
-  attackChart = signal<EChartsOption | null>(null);
-  regionChart = signal<EChartsOption | null>(null);
-  topIpsChart = signal<EChartsOption | null>(null);
+  // ── private injections ────────────────────────────────────────
+  protected readonly store = inject(ThreatStoreService);
 
+  // ── private state ─────────────────────────────────────────────
   private readonly BASE: Partial<EChartsOption> = {
     backgroundColor: 'transparent',
     textStyle: { color: '#6b7280', fontFamily: 'Inter, system-ui, sans-serif', fontSize: 10 },

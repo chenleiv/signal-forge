@@ -40,25 +40,27 @@ export interface TimelineEntry {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class IncidentDetailComponent {
-  incident = input<Incident | null>(null);
+  // ── inputs / outputs ──────────────────────────────────────────
+  incident       = input<Incident | null>(null);
   closed         = output<void>();
   incidentChange = output<Incident>();
 
-  private store      = inject(ThreatStoreService);
-  private router     = inject(Router);
-  private destroyRef = inject(DestroyRef);
-
-  notes        = signal<IncidentNote[]>([]);
-  newNote      = signal('');
+  // ── public signals ────────────────────────────────────────────
+  notes          = signal<IncidentNote[]>([]);
+  newNote        = signal('');
   completedTasks = signal<Set<number>>(new Set());
-  timeline     = signal<TimelineEntry[]>([]);
+  timeline       = signal<TimelineEntry[]>([]);
 
-  readonly tasks = computed(() =>
-    RESPONSE_TASKS[this.incident()?.attack_type ?? 'SQLi'] ?? []
-  );
-
+  readonly tasks      = computed(() => RESPONSE_TASKS[this.incident()?.attack_type ?? 'SQLi'] ?? []);
   readonly statusFlow = STATUS_FLOW;
+  readonly analysts   = ['analyst1', 'analyst2', 'analyst3', 'analyst4', 'analyst5'];
 
+  // ── private injections ────────────────────────────────────────
+  private readonly store      = inject(ThreatStoreService);
+  private readonly router     = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  // ── constructor ───────────────────────────────────────────────
   constructor() {
     effect(() => {
       const inc = this.incident();
@@ -74,28 +76,13 @@ export class IncidentDetailComponent {
     });
   }
 
+  // ── public methods ────────────────────────────────────────────
   close() { this.closed.emit(); }
-
-  private patchAndEmit(patch: Parameters<ThreatStoreService['patchIncident']>[1], timelineLabel: string, timelineType: TimelineEntry['type']) {
-    const inc = this.incident();
-    if (!inc) return;
-    this.store.patchIncident(inc.id, patch)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: updated => {
-          this.incidentChange.emit(updated);
-          this.timeline.update(tl => [{ label: timelineLabel, at: updated.updated_at, type: timelineType }, ...tl]);
-        },
-        error: () => console.error('[IncidentDetail] patch failed'),
-      });
-  }
 
   updateStatus(status: IncidentStatus) {
     if (this.incident()?.status === status) return;
     this.patchAndEmit({ status }, `Status → ${status}`, 'status');
   }
-
-  readonly analysts = ['analyst1', 'analyst2', 'analyst3', 'analyst4', 'analyst5'];
 
   updateAssignee(value: string) {
     const assigned_to = value || null;
@@ -122,19 +109,26 @@ export class IncidentDetailComponent {
       .subscribe(note => {
         this.notes.update(n => [...n, note]);
         this.newNote.set('');
-        this.timeline.update(tl => [
-          { label: `Note added by ${note.author}`, at: note.at, type: 'note' },
-          ...tl,
-        ]);
+        this.timeline.update(tl => [{ label: `Note added by ${note.author}`, at: note.at, type: 'note' }, ...tl]);
       });
   }
 
-  investigateIp(ip: string) {
-    this.router.navigate(['/threats'], { queryParams: { ip } });
-  }
+  investigateIp(ip: string) { this.router.navigate(['/threats'], { queryParams: { ip } }); }
 
   severityColor(sev: string): string {
     const map: Record<string, string> = { critical: '#ef4444', high: '#f97316', medium: '#f59e0b', low: '#60a5fa' };
     return map[sev] ?? '#9ca3af';
+  }
+
+  // ── private methods ───────────────────────────────────────────
+  private patchAndEmit(patch: Parameters<ThreatStoreService['patchIncident']>[1], timelineLabel: string, timelineType: TimelineEntry['type']) {
+    const inc = this.incident();
+    if (!inc) return;
+    this.store.patchIncident(inc.id, patch)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next:  updated => { this.incidentChange.emit(updated); this.timeline.update(tl => [{ label: timelineLabel, at: updated.updated_at, type: timelineType }, ...tl]); },
+        error: () => console.error('[IncidentDetail] patch failed'),
+      });
   }
 }

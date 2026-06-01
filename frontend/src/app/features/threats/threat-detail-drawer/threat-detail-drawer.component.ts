@@ -24,32 +24,28 @@ import { IpHistory, IpGeo, RelatedIp } from '../../../shared/models/threat.model
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ThreatDetailDrawerComponent {
-  ip = input<string | null>(null);
-  closed  = output<void>();
+  // ── inputs / outputs ──────────────────────────────────────────
+  ip       = input<string | null>(null);
+  closed   = output<void>();
   ipChange = output<string>();
 
-  private store      = inject(ThreatStoreService);
-  private router     = inject(Router);
-  private destroyRef = inject(DestroyRef);
-
-  history     = signal<IpHistory | null>(null);
-  loading     = signal(false);
-  aiSummary   = signal<string | null>(null);
-  aiLoading   = signal(false);
-  geoData     = signal<IpGeo | null>(null);
-  relatedIps  = signal<RelatedIp[]>([]);
-  geoOpen     = signal(true);
-  abuseOpen   = signal(false);
-  aiOpen      = signal(false);
-  mitreOpen   = signal(false);
-  relatedOpen = signal(false);
-  eventsOpen  = signal(true);
-  isBlocked       = signal(false);
-  existingCaseId  = signal<string | null>(null);
-  eventFilter     = signal('');
-  typeFilter      = signal('all');
-
-  private summaryCache = new Map<string, string | null>();
+  // ── public signals ────────────────────────────────────────────
+  history        = signal<IpHistory | null>(null);
+  loading        = signal(false);
+  aiSummary      = signal<string | null>(null);
+  aiLoading      = signal(false);
+  geoData        = signal<IpGeo | null>(null);
+  relatedIps     = signal<RelatedIp[]>([]);
+  geoOpen        = signal(true);
+  abuseOpen      = signal(false);
+  aiOpen         = signal(false);
+  mitreOpen      = signal(false);
+  relatedOpen    = signal(false);
+  eventsOpen     = signal(true);
+  isBlocked      = signal(false);
+  existingCaseId = signal<string | null>(null);
+  eventFilter    = signal('');
+  typeFilter     = signal('all');
 
   readonly filteredEvents = computed(() => {
     const events = this.history()?.events ?? [];
@@ -65,6 +61,15 @@ export class ThreatDetailDrawerComponent {
     [...new Set((this.history()?.events ?? []).map(e => e.attack_type))]
   );
 
+  // ── private injections ────────────────────────────────────────
+  private readonly store      = inject(ThreatStoreService);
+  private readonly router     = inject(Router);
+  private readonly destroyRef = inject(DestroyRef);
+
+  // ── private state ─────────────────────────────────────────────
+  private readonly summaryCache = new Map<string, string | null>();
+
+  // ── constructor ───────────────────────────────────────────────
   constructor() {
     effect(() => {
       const ip = this.ip();
@@ -85,12 +90,10 @@ export class ThreatDetailDrawerComponent {
       this.eventFilter.set('');
       this.typeFilter.set('all');
 
-      // history
       this.store.fetchIpHistory(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: h => { this.history.set(h); this.loading.set(false); }, error: () => this.loading.set(false) });
 
-      // ai summary (cached)
       const cached = this.summaryCache.get(ip);
       if (cached !== undefined) {
         this.aiSummary.set(cached);
@@ -100,33 +103,30 @@ export class ThreatDetailDrawerComponent {
         this.store.fetchAiSummary(ip)
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
-            next: res => { this.summaryCache.set(ip, res.summary); this.aiSummary.set(res.summary); this.aiLoading.set(false); },
-            error: () => this.aiLoading.set(false),
+            next:  res => { this.summaryCache.set(ip, res.summary); this.aiSummary.set(res.summary); this.aiLoading.set(false); },
+            error: ()  => this.aiLoading.set(false),
           });
       }
 
-      // geo
       this.store.fetchIpGeo(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: g => this.geoData.set(g), error: () => {} });
 
-      // related
       this.store.fetchRelatedIps(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: r => this.relatedIps.set(r.related), error: () => {} });
 
-      // block status
       this.store.getBlockStatus(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: r => this.isBlocked.set(r.blocked), error: () => {} });
 
-      // existing case
       this.store.getIpCase(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({ next: r => this.existingCaseId.set(r.case_id), error: () => {} });
     });
   }
 
+  // ── public methods ────────────────────────────────────────────
   close() { this.closed.emit(); }
 
   huntIp() {
@@ -155,16 +155,11 @@ export class ThreatDetailDrawerComponent {
   toggleBlock() {
     const ip = this.ip();
     if (!ip) return;
-    const action = this.isBlocked()
-      ? this.store.unblockIp(ip)
-      : this.store.blockIp(ip);
-    action.pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(r => this.isBlocked.set(r.blocked));
+    const action = this.isBlocked() ? this.store.unblockIp(ip) : this.store.blockIp(ip);
+    action.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(r => this.isBlocked.set(r.blocked));
   }
 
-  selectRelated(ip: string) {
-    this.ipChange.emit(ip);
-  }
+  selectRelated(ip: string) { this.ipChange.emit(ip); }
 
   scoreColor(score: number): string {
     if (score >= 80) return '#ef4444';

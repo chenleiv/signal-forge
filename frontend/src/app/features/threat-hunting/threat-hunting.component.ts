@@ -5,7 +5,6 @@ import {
   computed,
   ChangeDetectionStrategy,
   DestroyRef,
-  OnInit,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -25,23 +24,13 @@ const REGIONS      = ['US', 'EU', 'RU', 'CN', 'IL', 'BR'];
   styleUrl:    './threat-hunting.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ThreatHuntingComponent implements OnInit {
-  private store      = inject(ThreatStoreService);
-  private router     = inject(Router);
-  private route      = inject(ActivatedRoute);
-  private destroyRef = inject(DestroyRef);
-
-  readonly attackTypes = ATTACK_TYPES;
-  readonly regions     = REGIONS;
-
-  // Query fields
+export class ThreatHuntingComponent {
+  // ── public signals ────────────────────────────────────────────
   ip          = signal('');
   attack_type = signal('');
   region      = signal('');
   min_score   = signal(0);
   max_score   = signal(100);
-
-  // State
   results     = signal<HuntResult[]>([]);
   total       = signal(0);
   running     = signal(false);
@@ -58,13 +47,21 @@ export class ThreatHuntingComponent implements OnInit {
     max_score:   this.max_score(),
   }));
 
+  readonly attackTypes = ATTACK_TYPES;
+  readonly regions     = REGIONS;
+
+  // ── private injections ────────────────────────────────────────
+  private readonly store      = inject(ThreatStoreService);
+  private readonly router     = inject(Router);
+  private readonly route      = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
+
+  // ── constructor ───────────────────────────────────────────────
   constructor() {
     this.store.getSavedHunts()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(h => this.savedHunts.set(h));
-  }
 
-  ngOnInit() {
     const ip = this.route.snapshot.queryParamMap.get('ip');
     if (ip) {
       this.ip.set(ip);
@@ -73,17 +70,13 @@ export class ThreatHuntingComponent implements OnInit {
     }
   }
 
+  // ── public methods ────────────────────────────────────────────
   run() {
     this.running.set(true);
     this.store.runHunt(this.query())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: r => {
-          this.results.set(r.results);
-          this.total.set(r.total);
-          this.running.set(false);
-          this.hasRun.set(true);
-        },
+        next: r => { this.results.set(r.results); this.total.set(r.total); this.running.set(false); this.hasRun.set(true); },
         error: () => this.running.set(false),
       });
   }
@@ -104,11 +97,7 @@ export class ThreatHuntingComponent implements OnInit {
     if (!name) return;
     this.store.saveHunt(name, this.query(), this.total())
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(h => {
-        this.savedHunts.update(list => [h, ...list]);
-        this.saveName.set('');
-        this.showSave.set(false);
-      });
+      .subscribe(h => { this.savedHunts.update(list => [h, ...list]); this.saveName.set(''); this.showSave.set(false); });
   }
 
   loadHunt(hunt: SavedHunt) {
@@ -128,9 +117,7 @@ export class ThreatHuntingComponent implements OnInit {
       .subscribe(() => this.savedHunts.update(list => list.filter(h => h.id !== id)));
   }
 
-  investigateIp(ip: string) {
-    this.router.navigate(['/threats'], { queryParams: { ip } });
-  }
+  investigateIp(ip: string) { this.router.navigate(['/threats'], { queryParams: { ip } }); }
 
   scoreColor(score: number): string {
     if (score >= 80) return '#ef4444';
