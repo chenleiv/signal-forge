@@ -1,4 +1,4 @@
-import { Component, signal, HostListener, inject, OnInit } from '@angular/core';
+import { Component, signal, HostListener, inject, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ThreatTableComponent } from './threat-table/threat-table.component';
 import { ThreatDetailDrawerComponent } from './threat-detail-drawer/threat-detail-drawer.component';
@@ -9,6 +9,7 @@ import { ThreatDetailDrawerComponent } from './threat-detail-drawer/threat-detai
   imports: [ThreatTableComponent, ThreatDetailDrawerComponent],
   templateUrl: './threats.html',
   styleUrl: './threats.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Threats implements OnInit {
   private route  = inject(ActivatedRoute);

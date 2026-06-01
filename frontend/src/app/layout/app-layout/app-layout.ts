@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, signal, inject, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal, inject, computed, ChangeDetectionStrategy } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { ThreatsService } from '../../core/services/threats.service';
@@ -24,6 +24,7 @@ const PAGE_TITLES: Record<string, string> = {
   imports: [RouterLink, RouterLinkActive, RouterOutlet, CommandConsole],
   templateUrl: './app-layout.html',
   styleUrl: './app-layout.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppLayout implements OnInit, OnDestroy {
   readonly ws = inject(ThreatsService);

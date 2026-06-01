@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { SettingsService, AppSettings } from '../../core/services/settings.service';
 
@@ -8,6 +8,7 @@ import { SettingsService, AppSettings } from '../../core/services/settings.servi
   imports: [FormsModule],
   templateUrl: './settings.html',
   styleUrl: './settings.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Settings {
   private svc = inject(SettingsService);
