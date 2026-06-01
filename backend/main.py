@@ -125,6 +125,35 @@ THREAT_IPS = [
     "64.225.32.100",
 ]
 
+# Keep original list as fallback
+_FALLBACK_THREAT_IPS = list(THREAT_IPS)
+
+
+async def _refresh_threat_ips() -> None:
+    global THREAT_IPS
+    if not ABUSEIPDB_API_KEY:
+        THREAT_IPS = list(_FALLBACK_THREAT_IPS)
+        return
+    try:
+        async with httpx.AsyncClient() as client:
+            r = await client.get(
+                "https://api.abuseipdb.com/api/v2/blacklist",
+                headers={"Key": ABUSEIPDB_API_KEY, "Accept": "application/json"},
+                params={"confidenceMinimum": 90, "limit": 100},
+                timeout=10.0,
+            )
+            entries = r.json().get("data", [])
+            ips = [e["ipAddress"] for e in entries if e.get("ipAddress")]
+            if ips:
+                THREAT_IPS = ips
+                print(f"[AbuseIPDB] Loaded {len(ips)} threat IPs")
+            else:
+                THREAT_IPS = list(_FALLBACK_THREAT_IPS)
+    except Exception as exc:
+        print(f"[AbuseIPDB] Refresh failed: {exc} — using fallback")
+        THREAT_IPS = list(_FALLBACK_THREAT_IPS)
+
+
 ATTACK_TYPES = ["SQLi", "DDoS", "BruteForce", "PortScan", "Malware"]
 
 REGIONS = ["US", "EU", "RU", "CN", "IL", "BR"]
