@@ -201,7 +201,7 @@ $green:     #22c55e;
 }
 
 .field-input {
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $text;
   border-radius: 3px;
@@ -255,7 +255,7 @@ $green:     #22c55e;
 }
 
 .cond-select {
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $text;
   border-radius: 3px;
@@ -265,7 +265,7 @@ $green:     #22c55e;
   cursor: pointer;
 
   &:focus { border-color: rgba(59, 130, 246, 0.4); }
-  option { background: #0d1018; }
+  option { background: var(--c-input); }
 }
 
 .cond-op  { width: 80px; }
@@ -274,7 +274,7 @@ $green:     #22c55e;
 .cond-input {
   flex: 1;
   max-width: 160px;
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $text;
   border-radius: 3px;
@@ -348,7 +348,7 @@ $green:     #22c55e;
 
 // ── Query preview ─────────────────────────────────────────────
 .query-preview {
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   border-radius: 3px;
   padding: 10px 14px;

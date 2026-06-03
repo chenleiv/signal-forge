@@ -127,7 +127,7 @@ $accent:    var(--c-accent);
 .tooltip {
   position: absolute;
   pointer-events: none;
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   border-radius: 5px;
   padding: 8px 12px;

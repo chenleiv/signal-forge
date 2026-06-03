@@ -299,7 +299,7 @@ $secondary: var(--c-text-2);
   thead tr {
     position: sticky;
     top: 0;
-    background: #0d1018;
+    background: var(--c-input);
     z-index: 1;
   }
 

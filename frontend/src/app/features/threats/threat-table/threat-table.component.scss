@@ -39,7 +39,7 @@ $sev-low:      #60a5fa;
 }
 
 .filter-input {
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $text;
   border-radius: 3px;
@@ -106,7 +106,7 @@ $sev-low:      #60a5fa;
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   border-radius: 4px;
   overflow: hidden;
@@ -155,7 +155,7 @@ thead th {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   border-bottom: 1px solid $border;
-  background: #0d1018;
+  background: var(--c-input);
   position: sticky;
   top: 0;
 }
@@ -166,11 +166,11 @@ thead th {
 
   td {
     padding: 10px 16px;
-    border-bottom: 1px solid #151c2b;
+    border-bottom: 1px solid var(--c-border);
     color: $secondary;
   }
 
-  &:hover td        { background: #181f2e; }
+  &:hover td        { background: rgba(255, 255, 255, 0.02); }
   &.row-selected td { background: rgba($accent, 0.06); }
   &.row-selected    { border-left: 2px solid $accent; }
 }

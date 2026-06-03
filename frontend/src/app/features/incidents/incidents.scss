@@ -46,7 +46,7 @@ $accent:    var(--c-accent);
 }
 
 .filter-input {
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $text;
   border-radius: 3px;
@@ -162,7 +162,7 @@ $accent:    var(--c-accent);
   thead tr {
     position: sticky;
     top: 0;
-    background: #0d1018;
+    background: var(--c-input);
     z-index: 1;
     border-bottom: 1px solid $border;
   }

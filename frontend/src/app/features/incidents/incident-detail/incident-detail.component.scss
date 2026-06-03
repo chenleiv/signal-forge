@@ -33,7 +33,7 @@ $green:     #22c55e;
   align-items: center;
   padding: 14px 18px 10px;
   border-bottom: 1px solid $border;
-  background: #0d1018;
+  background: var(--c-input);
   flex-shrink: 0;
 }
 
@@ -175,7 +175,7 @@ $green:     #22c55e;
 }
 
 .assignee-select {
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $accent;
   font-size: 12px;
@@ -186,7 +186,7 @@ $green:     #22c55e;
   outline: none;
 
   &:focus { border-color: rgba(59, 130, 246, 0.4); }
-  option { background: #0d1018; color: $text; }
+  option { background: var(--c-input); color: $text; }
 }
 
 // ── Scrollable body ───────────────────────────────────────────
@@ -274,7 +274,7 @@ $green:     #22c55e;
 
 .note-input {
   flex: 1;
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $text;
   border-radius: 3px;

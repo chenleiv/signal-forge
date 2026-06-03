@@ -73,7 +73,7 @@ $accent:    var(--c-accent);
 }
 
 .field-input {
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $text;
   border-radius: 3px;
@@ -84,7 +84,7 @@ $accent:    var(--c-accent);
 
   &::placeholder { color: $muted; }
   &:focus { border-color: rgba(59, 130, 246, 0.4); }
-  option { background: #0d1018; }
+  option { background: var(--c-input); }
 }
 
 .score-range {
@@ -282,7 +282,7 @@ $accent:    var(--c-accent);
   thead tr {
     position: sticky;
     top: 0;
-    background: #0d1018;
+    background: var(--c-input);
     border-bottom: 1px solid $border;
     z-index: 1;
   }

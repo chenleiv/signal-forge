@@ -38,7 +38,7 @@ $accent:    var(--c-accent);
   align-items: flex-start;
   padding: 16px 20px;
   border-bottom: 1px solid $border;
-  background: #0d1018;
+  background: var(--c-input);
   flex-shrink: 0;
 }
 
@@ -236,7 +236,7 @@ $accent:    var(--c-accent);
   gap: 10px;
   align-items: flex-start;
   padding: 5px 0;
-  border-bottom: 1px solid #151c2b;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .tl-dot {
@@ -554,7 +554,7 @@ $accent:    var(--c-accent);
 
 .filter-input,
 .filter-select {
-  background: #0d1018;
+  background: var(--c-input);
   border: 1px solid $border;
   color: $text;
   border-radius: 3px;
@@ -591,7 +591,7 @@ $accent:    var(--c-accent);
   font-size: 11px;
 
   thead tr {
-    background: #0d1018;
+    background: var(--c-input);
     border-bottom: 1px solid $border;
   }
 
