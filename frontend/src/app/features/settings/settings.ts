@@ -1,5 +1,7 @@
 import { Component, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { SettingsService, AppSettings } from '../../core/services/settings.service';
+import { AuthService } from '../../core/services/auth';
+import { ThemeService } from '../../core/services/theme';
 
 @Component({
   selector: 'app-settings',
@@ -11,6 +13,8 @@ import { SettingsService, AppSettings } from '../../core/services/settings.servi
 })
 export class Settings {
   private svc = inject(SettingsService);
+  private auth = inject(AuthService);
+  readonly themeService = inject(ThemeService);
 
   form = signal<AppSettings>({ ...this.svc.settings() });
 
@@ -25,5 +29,9 @@ export class Settings {
   reset() {
     this.svc.reset();
     this.form.set({ ...this.svc.settings() });
+  }
+
+  logout() {
+    this.auth.logout();
   }
 }

@@ -193,6 +193,24 @@ $accent: #3b82f6;
     justify-content: flex-end;
 }
 
+.btn-logout {
+    padding: 8px 18px;
+    border: 1px solid #7f1d1d;
+    border-radius: 4px;
+    background: transparent;
+    color: #f87171;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-right: auto;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.12);
+        border-color: #ef4444;
+        color: #fca5a5;
+    }
+}
+
 .btn-reset {
     padding: 8px 18px;
     border: 1px solid $border;
@@ -232,4 +250,36 @@ $accent: #3b82f6;
             background: #15803d;
         }
     }
+}
+
+// ── Theme Toggle ──────────────────────────────────────────────
+.theme-toggle {
+  display: flex;
+  background: var(--c-input);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  overflow: hidden;
+  width: fit-content;
+}
+
+.theme-btn {
+  padding: 7px 20px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--c-text-2);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+
+  &.active {
+    background: var(--c-accent);
+    color: #fff;
+  }
+
+  &:not(.active):hover {
+    background: var(--c-border);
+    color: var(--c-text);
+  }
 }
