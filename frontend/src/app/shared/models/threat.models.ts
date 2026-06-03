@@ -49,19 +49,6 @@ export interface RelatedIp {
   event_count: number;
 }
 
-export interface NetworkNode {
-  id: string;
-  type: 'ip' | 'attack';
-  score?: number;
-  threat_level?: ThreatLevel;
-  event_count?: number;
-}
-
-export interface NetworkLink {
-  source: string;
-  target: string;
-  value: number;
-}
 
 export interface HuntQuery {
   ip?: string;

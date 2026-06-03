@@ -170,7 +170,7 @@ thead th {
     color: $secondary;
   }
 
-  &:hover td        { background: rgba(255, 255, 255, 0.02); }
+  &:hover td        { background: var(--c-border); }
   &.row-selected td { background: rgba($accent, 0.06); }
   &.row-selected    { border-left: 2px solid $accent; }
 }

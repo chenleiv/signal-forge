@@ -10,8 +10,6 @@ import {
   Incident,
   IncidentNote,
   IncidentStatus,
-  NetworkNode,
-  NetworkLink,
   HuntQuery,
   SavedHunt,
   HuntResult,
@@ -120,10 +118,6 @@ export class ThreatStoreService {
 
   getIpCase(ip: string) {
     return this.http.get<{ case_id: string | null }>(`/api/ip/${ip}/case`);
-  }
-
-  fetchNetwork() {
-    return this.http.get<{ nodes: NetworkNode[]; links: NetworkLink[] }>('/api/network');
   }
 
   runHunt(query: HuntQuery) {

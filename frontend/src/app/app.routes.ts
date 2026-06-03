@@ -28,10 +28,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/threat-map/threat-map').then((m) => m.ThreatMap),
       },
       {
-        path: 'network',
-        loadComponent: () => import('./features/network-graph/network-graph.component').then((m) => m.NetworkGraphComponent),
-      },
-      {
         path: 'hunting',
         loadComponent: () => import('./features/threat-hunting/threat-hunting.component').then((m) => m.ThreatHuntingComponent),
       },

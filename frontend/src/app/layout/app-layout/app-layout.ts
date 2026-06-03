@@ -13,7 +13,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/alerts':    'Alerts',
   '/incidents': 'Incidents',
   '/map':       'Threat Map',
-  '/network':   'Network Graph',
   '/hunting':   'Threat Hunting',
   '/rules':     'Detection Rules',
   '/settings':  'Settings',

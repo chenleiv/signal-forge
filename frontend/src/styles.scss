@@ -13,7 +13,7 @@ body {
   background: var(--c-bg, #0f1117);
 }
 
-body[data-theme="dark"] {
+:root[data-theme="dark"] {
   --c-bg:     #0f1117;
   --c-panel:  #13171f;
   --c-border: #1e2535;
@@ -24,7 +24,7 @@ body[data-theme="dark"] {
   --c-input:  #0d1220;
 }
 
-body[data-theme="light"] {
+:root[data-theme="light"] {
   --c-bg:     #eef2ff;
   --c-panel:  #f5f7ff;
   --c-border: #c7d0e8;

@@ -17,7 +17,7 @@ import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 
 from database import Base
-from models import Incident, Note, IncidentTask  # noqa: F401 — registers tables
+from models import Incident, Note, IncidentTask, Rule  # noqa: F401 — registers tables
 
 target_metadata = Base.metadata
 

@@ -14,7 +14,7 @@ export class ThemeService {
 
   constructor() {
     effect(() => {
-      this.doc.body.setAttribute('data-theme', this.theme());
+      this.doc.documentElement.setAttribute('data-theme', this.theme());
       this.storage?.setItem(THEME_KEY, this.theme());
     });
   }

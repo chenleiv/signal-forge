@@ -11,6 +11,7 @@ import { RouterLink } from '@angular/router';
 import { NgxEchartsDirective } from 'ngx-echarts';
 import { EChartsOption } from 'echarts';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
+import { ThemeService } from '../../core/services/theme';
 import { ThreatStats } from '../../shared/models/threat.models';
 
 @Component({
@@ -34,18 +35,16 @@ export class Dashboard {
 
   // ── private injections ────────────────────────────────────────
   protected readonly store = inject(ThreatStoreService);
-
-  // ── private state ─────────────────────────────────────────────
-  private readonly BASE: Partial<EChartsOption> = {
-    backgroundColor: 'transparent',
-    textStyle: { color: '#6b7280', fontFamily: 'Inter, system-ui, sans-serif', fontSize: 10 },
-  };
+  private readonly themeService = inject(ThemeService);
 
   constructor() {
     effect(() => {
+      const isLight = this.themeService.theme() === 'light';
       const stats = this.store.stats();
       const events = this.store.events();
       if (!stats) return;
+
+      const pal = this.palette(isLight);
 
       const sevTotal = Object.values(stats.severity_counts).reduce((s, n) => s + n, 0);
       this.severityChart.set(
@@ -59,6 +58,7 @@ export class Dashboard {
           ],
           sevTotal,
           'Events',
+          pal,
         ),
       );
 
@@ -74,6 +74,7 @@ export class Dashboard {
           atkData,
           atkData.reduce((s, d) => s + d.value, 0),
           'Events',
+          pal,
         ),
       );
 
@@ -103,11 +104,22 @@ export class Dashboard {
           regData,
           regData.reduce((s, d) => s + d.value, 0),
           'Events',
+          pal,
         ),
       );
 
-      this.topIpsChart.set(this.buildTopIps(stats));
+      this.topIpsChart.set(this.buildTopIps(stats, pal));
     });
+  }
+
+  private palette(isLight: boolean) {
+    return {
+      text:     isLight ? '#475569' : '#6b7280',
+      text2:    isLight ? '#64748b' : '#9ca3af',
+      textMain: isLight ? '#1e293b' : '#e5e7eb',
+      muted:    isLight ? '#94a3b8' : '#4b5563',
+      gridLine: isLight ? '#e2e8f0' : '#151c2b',
+    };
   }
 
   private buildDonut(
@@ -115,12 +127,14 @@ export class Dashboard {
     data: { name: string; value: number; color: string }[],
     total: number,
     centerLabel: string,
+    pal: ReturnType<Dashboard['palette']>,
   ): EChartsOption {
     return {
-      ...this.BASE,
+      backgroundColor: 'transparent',
+      textStyle: { color: pal.text, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 10 },
       title: {
         text: title,
-        textStyle: { color: '#9ca3af', fontSize: 9, fontWeight: 600 },
+        textStyle: { color: pal.text2, fontSize: 9, fontWeight: 600 },
         top: 8,
         left: 12,
       },
@@ -133,7 +147,7 @@ export class Dashboard {
             text: total.toString(),
             fontSize: 22,
             fontWeight: 'bold',
-            fill: '#e5e7eb',
+            fill: pal.textMain,
             font: 'bold 22px JetBrains Mono, monospace',
           },
         },
@@ -141,12 +155,12 @@ export class Dashboard {
           type: 'text',
           left: 'center',
           top: '52%',
-          style: { text: centerLabel, fontSize: 10, fill: '#4b5563' },
+          style: { text: centerLabel, fontSize: 10, fill: pal.muted },
         },
       ],
       legend: {
         bottom: 4,
-        textStyle: { color: '#6b7280', fontSize: 9 },
+        textStyle: { color: pal.text, fontSize: 9 },
         itemWidth: 8,
         itemHeight: 8,
       },
@@ -157,33 +171,34 @@ export class Dashboard {
           center: ['50%', '46%'],
           data: data.map((d) => ({ name: d.name, value: d.value, itemStyle: { color: d.color } })),
           label: { show: false },
-          emphasis: { label: { show: true, color: '#e5e7eb', fontSize: 11, fontWeight: 'bold' } },
+          emphasis: { label: { show: true, color: pal.textMain, fontSize: 11, fontWeight: 'bold' } },
         },
       ],
     };
   }
 
-  private buildTopIps(stats: ThreatStats): EChartsOption {
+  private buildTopIps(stats: ThreatStats, pal: ReturnType<Dashboard['palette']>): EChartsOption {
     const top = stats.top_ips.slice(0, 6);
     return {
-      ...this.BASE,
+      backgroundColor: 'transparent',
+      textStyle: { color: pal.text, fontFamily: 'Inter, system-ui, sans-serif', fontSize: 10 },
       title: {
         text: 'TOP ATTACKING IPs',
-        textStyle: { color: '#9ca3af', fontSize: 9, fontWeight: 600 },
+        textStyle: { color: pal.text2, fontSize: 9, fontWeight: 600 },
         top: 8,
         left: 12,
       },
       grid: { top: 36, bottom: 20, left: 10, right: 44, containLabel: true },
       xAxis: {
         type: 'value',
-        splitLine: { lineStyle: { color: '#151c2b' } },
+        splitLine: { lineStyle: { color: pal.gridLine } },
         axisLine: { show: false },
         axisLabel: { show: false },
       },
       yAxis: {
         type: 'category',
         data: top.map(x => x.ip),
-        axisLabel: { color: '#6b7280', fontSize: 9 },
+        axisLabel: { color: pal.text, fontSize: 9 },
       },
       series: [
         {
@@ -193,7 +208,7 @@ export class Dashboard {
             itemStyle: { color: '#3b82f6', borderRadius: [0, 3, 3, 0] },
           })),
           barMaxWidth: 14,
-          label: { show: true, position: 'right', color: '#9ca3af', fontSize: 9 },
+          label: { show: true, position: 'right', color: pal.text2, fontSize: 9 },
         },
       ],
     };

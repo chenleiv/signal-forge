@@ -108,7 +108,7 @@ async def lifespan(app: FastAPI):
             global _incident_counter
             async with AsyncSessionLocal() as _session:
                 _row = await _session.execute(
-                    _sa_text("SELECT COALESCE(MAX(CAST(SUBSTRING(id, 5) AS INTEGER)), 0) FROM incidents")
+                    _sa_text("SELECT COALESCE(MAX(CAST(SUBSTR(id, 5) AS INTEGER)), 0) FROM incidents")
                 )
                 _max = _row.scalar() or 0
                 if _max > 0:
@@ -127,7 +127,7 @@ async def lifespan(app: FastAPI):
     # Enrich fetched IPs with geo data via IPInfo
     if IPINFO_TOKEN:
         async with httpx.AsyncClient() as client:
-            for ip in THREAT_IPS[:20]:
+            for ip in list(THREAT_IPS.keys())[:20]:
                 data = await _fetch_ipinfo(client, ip)
                 if data:
                     _geo_cache[ip] = data
@@ -170,49 +170,64 @@ _incident_counter: int = 0
 
 # ── Simulation data ───────────────────────────────────────────
 
-THREAT_IPS = [
-    "185.220.101.47",
-    "45.33.32.156",
-    "104.21.33.14",
-    "77.88.8.8",
-    "80.82.77.139",
-    "5.188.206.14",
-    "194.165.16.11",
-    "91.108.4.1",
-    "185.159.82.45",
-    "51.15.193.47",
-    "167.99.247.3",
-    "64.225.32.100",
-]
+THREAT_IPS: dict[str, int] = {}
 
-# Keep original list as fallback
-_FALLBACK_THREAT_IPS = list(THREAT_IPS)
+_CACHE_FILE = pathlib.Path(__file__).parent / "threat_ips_cache.json"
+
+
+def _load_cache() -> dict[str, int]:
+    try:
+        if _CACHE_FILE.exists():
+            data = json.loads(_CACHE_FILE.read_text())
+            if isinstance(data, dict) and data:
+                print(f"[AbuseIPDB] Loaded {len(data)} threat IPs from cache")
+                return data
+    except Exception:
+        pass
+    return {}
+
+
+def _save_cache(ip_scores: dict[str, int]) -> None:
+    try:
+        _CACHE_FILE.write_text(json.dumps(ip_scores))
+    except Exception:
+        pass
 
 
 async def _refresh_threat_ips() -> None:
     global THREAT_IPS
     if not ABUSEIPDB_API_KEY:
-        THREAT_IPS = list(_FALLBACK_THREAT_IPS)
+        THREAT_IPS = _load_cache()
+        if not THREAT_IPS:
+            print("[AbuseIPDB] No API key and no cache — simulation paused")
         return
     try:
         async with httpx.AsyncClient() as client:
             r = await client.get(
                 "https://api.abuseipdb.com/api/v2/blacklist",
                 headers={"Key": ABUSEIPDB_API_KEY, "Accept": "application/json"},
-                params={"confidenceMinimum": 90, "limit": 100},
+                params={"confidenceMinimum": 50, "limit": 100},
                 timeout=10.0,
             )
             r.raise_for_status()
             entries = r.json().get("data", [])
-            ips = [e["ipAddress"] for e in entries if e.get("ipAddress")]
-            if ips:
-                THREAT_IPS = ips
-                print(f"[AbuseIPDB] Loaded {len(ips)} threat IPs")
+            ip_scores = {
+                e["ipAddress"]: e.get("abuseConfidenceScore", 50)
+                for e in entries if e.get("ipAddress")
+            }
+            if ip_scores:
+                THREAT_IPS = ip_scores
+                _save_cache(ip_scores)
+                print(f"[AbuseIPDB] Loaded {len(ip_scores)} threat IPs with real scores")
             else:
-                THREAT_IPS = list(_FALLBACK_THREAT_IPS)
+                THREAT_IPS = _load_cache()
+                print("[AbuseIPDB] Empty response — falling back to cache")
     except Exception as exc:
-        print(f"[AbuseIPDB] Refresh failed: {exc} — using fallback")
-        THREAT_IPS = list(_FALLBACK_THREAT_IPS)
+        THREAT_IPS = _load_cache()
+        if THREAT_IPS:
+            print(f"[AbuseIPDB] Refresh failed ({exc}) — using cached data")
+        else:
+            print(f"[AbuseIPDB] Refresh failed ({exc}) — no cache available")
 
 
 ATTACK_TYPES = ["SQLi", "DDoS", "BruteForce", "PortScan", "Malware"]
@@ -509,16 +524,31 @@ def _record_event(event: dict) -> None:
 # ── Threat simulation ─────────────────────────────────────────
 
 
+_SEVERITY_BANDS = [
+    ("low",      1,  39, 0.15),
+    ("medium",  40,  59, 0.30),
+    ("high",    60,  79, 0.35),
+    ("critical", 80, 100, 0.20),
+]
+
 def generate_threat() -> dict:
-    ip = random.choice(THREAT_IPS)
-    score = random.randint(5, 99)
+    if not THREAT_IPS:
+        return {}
+    ip = random.choice(list(THREAT_IPS.keys()))
+    level = random.choices(
+        [b[0] for b in _SEVERITY_BANDS],
+        weights=[b[3] for b in _SEVERITY_BANDS],
+        k=1,
+    )[0]
+    lo, hi = next((b[1], b[2]) for b in _SEVERITY_BANDS if b[0] == level)
+    score = random.randint(lo, hi)
     attack_type = random.choice(ATTACK_TYPES)
     region = random.choice(REGIONS)
 
     event: dict = {
         "ip": ip,
         "score": score,
-        "threat_level": _score_to_level(score),
+        "threat_level": level,
         "attack_type": attack_type,
         "region": region,
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -566,8 +596,9 @@ async def threats_ws(ws: WebSocket, token: str = ""):
     try:
         while True:
             threat = generate_threat()
-            _record_event(threat)
-            await ws.send_text(json.dumps(threat))
+            if threat:
+                _record_event(threat)
+                await ws.send_text(json.dumps(threat))
             await asyncio.sleep(random.uniform(0.5, 1.5))
     except WebSocketDisconnect:
         pass
@@ -1009,44 +1040,6 @@ async def add_note(
     return note
 
 
-# ── REST: network graph ───────────────────────────────────────
-
-
-@app.get("/api/network")
-async def get_network(_=Depends(verify_token)):
-    nodes: list[dict] = []
-    links: list[dict] = []
-    seen_attacks: set[str] = set()
-
-    for ip, events in ip_store.items():
-        ev = list(events)
-        if not ev:
-            continue
-        scores = [e["score"] for e in ev]
-        avg = sum(scores) / len(scores)
-        score = int(avg)
-        level = _score_to_level(avg)
-
-        attack_counts: dict[str, int] = {}
-        for e in ev:
-            attack_counts[e["attack_type"]] = attack_counts.get(e["attack_type"], 0) + 1
-
-        nodes.append({
-            "id": ip, "type": "ip",
-            "score": score, "threat_level": level,
-            "event_count": len(ev),
-        })
-
-        for attack, count in attack_counts.items():
-            seen_attacks.add(attack)
-            links.append({"source": ip, "target": attack, "value": count})
-
-    for attack in seen_attacks:
-        nodes.append({"id": attack, "type": "attack"})
-
-    return {"nodes": nodes, "links": links}
-
-
 # ── REST: threat hunting ──────────────────────────────────────
 
 _saved_hunts: list[dict] = []
@@ -1129,34 +1122,38 @@ async def create_rule(body: dict, db: Optional[AsyncSession] = Depends(get_db), 
         "match_count": 0,
     }
     if USE_DB and db is not None:
-        return await db_create_rule(db, rule_data)
+        saved = await db_create_rule(db, rule_data)
+        _rules.append(saved)
+        return saved
     _rules.append(rule_data)
     return rule_data
 
 
 @app.patch("/api/rules/{rule_id}")
 async def update_rule(rule_id: str, body: dict, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
-    if USE_DB and db is not None:
-        updated = await db_update_rule(db, rule_id, body)
-        if updated is None:
-            raise HTTPException(status_code=404, detail="Rule not found")
-        return updated
     for rule in _rules:
         if rule["id"] == rule_id:
             for key in ["name", "enabled", "conditions", "logic", "actions"]:
                 if key in body:
                     rule[key] = body[key]
-            return rule
-    raise HTTPException(status_code=404, detail="Rule not found")
+            break
+    if USE_DB and db is not None:
+        updated = await db_update_rule(db, rule_id, body)
+        if updated is None:
+            raise HTTPException(status_code=404, detail="Rule not found")
+        return updated
+    rule_in_mem = next((r for r in _rules if r["id"] == rule_id), None)
+    if rule_in_mem is None:
+        raise HTTPException(status_code=404, detail="Rule not found")
+    return rule_in_mem
 
 
 @app.delete("/api/rules/{rule_id}")
 async def delete_rule(rule_id: str, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
-    if USE_DB and db is not None:
-        await db_delete_rule(db, rule_id)
-        return {"ok": True}
     global _rules
     _rules = [r for r in _rules if r["id"] != rule_id]
+    if USE_DB and db is not None:
+        await db_delete_rule(db, rule_id)
     return {"ok": True}
 
 

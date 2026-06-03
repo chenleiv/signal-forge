@@ -165,7 +165,7 @@ $accent: var(--c-accent);
     transition: background 0.1s;
 
     &:hover {
-        background: rgba(255, 255, 255, 0.02);
+        background: var(--c-border);
     }
 
     &.ack td {
