@@ -1,10 +1,10 @@
-$bg:      #0a0c12;
-$card:    #0f1420;
-$border:  #1e2d45;
-$text:    #e5e7eb;
-$muted:   #4b5563;
-$secondary: #6b7280;
-$accent:  #3b82f6;
+$bg:        var(--c-bg);
+$card:      var(--c-panel);
+$border:    var(--c-border);
+$text:      var(--c-text);
+$muted:     var(--c-muted);
+$secondary: var(--c-text-2);
+$accent:    var(--c-accent);
 
 // ── Page ─────────────────────────────────────────────────────
 .login-page {

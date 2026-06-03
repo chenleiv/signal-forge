@@ -21,7 +21,7 @@
 
 .console {
     background: #080d14;
-    border-top: 1px solid #1e2535;
+    border-top: 1px solid var(--c-border);
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
     height: 220px;
     display: flex;
@@ -33,7 +33,7 @@
     align-items: center;
     gap: 12px;
     padding: 6px 16px;
-    border-bottom: 1px solid #1e2535;
+    border-bottom: 1px solid var(--c-border);
     background: #060b12;
 }
 
@@ -89,7 +89,7 @@
     align-items: center;
     gap: 8px;
     padding: 8px 16px;
-    border-top: 1px solid #1e2535;
+    border-top: 1px solid var(--c-border);
 }
 
 .prompt {

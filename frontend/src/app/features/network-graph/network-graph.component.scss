@@ -1,8 +1,8 @@
-$border: #1e2535;
-$text: #e5e7eb;
-$secondary: #9ca3af;
-$muted: #4b5563;
-$accent: #3b82f6;
+$border:    var(--c-border);
+$text:      var(--c-text);
+$secondary: var(--c-text-2);
+$muted:     var(--c-muted);
+$accent:    var(--c-accent);
 
 :host {
   display: block;
