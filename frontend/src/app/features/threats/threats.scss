@@ -27,7 +27,7 @@
 
   &:hover .handle-bar,
   &:active .handle-bar {
-    background: #3b82f6;
+    background: var(--c-accent);
     box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
   }
 }
@@ -64,7 +64,7 @@
   flex-direction: column;
   transform: translateX(100%);
   transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  border-left: 1px solid #1e2535;
+  border-left: 1px solid var(--c-border);
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.55);
 
   &.open {

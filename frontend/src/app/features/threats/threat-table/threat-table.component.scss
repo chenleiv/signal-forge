@@ -1,11 +1,11 @@
 // ── Palette ──────────────────────────────────────────────────
-$bg:      #0f1117;
-$panel:   #13171f;
-$border:  #1e2535;
-$text:    #e5e7eb;
-$muted:   #4b5563;
-$secondary: #9ca3af;
-$accent:  #3b82f6;
+$bg:        var(--c-bg);
+$panel:     var(--c-panel);
+$border:    var(--c-border);
+$text:      var(--c-text);
+$muted:     var(--c-muted);
+$secondary: var(--c-text-2);
+$accent:    var(--c-accent);
 
 $sev-critical: #ef4444;
 $sev-high:     #f97316;

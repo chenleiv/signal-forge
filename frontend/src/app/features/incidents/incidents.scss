@@ -1,8 +1,8 @@
-$border: #1e2535;
-$text: #e5e7eb;
-$secondary: #9ca3af;
-$muted: #4b5563;
-$accent: #3b82f6;
+$border:    var(--c-border);
+$text:      var(--c-text);
+$secondary: var(--c-text-2);
+$muted:     var(--c-muted);
+$accent:    var(--c-accent);
 
 :host {
   display: block;
@@ -82,7 +82,7 @@ $accent: #3b82f6;
   position: absolute;
   top: calc(100% + 4px);
   right: 0;
-  background: #13171f;
+  background: var(--c-panel);
   border: 1px solid $border;
   border-radius: 4px;
   overflow: hidden;
@@ -129,7 +129,7 @@ $accent: #3b82f6;
     &.pill-open         { background: rgba(239,68,68,0.12);   color: #ef4444;  border-color: rgba(239,68,68,0.35); }
     &.pill-investigating{ background: rgba(249,115,22,0.12);  color: #f97316;  border-color: rgba(249,115,22,0.35); }
     &.pill-contained    { background: rgba(245,158,11,0.12);  color: #f59e0b;  border-color: rgba(245,158,11,0.35); }
-    &.pill-closed       { background: rgba(107,114,128,0.15); color: #9ca3af;  border-color: rgba(107,114,128,0.35); }
+    &.pill-closed       { background: rgba(107,114,128,0.15); color: var(--c-text-2);  border-color: rgba(107,114,128,0.35); }
     &.pill-critical     { background: rgba(239,68,68,0.12);   color: #ef4444;  border-color: rgba(239,68,68,0.35); }
     &.pill-high         { background: rgba(249,115,22,0.12);  color: #f97316;  border-color: rgba(249,115,22,0.35); }
     &.pill-medium       { background: rgba(245,158,11,0.12);  color: #f59e0b;  border-color: rgba(245,158,11,0.35); }
@@ -248,7 +248,7 @@ $accent: #3b82f6;
   }
 
   &.status-closed {
-    color: #4b5563;
+    color: var(--c-muted);
   }
 }
 
@@ -258,7 +258,7 @@ $accent: #3b82f6;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: #1e2535;
+  background: var(--c-border);
   border: 1px solid rgba(59, 130, 246, 0.35);
   color: #93c5fd;
   font-size: 11px;
