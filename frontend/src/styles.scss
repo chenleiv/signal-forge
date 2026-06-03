@@ -10,7 +10,7 @@ html, body {
 }
 
 body {
-  background: var(--c-bg);
+  background: var(--c-bg, #0f1117);
 }
 
 body[data-theme="dark"] {
@@ -37,5 +37,5 @@ body[data-theme="light"] {
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1e2535; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2d3748; }
+::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--c-muted); }
