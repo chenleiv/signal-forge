@@ -137,8 +137,10 @@ async def db_find_open_incident_by_ip(session: AsyncSession, ip: str) -> dict | 
         select(Incident)
         .options(selectinload(Incident.notes), selectinload(Incident.tasks))
         .where(Incident.source_ip == ip, Incident.status != "closed")
+        .order_by(Incident.created_at.desc())
+        .limit(1)
     )
-    inc = result.scalar_one_or_none()
+    inc = result.scalars().first()
     return _incident_to_dict(inc) if inc else None
 
 
