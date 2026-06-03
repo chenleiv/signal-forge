@@ -280,6 +280,25 @@ $accent:    var(--c-accent);
   display: flex;
   flex-direction: column;
   gap: 4px;
+
+  &.full-width {
+    grid-column: 1 / -1;
+  }
+}
+
+.payload-val {
+  word-break: break-all;
+  background: var(--c-input);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  border: 1px solid var(--c-border);
+}
+
+.hash-val {
+  word-break: break-all;
+  font-size: 10px;
+  color: var(--c-text-2);
 }
 
 .abuse-badge {

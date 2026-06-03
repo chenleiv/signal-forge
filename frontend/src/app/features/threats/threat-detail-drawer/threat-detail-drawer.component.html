@@ -141,6 +141,86 @@
         </div>
       }
 
+      @let lastEvent = history()?.events?.[history()!.events.length - 1];
+      @if (lastEvent && lastEvent.attack_type !== 'RepeatedIP' && lastEvent.attack_type !== 'Escalation') {
+        <div class="section">
+          <button class="section-toggle" (click)="attackOpen.update(v => !v)">
+            <span class="section-title">ATTACK DETAILS — {{ lastEvent.attack_type }}</span>
+            <span class="toggle-chevron" [class.open]="attackOpen()">›</span>
+          </button>
+          @if (attackOpen()) {
+            <div class="enrichment-grid">
+              @if (lastEvent.attack_type === 'DDoS') {
+                <div class="enrich-item">
+                  <span class="meta-label">Packet Rate</span>
+                  <span class="meta-val mono">{{ (lastEvent.packet_rate ?? 0) | number }} req/s</span>
+                </div>
+                <div class="enrich-item">
+                  <span class="meta-label">Duration</span>
+                  <span class="meta-val mono">{{ lastEvent.duration_sec }}s</span>
+                </div>
+                <div class="enrich-item">
+                  <span class="meta-label">Protocol</span>
+                  <span class="meta-val mono">{{ lastEvent.protocol }}</span>
+                </div>
+              }
+              @if (lastEvent.attack_type === 'SQLi') {
+                <div class="enrich-item full-width">
+                  <span class="meta-label">Payload</span>
+                  <span class="meta-val mono payload-val">{{ lastEvent.payload }}</span>
+                </div>
+                <div class="enrich-item">
+                  <span class="meta-label">Target Endpoint</span>
+                  <span class="meta-val mono">{{ lastEvent.target_endpoint }}</span>
+                </div>
+              }
+              @if (lastEvent.attack_type === 'BruteForce') {
+                <div class="enrich-item">
+                  <span class="meta-label">Attempts</span>
+                  <span class="meta-val mono">{{ lastEvent.attempts | number }}</span>
+                </div>
+                <div class="enrich-item">
+                  <span class="meta-label">Username</span>
+                  <span class="meta-val mono">{{ lastEvent.username }}</span>
+                </div>
+                <div class="enrich-item">
+                  <span class="meta-label">Service</span>
+                  <span class="meta-val mono">{{ lastEvent.service }}</span>
+                </div>
+              }
+              @if (lastEvent.attack_type === 'PortScan') {
+                <div class="enrich-item">
+                  <span class="meta-label">Scan Type</span>
+                  <span class="meta-val mono">{{ lastEvent.scan_type }}</span>
+                </div>
+                <div class="enrich-item">
+                  <span class="meta-label">Ports Scanned</span>
+                  <span class="meta-val mono">{{ lastEvent.ports_scanned?.length }} ports</span>
+                </div>
+                <div class="enrich-item full-width">
+                  <span class="meta-label">Port Range</span>
+                  <span class="meta-val mono">{{ lastEvent.ports_scanned?.[0] }}–{{ lastEvent.ports_scanned?.[lastEvent.ports_scanned!.length - 1] }}</span>
+                </div>
+              }
+              @if (lastEvent.attack_type === 'Malware') {
+                <div class="enrich-item">
+                  <span class="meta-label">Family</span>
+                  <span class="meta-val mono">{{ lastEvent.family }}</span>
+                </div>
+                <div class="enrich-item">
+                  <span class="meta-label">C2 Domain</span>
+                  <span class="meta-val mono">{{ lastEvent.c2_domain }}</span>
+                </div>
+                <div class="enrich-item full-width">
+                  <span class="meta-label">Hash (MD5)</span>
+                  <span class="meta-val mono hash-val">{{ lastEvent.hash }}</span>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
       @if (aiLoading() || aiSummary()) {
         <div class="section">
           <button class="section-toggle" (click)="aiOpen.update(v => !v)">

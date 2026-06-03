@@ -1,5 +1,5 @@
 export type ThreatLevel = 'critical' | 'high' | 'medium' | 'low';
-export type AttackType = 'SQLi' | 'DDoS' | 'BruteForce' | 'PortScan' | 'Malware';
+export type AttackType = 'SQLi' | 'DDoS' | 'BruteForce' | 'PortScan' | 'Malware' | 'RepeatedIP' | 'Escalation';
 
 export interface ThreatEvent {
   ip: string;
@@ -10,11 +10,34 @@ export interface ThreatEvent {
   region: string;
   lat?: number;
   lng?: number;
+  // DDoS
+  packet_rate?: number;
+  duration_sec?: number;
+  protocol?: string;
+  // SQLi
+  payload?: string;
+  target_endpoint?: string;
+  // BruteForce
+  attempts?: number;
+  username?: string;
+  service?: string;
+  // PortScan
+  ports_scanned?: number[];
+  scan_type?: string;
+  // Malware
+  family?: string;
+  hash?: string;
+  c2_domain?: string;
+  // Behavioral
+  dominant_attack?: string;
+  event_count_10m?: number;
+  overall_avg?: number;
+  recent_avg?: number;
 }
 
 export interface ThreatStats {
   severity_counts: Record<ThreatLevel, number>;
-  attack_types: Record<AttackType, number>;
+  attack_types: Partial<Record<AttackType, number>>;
   events_per_min: { minute: string; count: number }[];
   top_ips: { ip: string; count: number; score: number }[];
 }

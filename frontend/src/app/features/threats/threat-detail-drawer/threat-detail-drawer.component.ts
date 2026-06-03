@@ -9,7 +9,7 @@ import {
   effect,
   DestroyRef,
 } from '@angular/core';
-import { DatePipe, NgClass } from '@angular/common';
+import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
@@ -18,7 +18,7 @@ import { IpHistory, IpGeo, RelatedIp } from '../../../shared/models/threat.model
 @Component({
   selector: 'app-threat-detail-drawer',
   standalone: true,
-  imports: [DatePipe, NgClass],
+  imports: [DatePipe, DecimalPipe, NgClass],
   templateUrl: './threat-detail-drawer.component.html',
   styleUrl: './threat-detail-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -38,6 +38,7 @@ export class ThreatDetailDrawerComponent {
   relatedIps     = signal<RelatedIp[]>([]);
   geoOpen        = signal(true);
   abuseOpen      = signal(false);
+  attackOpen     = signal(true);
   aiOpen         = signal(false);
   mitreOpen      = signal(false);
   relatedOpen    = signal(false);
@@ -80,6 +81,7 @@ export class ThreatDetailDrawerComponent {
       this.relatedIps.set([]);
       this.geoOpen.set(true);
       this.abuseOpen.set(false);
+      this.attackOpen.set(true);
       this.aiOpen.set(false);
       this.mitreOpen.set(false);
       this.relatedOpen.set(false);

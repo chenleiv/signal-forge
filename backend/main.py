@@ -140,11 +140,80 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(6 * 3600)
             await _refresh_threat_ips()
 
+    # Behavioral detection: repeated IPs + score escalation, runs every 60 s
+    async def _behavioral_loop():
+        while True:
+            await asyncio.sleep(60)
+            now = datetime.now(timezone.utc)
+            window_start = now - timedelta(minutes=10)
+            cooldown = timedelta(minutes=_BEHAVIORAL_COOLDOWN_MIN)
+
+            for ip, events_deque in list(ip_store.items()):
+                events = list(events_deque)
+                if not events:
+                    continue
+
+                flagged = _behavioral_flagged.setdefault(ip, {})
+
+                # ── Repeated IP detection ──────────────────────────
+                recent = [
+                    e for e in events
+                    if datetime.fromisoformat(e["timestamp"]) >= window_start
+                ]
+                last_repeated = flagged.get("repeated_at")
+                if (
+                    len(recent) >= _REPEATED_EVENT_THRESHOLD
+                    and (last_repeated is None or now - last_repeated > cooldown)
+                ):
+                    flagged["repeated_at"] = now
+                    dominant = max(
+                        set(e["attack_type"] for e in recent),
+                        key=lambda t: sum(1 for e in recent if e["attack_type"] == t),
+                    )
+                    trigger = {
+                        "ip": ip,
+                        "attack_type": "RepeatedIP",
+                        "threat_level": "high",
+                        "region": recent[-1].get("region", "unknown"),
+                        "score": len(recent),
+                        "dominant_attack": dominant,
+                        "event_count_10m": len(recent),
+                    }
+                    _create_incident(trigger)
+
+                # ── Score escalation detection ─────────────────────
+                if len(events) < 6:
+                    continue
+                overall_avg = sum(e["score"] for e in events) / len(events)
+                recent_avg = sum(e["score"] for e in events[-5:]) / 5
+                last_escalation = flagged.get("escalation_at")
+                if (
+                    recent_avg - overall_avg >= _ESCALATION_SCORE_DELTA
+                    and (last_escalation is None or now - last_escalation > cooldown)
+                ):
+                    flagged["escalation_at"] = now
+                    trigger = {
+                        "ip": ip,
+                        "attack_type": "Escalation",
+                        "threat_level": "critical",
+                        "region": events[-1].get("region", "unknown"),
+                        "score": int(recent_avg),
+                        "overall_avg": int(overall_avg),
+                        "recent_avg": int(recent_avg),
+                    }
+                    _create_incident(trigger)
+
     refresh_task = asyncio.create_task(_refresh_loop())
+    behavioral_task = asyncio.create_task(_behavioral_loop())
 
     yield
 
     refresh_task.cancel()
+    behavioral_task.cancel()
+    try:
+        await behavioral_task
+    except asyncio.CancelledError:
+        pass
     try:
         await refresh_task
     except asyncio.CancelledError:
@@ -339,6 +408,8 @@ MITRE_MAP: dict[str, list[str]] = {
     "BruteForce": ["T1110"],
     "PortScan": ["T1046"],
     "Malware": ["T1059", "T1204"],
+    "RepeatedIP": ["T1078", "T1110"],
+    "Escalation": ["T1071", "T1496"],
 }
 
 INCIDENT_TITLES = {
@@ -347,6 +418,8 @@ INCIDENT_TITLES = {
     "BruteForce": "Brute Force authentication attack",
     "PortScan": "Reconnaissance port scan detected",
     "Malware": "Malware execution detected",
+    "RepeatedIP": "Repeated attacker — behavioral spike detected",
+    "Escalation": "Threat score escalation — attacker intensifying",
 }
 
 
@@ -363,6 +436,12 @@ minute_buckets: deque = deque(maxlen=15)
 _current_minute: str = ""
 _current_bucket_count: int = 0
 incidents_store: deque = deque(maxlen=50)
+
+# Behavioral detection: tracks when each IP was last flagged to avoid spam
+_behavioral_flagged: dict[str, dict] = {}  # ip -> {"repeated_at": dt, "escalation_at": dt}
+_BEHAVIORAL_COOLDOWN_MIN = 30              # minutes before re-flagging same IP
+_REPEATED_EVENT_THRESHOLD = 8             # events in 10 min window
+_ESCALATION_SCORE_DELTA = 20              # points above overall avg to trigger escalation
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -531,6 +610,50 @@ _SEVERITY_BANDS = [
     ("critical", 80, 100, 0.20),
 ]
 
+_SQLI_PAYLOADS = [
+    "' OR 1=1--", "' UNION SELECT null,null--", "'; DROP TABLE users--",
+    "' AND SLEEP(5)--", "admin'--", "' OR 'x'='x",
+]
+_MALWARE_FAMILIES = ["Emotet", "Mirai", "BlackMatter", "Cobalt Strike", "AsyncRAT", "Raccoon"]
+_SERVICES = ["SSH", "RDP", "FTP", "SMTP", "HTTP", "VNC"]
+_PROTOCOLS = ["UDP", "TCP", "ICMP"]
+_SCAN_TYPES = ["SYN", "ACK", "XMAS", "NULL", "FIN"]
+_ENDPOINTS = ["/api/login", "/admin", "/wp-admin", "/api/users", "/graphql", "/.env"]
+
+def _attack_metadata(attack_type: str) -> dict:
+    if attack_type == "DDoS":
+        return {
+            "packet_rate": random.randint(10_000, 2_000_000),
+            "duration_sec": random.randint(5, 300),
+            "protocol": random.choice(_PROTOCOLS),
+        }
+    if attack_type == "SQLi":
+        return {
+            "payload": random.choice(_SQLI_PAYLOADS),
+            "target_endpoint": random.choice(_ENDPOINTS),
+        }
+    if attack_type == "BruteForce":
+        return {
+            "attempts": random.randint(20, 5000),
+            "username": random.choice(["admin", "root", "administrator", "user", "guest"]),
+            "service": random.choice(_SERVICES),
+        }
+    if attack_type == "PortScan":
+        port_count = random.randint(10, 65)
+        start = random.randint(20, 1000)
+        return {
+            "ports_scanned": list(range(start, start + port_count)),
+            "scan_type": random.choice(_SCAN_TYPES),
+        }
+    if attack_type == "Malware":
+        return {
+            "family": random.choice(_MALWARE_FAMILIES),
+            "hash": "%032x" % random.getrandbits(128),
+            "c2_domain": f"c2-{random.randint(1,999)}.{random.choice(['xyz','top','ru','cn'])}",
+        }
+    return {}
+
+
 def generate_threat() -> dict:
     if not THREAT_IPS:
         return {}
@@ -552,6 +675,7 @@ def generate_threat() -> dict:
         "attack_type": attack_type,
         "region": region,
         "timestamp": datetime.now(timezone.utc).isoformat(),
+        **_attack_metadata(attack_type),
     }
     if ip in _ip_coords:
         lat, lng = _ip_coords[ip]
