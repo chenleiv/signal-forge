@@ -52,6 +52,21 @@
         </tr>
       </thead>
       <tbody>
+        @if (loading()) {
+          @for (i of [1,2,3,4,5,6]; track i) {
+            <tr class="sk-row">
+              <td><span class="sk-line" style="width:72px"></span></td>
+              <td><span class="sk-circle" style="width:10px;height:10px;display:inline-block"></span></td>
+              <td><span class="sk-line" [style.width.px]="160 + (i * 13 % 60)"></span></td>
+              <td><span class="sk-line" style="width:80px"></span></td>
+              <td><span class="sk-line" style="width:70px"></span></td>
+              <td><span class="sk-line" style="width:90px"></span></td>
+              <td><span class="sk-line" style="width:32px"></span></td>
+              <td><span class="sk-line" [style.width.px]="80 + (i * 7 % 40)"></span></td>
+              <td><span class="sk-line" style="width:65px"></span></td>
+            </tr>
+          }
+        }
         @for (inc of filtered(); track inc.id) {
           <tr class="inc-row" (click)="open(inc)" [class.row-selected]="selected()?.id === inc.id">
             <td class="id-cell mono">{{ inc.id }}</td>

@@ -27,7 +27,23 @@
   </div>
 
   @if (loading()) {
-    <div class="loading">Loading threat data…</div>
+    <table class="threat-table">
+      <thead>
+        <tr><th>#</th><th>IP Address</th><th>Avg Score</th><th>Events</th><th>Level</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (i of [1,2,3,4,5,6,7,8]; track i) {
+          <tr class="sk-row">
+            <td><span class="sk-line" style="width:16px"></span></td>
+            <td><span class="sk-line" [style.width.px]="110 + (i * 7 % 40)"></span></td>
+            <td><span class="sk-line" style="width:36px"></span></td>
+            <td><span class="sk-line" style="width:28px"></span></td>
+            <td><span class="sk-line" style="width:60px"></span></td>
+            <td><span class="sk-line" style="width:50px"></span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
   } @else {
     <table class="threat-table">
       <thead>

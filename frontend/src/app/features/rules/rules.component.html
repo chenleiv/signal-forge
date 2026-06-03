@@ -6,10 +6,24 @@
       <button class="btn-new" (click)="newRule()">+ New</button>
     </div>
 
-    @if (rules().length === 0 && !isNew()) {
-      <div class="sidebar-empty">
-        <p>No rules yet</p>
+    @if (loading()) {
+      <div class="rules-list">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="rule-item sk-rule-item">
+            <span class="sk-circle" style="width:28px;height:28px;display:inline-block;flex-shrink:0"></span>
+            <div class="rule-info" style="flex:1">
+              <span class="sk-line" [style.width.px]="100 + (i * 17 % 50)"></span>
+              <span class="sk-line-sm" style="width:70px;margin-top:6px"></span>
+            </div>
+          </div>
+        }
       </div>
+    } @else {
+      @if (rules().length === 0 && !isNew()) {
+        <div class="sidebar-empty">
+          <p>No rules yet</p>
+        </div>
+      }
     }
 
     <div class="rules-list">

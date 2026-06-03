@@ -78,11 +78,36 @@ $accent:    var(--c-accent);
 }
 
 // ── Loading ───────────────────────────────────────────────────
-.detail-loading {
-  padding: 40px;
-  text-align: center;
-  color: $muted;
-  font-size: 12px;
+.sk-drawer {
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sk-score-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  span { display: inline-block; }
+}
+
+.sk-meta-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  span { display: block; }
+}
+
+.sk-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--c-panel);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  span { display: block; }
 }
 
 // ── Body ──────────────────────────────────────────────────────

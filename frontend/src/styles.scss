@@ -35,6 +35,30 @@ body {
   --c-input:  #ffffff;
 }
 
+/* ── Skeleton shimmer ─────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.sk {
+  background: linear-gradient(
+    90deg,
+    var(--c-border) 25%,
+    var(--c-panel)  50%,
+    var(--c-border) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+.sk-line  { @extend .sk; height: 13px; }
+.sk-line-sm { @extend .sk; height: 10px; }
+.sk-line-lg { @extend .sk; height: 18px; }
+.sk-block { @extend .sk; border-radius: 8px; }
+.sk-circle { @extend .sk; border-radius: 50%; }
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--c-border); border-radius: 3px; }

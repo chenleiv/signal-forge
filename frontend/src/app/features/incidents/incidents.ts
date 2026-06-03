@@ -30,6 +30,7 @@ import { downloadCsv, downloadPdf } from '../../core/utils/export.utils';
 })
 export class Incidents {
   incidents = signal<Incident[]>([]);
+  loading   = signal(true);
   selected = signal<Incident | null>(null);
   searchText = signal('');
   statusFilter = signal('all');
@@ -94,6 +95,7 @@ export class Incidents {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((d) => {
         this.incidents.set(d);
+        this.loading.set(false);
         if (targetId) {
           const match = d.find((i) => i.id === targetId);
           if (match) {

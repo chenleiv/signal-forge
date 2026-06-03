@@ -33,6 +33,7 @@ export class RulesComponent {
   private destroyRef = inject(DestroyRef);
 
   rules    = signal<DetectionRule[]>([]);
+  loading  = signal(true);
   selected = signal<DetectionRule | null>(null);
   isNew    = signal(false);
 
@@ -54,7 +55,7 @@ export class RulesComponent {
   constructor() {
     this.store.getRules()
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(r => this.rules.set(r));
+      .subscribe(r => { this.rules.set(r); this.loading.set(false); });
   }
 
   private loadEditor(rule?: DetectionRule) {

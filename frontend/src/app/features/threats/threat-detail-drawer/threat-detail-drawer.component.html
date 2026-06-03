@@ -50,7 +50,23 @@
   </div>
 
   @if (loading()) {
-    <div class="detail-loading">Loading intelligence data…</div>
+    <div class="sk-drawer">
+      <div class="sk-score-row">
+        <span class="sk-circle" style="width:72px;height:72px"></span>
+        <div class="sk-meta-col">
+          <span class="sk-line" style="width:80px"></span>
+          <span class="sk-line-sm" style="width:55px"></span>
+          <span class="sk-line-sm" style="width:70px"></span>
+        </div>
+      </div>
+      @for (w of ['100%','85%','92%']; track w) {
+        <div class="sk-section-block">
+          <span class="sk-line-lg" [style.width]="w"></span>
+          <span class="sk-line" style="width:75%"></span>
+          <span class="sk-line" style="width:60%"></span>
+        </div>
+      }
+    </div>
   }
 
   @if (history()) {
