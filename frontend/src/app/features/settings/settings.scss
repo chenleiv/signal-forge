@@ -1,9 +1,9 @@
-$bg: #0f1117;
-$panel: #13171f;
-$border: #1e2535;
-$text: #e5e7eb;
-$muted: #9ca3af;
-$accent: #3b82f6;
+$bg:     var(--c-bg);
+$panel:  var(--c-panel);
+$border: var(--c-border);
+$text:   var(--c-text);
+$muted:  var(--c-text-2);
+$accent: var(--c-accent);
 
 :host {
     display: block;
@@ -104,7 +104,7 @@ $accent: #3b82f6;
     }
 
     input {
-        background: #0d1220;
+        background: var(--c-input);
         border: 1px solid $border;
         border-radius: 4px;
         padding: 8px 10px;
@@ -139,7 +139,7 @@ $accent: #3b82f6;
     gap: 12px;
 
     input[type="number"] {
-        background: #0d1220;
+        background: var(--c-input);
         border: 1px solid $border;
         border-radius: 4px;
         padding: 7px 10px;
