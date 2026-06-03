@@ -23,7 +23,7 @@ export class CommandConsole {
   private store = inject(ThreatStoreService);
 
   isOpen = signal(false);
-  lines = signal<string[]>(['ThreatWatcher Console v1.0 — type "help" for commands']);
+  lines = signal<string[]>(['SignalForge Console v1.0 — type "help" for commands']);
   inputValue = signal('');
 
   private cmdHistory: string[] = [];

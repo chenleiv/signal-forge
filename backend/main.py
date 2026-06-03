@@ -693,7 +693,7 @@ def generate_threat() -> dict:
 
 @app.post("/auth/login")
 async def login(body: dict):
-    if body.get("username") == "analyst" and body.get("password") == "threatwatcher":
+    if body.get("username") == "analyst" and body.get("password") == "signalforge":
         from jose import jwt
 
         token = jwt.encode(

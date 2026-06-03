@@ -35,7 +35,7 @@ export class Login {
 
   demoLogin() {
     this.username.set('analyst');
-    this.password.set('threatwatcher');
+    this.password.set('signalforge');
     this.submit();
   }
 }
