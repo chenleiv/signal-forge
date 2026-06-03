@@ -30,6 +30,7 @@ const PAGE_TITLES: Record<string, string> = {
 export class AppLayout {
   readonly ws              = inject(ThreatsService);
   readonly settingsService = inject(SettingsService);
+  // Injected to eagerly trigger the effect() that sets data-theme on <body>.
   readonly themeService    = inject(ThemeService);
   private router           = inject(Router);
   private destroyRef       = inject(DestroyRef);

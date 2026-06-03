@@ -49,12 +49,14 @@
                     <div class="theme-toggle">
                         <button class="theme-btn"
                             [class.active]="themeService.theme() === 'dark'"
-                            (click)="themeService.theme() !== 'dark' && themeService.toggle()">
+                            [disabled]="themeService.theme() === 'dark'"
+                            (click)="themeService.toggle()">
                             🌙 Dark
                         </button>
                         <button class="theme-btn"
                             [class.active]="themeService.theme() === 'light'"
-                            (click)="themeService.theme() !== 'light' && themeService.toggle()">
+                            [disabled]="themeService.theme() === 'light'"
+                            (click)="themeService.toggle()">
                             ☀️ Light
                         </button>
                     </div>

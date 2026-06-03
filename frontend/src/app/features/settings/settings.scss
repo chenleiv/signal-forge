@@ -278,6 +278,11 @@ $accent: #3b82f6;
     color: #fff;
   }
 
+  &:disabled {
+    cursor: default;
+    opacity: 1;
+  }
+
   &:not(.active):hover {
     background: var(--c-border);
     color: var(--c-text);
