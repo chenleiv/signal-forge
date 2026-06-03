@@ -6,15 +6,16 @@ const THEME_KEY = 'sf_theme';
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
   private doc = inject(DOCUMENT);
+  private storage = this.doc.defaultView?.localStorage;
 
   readonly theme = signal<'dark' | 'light'>(
-    (localStorage.getItem(THEME_KEY) as 'dark' | 'light') ?? 'dark'
+    this.storage?.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'
   );
 
   constructor() {
     effect(() => {
       this.doc.body.setAttribute('data-theme', this.theme());
-      localStorage.setItem(THEME_KEY, this.theme());
+      this.storage?.setItem(THEME_KEY, this.theme());
     });
   }
 
