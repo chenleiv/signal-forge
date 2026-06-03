@@ -4,6 +4,7 @@ import { filter, map } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ThreatsService } from '../../core/services/threats.service';
 import { SettingsService } from '../../core/services/settings.service';
+import { ThemeService } from '../../core/services/theme';
 import { CommandConsole } from '../../features/command-console/command-console';
 
 const PAGE_TITLES: Record<string, string> = {
@@ -27,10 +28,11 @@ const PAGE_TITLES: Record<string, string> = {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AppLayout {
-  readonly ws             = inject(ThreatsService);
+  readonly ws              = inject(ThreatsService);
   readonly settingsService = inject(SettingsService);
-  private router          = inject(Router);
-  private destroyRef      = inject(DestroyRef);
+  readonly themeService    = inject(ThemeService);
+  private router           = inject(Router);
+  private destroyRef       = inject(DestroyRef);
 
   private navTitle = toSignal(
     this.router.events.pipe(
