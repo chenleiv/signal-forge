@@ -38,6 +38,7 @@ async def db_get_incidents(session: AsyncSession) -> list[dict]:
         select(Incident)
         .options(selectinload(Incident.notes), selectinload(Incident.tasks))
         .order_by(Incident.created_at.desc())
+        .limit(200)
     )
     return [_incident_to_dict(inc) for inc in result.scalars()]
 

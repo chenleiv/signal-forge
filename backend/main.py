@@ -102,6 +102,19 @@ async def lifespan(app: FastAPI):
         else:
             print("[Alembic] Migrations up to date")
 
+        # Clean up auto-generated incidents — only user-created incidents belong in DB.
+        # If there are more than 50 incidents it means the old rule-triggered writes
+        # accumulated; wipe them so the list stays clean.
+        if AsyncSessionLocal is not None:
+            from sqlalchemy import text as _sa_text
+            async with AsyncSessionLocal() as _session:
+                _count_row = await _session.execute(_sa_text("SELECT COUNT(*) FROM incidents"))
+                _count = _count_row.scalar() or 0
+                if _count > 50:
+                    await _session.execute(_sa_text("DELETE FROM incidents"))
+                    await _session.commit()
+                    print(f"[DB] Cleared {_count} auto-generated incidents from DB")
+
         # Seed _incident_counter from DB max to avoid primary key collisions on restart
         if AsyncSessionLocal is not None:
             from sqlalchemy import text as _sa_text
@@ -519,15 +532,6 @@ def _create_incident(trigger: dict) -> None:
         "completed_tasks": [],
     }
     incidents_store.appendleft(data)
-
-    if USE_DB and AsyncSessionLocal is not None:
-        async def _write():
-            try:
-                async with AsyncSessionLocal() as session:
-                    await db_create_incident(session, data)
-            except Exception as exc:
-                print(f"[DB] _create_incident write failed for {data['id']}: {exc}")
-        asyncio.create_task(_write())
 
 
 def _eval_condition(cond: dict, event: dict) -> bool:
