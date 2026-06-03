@@ -5,9 +5,34 @@
 html, body {
   height: 100%;
   margin: 0;
-  background: #0f1117;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background: var(--c-bg);
+}
+
+body[data-theme="dark"] {
+  --c-bg:     #0f1117;
+  --c-panel:  #13171f;
+  --c-border: #1e2535;
+  --c-text:   #e5e7eb;
+  --c-text-2: #9ca3af;
+  --c-muted:  #4b5563;
+  --c-accent: #3b82f6;
+  --c-input:  #0d1220;
+}
+
+body[data-theme="light"] {
+  --c-bg:     #eef2ff;
+  --c-panel:  #f5f7ff;
+  --c-border: #c7d0e8;
+  --c-text:   #1e293b;
+  --c-text-2: #475569;
+  --c-muted:  #64748b;
+  --c-accent: #4f72de;
+  --c-input:  #ffffff;
 }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }
