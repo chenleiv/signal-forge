@@ -8,6 +8,7 @@ import { SettingsService } from './settings.service';
 export class ThreatsService {
   private socket!: WebSocket;
   private statsSub?: Subscription;
+  private alertSub?: Subscription;
   private store = inject(ThreatStoreService);
   private settingsService = inject(SettingsService);
 
@@ -17,6 +18,7 @@ export class ThreatsService {
 
   connect() {
     this.statsSub?.unsubscribe();
+    this.alertSub?.unsubscribe();
     this.socket?.close();
     this.destroyed = false;
     this.status.set('reconnecting');
@@ -49,6 +51,10 @@ export class ThreatsService {
     this.statsSub = timer(0, 5000).pipe(
       switchMap(() => this.store.refreshStats().pipe(catchError(() => EMPTY))),
     ).subscribe((s) => this.store.stats.set(s));
+
+    this.alertSub = timer(0, 15_000).pipe(
+      switchMap(() => this.store.fetchAlerts().pipe(catchError(() => EMPTY))),
+    ).subscribe(alerts => this.store.alerts.set(alerts));
   }
 
   disconnect() {
@@ -56,5 +62,6 @@ export class ThreatsService {
     this.status.set('disconnected');
     this.socket?.close();
     this.statsSub?.unsubscribe();
+    this.alertSub?.unsubscribe();
   }
 }
