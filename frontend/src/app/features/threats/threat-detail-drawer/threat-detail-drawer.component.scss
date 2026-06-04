@@ -44,7 +44,7 @@ $accent:    var(--c-accent);
 
 .drawer-label {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: $muted;
@@ -150,7 +150,7 @@ $accent:    var(--c-accent);
 }
 
 .score-sub {
-  font-size: 7px;
+  font-size: 9px;
   color: $muted;
   letter-spacing: 0.05em;
   margin-top: 2px;
@@ -169,7 +169,7 @@ $accent:    var(--c-accent);
 }
 
 .meta-label {
-  font-size: 10px;
+  font-size: 11px;
   color: $muted;
   letter-spacing: 0.05em;
   width: 80px;
@@ -177,7 +177,7 @@ $accent:    var(--c-accent);
 }
 
 .meta-val {
-  font-size: 12px;
+  font-size: 13px;
   color: $text;
   font-family: monospace;
 }
@@ -191,7 +191,7 @@ $accent:    var(--c-accent);
 }
 
 .section-title {
-  font-size: 9px;
+  font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: $muted;
@@ -244,7 +244,7 @@ $accent:    var(--c-accent);
   background: rgba(59, 130, 246, 0.08);
   border: 1px solid rgba(59, 130, 246, 0.25);
   color: $accent;
-  font-size: 10px;
+  font-size: 11px;
   font-family: monospace;
   font-weight: 600;
 }
@@ -279,18 +279,18 @@ $accent:    var(--c-accent);
 }
 
 .tl-type {
-  font-size: 11px;
+  font-size: 13px;
   color: $text;
   font-family: monospace;
 }
 
 .tl-score {
-  font-size: 10px;
+  font-size: 11px;
   color: $secondary;
 }
 
 .tl-time {
-  font-size: 10px;
+  font-size: 11px;
   color: $muted;
 }
 
@@ -316,13 +316,13 @@ $accent:    var(--c-accent);
   background: var(--c-input);
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 12px;
   border: 1px solid var(--c-border);
 }
 
 .hash-val {
   word-break: break-all;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--c-text-2);
 }
 
@@ -347,7 +347,7 @@ $accent:    var(--c-accent);
 
 // AI Summary
 .ai-summary {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.7;
   color: $secondary;
   margin: 0;
@@ -485,7 +485,7 @@ $accent:    var(--c-accent);
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.3);
   color: #ef4444;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   margin-top: 2px;
@@ -505,7 +505,7 @@ $accent:    var(--c-accent);
 }
 
 .org-val {
-  font-size: 11px;
+  font-size: 13px;
   word-break: break-word;
 }
 
@@ -549,7 +549,7 @@ $accent:    var(--c-accent);
 
 .related-ip {
   font-family: monospace;
-  font-size: 12px;
+  font-size: 13px;
   color: $text;
   font-weight: 600;
 }
@@ -566,7 +566,7 @@ $accent:    var(--c-accent);
   background: rgba(168, 85, 247, 0.08);
   border: 1px solid rgba(168, 85, 247, 0.2);
   color: #a855f7;
-  font-size: 9px;
+  font-size: 10px;
   font-family: monospace;
 }
 
@@ -585,7 +585,7 @@ $accent:    var(--c-accent);
 }
 
 .related-events {
-  font-size: 9px;
+  font-size: 10px;
   color: $muted;
 }
 
@@ -642,7 +642,7 @@ $accent:    var(--c-accent);
   th {
     padding: 6px 10px;
     text-align: left;
-    font-size: 9px;
+    font-size: 10px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: $muted;
