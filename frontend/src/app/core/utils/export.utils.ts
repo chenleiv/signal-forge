@@ -1,6 +1,3 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
 export function downloadCsv(headers: string[], rows: string[][], filename: string): void {
   const lines = [headers, ...rows].map(
     row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
@@ -14,7 +11,11 @@ export function downloadCsv(headers: string[], rows: string[][], filename: strin
   URL.revokeObjectURL(url);
 }
 
-export function downloadPdf(title: string, headers: string[], rows: string[][], filename: string): void {
+export async function downloadPdf(title: string, headers: string[], rows: string[][], filename: string): Promise<void> {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ]);
   const doc = new jsPDF();
   doc.setFontSize(13);
   doc.setTextColor(40);

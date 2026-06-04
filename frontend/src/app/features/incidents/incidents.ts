@@ -10,7 +10,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { timer } from 'rxjs';
-import { Incident } from '../../shared/models/threat.models';
+import { Incident, SEVERITY_COLORS } from '../../shared/models/threat.models';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { IncidentDetailComponent } from './incident-detail/incident-detail.component';
 import { downloadCsv, downloadPdf } from '../../core/utils/export.utils';
@@ -154,19 +154,10 @@ export class Incidents {
       this.exportHeaders,
       this.exportRows,
       'incidents.pdf',
-    );
-    this.exportOpen.set(false);
+    ).then(() => this.exportOpen.set(false));
   }
 
-  severityColor(sev: string): string {
-    const map: Record<string, string> = {
-      critical: '#ef4444',
-      high: '#f97316',
-      medium: '#f59e0b',
-      low: '#60a5fa',
-    };
-    return map[sev] ?? '#9ca3af';
-  }
+  readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? '#9ca3af';
 
   private refreshList() {
     this.store
