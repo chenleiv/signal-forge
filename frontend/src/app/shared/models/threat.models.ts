@@ -1,6 +1,23 @@
 export type ThreatLevel = 'critical' | 'high' | 'medium' | 'low';
 export type AttackType = 'SQLi' | 'DDoS' | 'BruteForce' | 'PortScan' | 'Malware' | 'RepeatedIP' | 'Escalation';
 
+export const ATTACK_TYPES = ['SQLi', 'DDoS', 'BruteForce', 'PortScan', 'Malware'] as const;
+export const REGIONS      = ['US', 'EU', 'RU', 'CN', 'IL', 'BR'] as const;
+
+export const SEVERITY_COLORS: Record<string, string> = {
+  critical: '#ef4444',
+  high:     '#f97316',
+  medium:   '#f59e0b',
+  low:      '#60a5fa',
+};
+
+export function scoreToColor(score: number): string {
+  if (score >= 80) return SEVERITY_COLORS['critical'];
+  if (score >= 60) return SEVERITY_COLORS['high'];
+  if (score >= 40) return SEVERITY_COLORS['medium'];
+  return SEVERITY_COLORS['low'];
+}
+
 export interface ThreatEvent {
   ip: string;
   score: number;
@@ -39,7 +56,7 @@ export interface ThreatStats {
   severity_counts: Record<ThreatLevel, number>;
   attack_types: Partial<Record<AttackType, number>>;
   events_per_min: { minute: string; count: number }[];
-  top_ips: { ip: string; count: number; score: number }[];
+  top_ips: { ip: string; count: number; score: number; threat_level: ThreatLevel }[];
 }
 
 export interface IpHistory {
@@ -147,4 +164,19 @@ export interface OtxData {
   reputation: number;
   pulses: OtxPulse[];
   malware_families: string[];
+}
+
+export type AlertStatus = 'new' | 'acknowledged' | 'dismissed';
+export type AlertSource = 'behavioral' | 'rule';
+
+export interface ThreatAlert {
+  id: string;
+  source: AlertSource;
+  type: string;
+  severity: ThreatLevel;
+  ip: string | null;
+  message: string;
+  status: AlertStatus;
+  created_at: string;
+  acknowledged_at: string | null;
 }
