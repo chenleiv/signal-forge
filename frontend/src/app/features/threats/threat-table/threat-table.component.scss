@@ -143,14 +143,14 @@ $sev-low:      #60a5fa;
 .threat-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 thead th {
   padding: 8px 16px;
   text-align: left;
   color: $muted;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -177,7 +177,7 @@ thead th {
 
 .cell-idx   { color: $muted;   width: 36px; }
 .cell-ip    { color: $text;    font-family: monospace; }
-.cell-count { color: $secondary; }
+.cell-count { color: $text; }
 .cell-action { color: $muted; font-size: 11px; }
 
 // ── Score ────────────────────────────────────────────────────
@@ -212,7 +212,7 @@ thead th {
 }
 
 .sev-label {
-  font-size: 12px;
+  font-size: 13px;
   color: $text;
   font-weight: 400;
 }
