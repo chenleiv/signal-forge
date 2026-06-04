@@ -72,29 +72,38 @@
   @if (history()) {
     <div class="detail-body">
 
-      <div class="score-section">
-        <div class="score-ring" [style.borderColor]="scoreColor(history()?.score ?? 0)">
-          <span class="score-value" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.score }}</span>
-          <span class="score-sub">AVG SCORE</span>
+      @if ((history()?.events?.length ?? 0) === 0) {
+        <div class="no-history-notice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><circle cx="12" cy="16" r=".5" fill="currentColor"/>
+          </svg>
+          No threat events recorded for this IP — likely opened from an alert.
         </div>
-        <div class="score-meta">
-          <div class="meta-row">
-            <span class="meta-label">Level</span>
-            <span class="meta-val" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.threat_level?.toUpperCase() ?? '—' }}</span>
+      } @else {
+        <div class="score-section">
+          <div class="score-ring" [style.borderColor]="scoreColor(history()?.score ?? 0)">
+            <span class="score-value" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.score }}</span>
+            <span class="score-sub">AVG SCORE</span>
           </div>
-          <div class="meta-row">
-            <span class="meta-label">Events</span>
-            <span class="meta-val">{{ history()?.events?.length ?? 0 }}</span>
+          <div class="score-meta">
+            <div class="meta-row">
+              <span class="meta-label">Level</span>
+              <span class="meta-val" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.threat_level?.toUpperCase() ?? '—' }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Events</span>
+              <span class="meta-val">{{ history()?.events?.length ?? 0 }}</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">Regions</span>
+              <span class="meta-val">{{ history()?.regions?.join(', ') ?? '—' }}</span>
+            </div>
+            @if (isBlocked()) {
+              <div class="blocked-chip">⛔ BLOCKED</div>
+            }
           </div>
-          <div class="meta-row">
-            <span class="meta-label">Regions</span>
-            <span class="meta-val">{{ history()?.regions?.join(', ') ?? '—' }}</span>
-          </div>
-          @if (isBlocked()) {
-            <div class="blocked-chip">⛔ BLOCKED</div>
-          }
         </div>
-      </div>
+      }
 
       @if (geoData()) {
         <div class="section">
@@ -125,6 +134,25 @@
                 <span class="meta-val mono">{{ geoData()!.timezone }}</span>
               </div>
             </div>
+          }
+        </div>
+      }
+
+      @if (aiLoading() || aiSummary()) {
+        <div class="section">
+          <button class="section-toggle" (click)="aiOpen.update(v => !v)">
+            <span class="section-title">AI ANALYSIS</span>
+            <span class="toggle-chevron" [class.open]="aiOpen()">›</span>
+          </button>
+          @if (aiOpen()) {
+            @if (aiLoading()) {
+              <div class="ai-loading">
+                <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
+                Analyzing threat intelligence...
+              </div>
+            } @else {
+              <p class="ai-summary">{{ aiSummary() }}</p>
+            }
           }
         </div>
       }
@@ -233,25 +261,6 @@
                 </div>
               }
             </div>
-          }
-        </div>
-      }
-
-      @if (aiLoading() || aiSummary()) {
-        <div class="section">
-          <button class="section-toggle" (click)="aiOpen.update(v => !v)">
-            <span class="section-title">AI ANALYSIS</span>
-            <span class="toggle-chevron" [class.open]="aiOpen()">›</span>
-          </button>
-          @if (aiOpen()) {
-            @if (aiLoading()) {
-              <div class="ai-loading">
-                <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
-                Analyzing threat intelligence...
-              </div>
-            } @else {
-              <p class="ai-summary">{{ aiSummary() }}</p>
-            }
           }
         </div>
       }

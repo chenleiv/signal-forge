@@ -60,7 +60,7 @@
               <span class="alert-message">{{ alert.message }}</span>
               <div class="alert-actions">
                 @if (caseMap()[alert.id]) {
-                  <span class="case-indicator">↗ {{ caseMap()[alert.id] }}</span>
+                  <a class="case-indicator" [routerLink]="['/incidents']" [queryParams]="{ id: caseMap()[alert.id] }">↗ {{ caseMap()[alert.id] }}</a>
                 }
                 @if (alert.status === 'new') {
                   <button class="act-btn act-ack"     (click)="acknowledge(alert.id)">Acknowledge</button>

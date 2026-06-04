@@ -39,7 +39,7 @@ export class ThreatDetailDrawerComponent {
   geoOpen        = signal(true);
   abuseOpen      = signal(false);
   attackOpen     = signal(true);
-  aiOpen         = signal(false);
+  aiOpen         = signal(true);
   mitreOpen      = signal(false);
   relatedOpen    = signal(false);
   eventsOpen     = signal(true);
@@ -82,7 +82,7 @@ export class ThreatDetailDrawerComponent {
       this.geoOpen.set(true);
       this.abuseOpen.set(false);
       this.attackOpen.set(true);
-      this.aiOpen.set(false);
+      this.aiOpen.set(true);
       this.mitreOpen.set(false);
       this.relatedOpen.set(false);
       this.eventsOpen.set(true);

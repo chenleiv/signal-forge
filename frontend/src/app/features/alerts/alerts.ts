@@ -7,6 +7,7 @@ import {
   DestroyRef,
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { AlertSource, AlertStatus, SEVERITY_COLORS } from '../../shared/models/threat.models';
@@ -16,7 +17,7 @@ type SevFilter = 'all' | 'critical' | 'high' | 'medium' | 'low';
 @Component({
   selector: 'app-alerts',
   standalone: true,
-  imports: [TitleCasePipe],
+  imports: [TitleCasePipe, RouterLink],
   templateUrl: './alerts.html',
   styleUrl: './alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -122,6 +122,22 @@ $accent:    var(--c-accent);
   scrollbar-color: $border transparent;
 }
 
+// No-history notice
+.no-history-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 25%, transparent);
+  border-radius: 6px;
+  font-size: 12px;
+  color: $secondary;
+  line-height: 1.4;
+
+  svg { flex-shrink: 0; opacity: 0.7; }
+}
+
 // Score section
 .score-section {
   display: grid;
