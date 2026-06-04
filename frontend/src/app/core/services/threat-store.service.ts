@@ -14,7 +14,7 @@ import {
   SavedHunt,
   HuntResult,
   DetectionRule,
-  OtxData,
+  ThreatAlert,
 } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
 
@@ -43,12 +43,11 @@ export class ThreatStoreService {
     return buckets[buckets.length - 1].count;
   });
 
-  readonly severityColor: Record<ThreatLevel, string> = {
-    critical: '#ff2d55',
-    high: '#ff6b00',
-    medium: '#ffcc00',
-    low: '#00d4ff',
-  };
+  readonly alerts = signal<ThreatAlert[]>([]);
+
+  readonly newAlertCount = computed(
+    () => this.alerts().filter(a => a.status === 'new').length
+  );
 
   addEvent(event: ThreatEvent) {
     if (this.frozen()) return;
@@ -74,10 +73,6 @@ export class ThreatStoreService {
 
   fetchIpGeo(ip: string) {
     return this.http.get<IpGeo>(`/api/ip/${ip}/geo`);
-  }
-
-  fetchOtxData(ip: string) {
-    return this.http.get<OtxData>(`/api/ip/${encodeURIComponent(ip)}/otx`);
   }
 
   fetchRelatedIps(ip: string) {
@@ -143,10 +138,6 @@ export class ThreatStoreService {
     return this.http.post<Incident & { existing: boolean }>('/api/incidents/from-ip', { ip });
   }
 
-  setSimulation(active: boolean) {
-    return this.http.post('/api/simulation', { active });
-  }
-
   getRules() {
     return this.http.get<DetectionRule[]>('/api/rules');
   }
@@ -161,5 +152,21 @@ export class ThreatStoreService {
 
   deleteRule(id: string) {
     return this.http.delete<{ ok: boolean }>(`/api/rules/${id}`);
+  }
+
+  fetchAlerts() {
+    return this.http.get<ThreatAlert[]>('/api/alerts');
+  }
+
+  acknowledgeAlert(id: string) {
+    return this.http.patch<ThreatAlert>(`/api/alerts/${id}`, { status: 'acknowledged' });
+  }
+
+  dismissAlert(id: string) {
+    return this.http.patch<ThreatAlert>(`/api/alerts/${id}`, { status: 'dismissed' });
+  }
+
+  createCaseFromAlert(id: string) {
+    return this.http.post<Incident & { existing: boolean }>(`/api/alerts/${id}/case`, {});
   }
 }
