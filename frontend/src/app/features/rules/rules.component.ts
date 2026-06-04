@@ -121,14 +121,15 @@ export class RulesComponent {
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe(updated => {
           this.rules.update(list => list.map(r => r.id === updated.id ? updated : r));
-          this.selected.set(updated);
+          this.selected.set(null);
+          this.isNew.set(false);
         });
     } else {
       this.store.createRule(payload)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe(created => {
           this.rules.update(list => [...list, created]);
-          this.selected.set(created);
+          this.selected.set(null);
           this.isNew.set(false);
         });
     }

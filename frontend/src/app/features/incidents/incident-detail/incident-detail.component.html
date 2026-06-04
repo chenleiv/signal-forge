@@ -50,11 +50,10 @@
     </div>
     <div class="meta-item">
       <span class="meta-label">Assigned</span>
-      <select class="assignee-select" [value]="incident()!.assigned_to ?? ''"
-              (change)="updateAssignee($any($event.target).value)">
-        <option value="">Unassigned</option>
+      <select class="assignee-select" (change)="updateAssignee($any($event.target).value)">
+        <option value="" [selected]="!incident()!.assigned_to">Unassigned</option>
         @for (a of analysts; track a) {
-          <option [value]="a">{{ a }}</option>
+          <option [value]="a" [selected]="incident()!.assigned_to === a">{{ a }}</option>
         }
       </select>
     </div>
