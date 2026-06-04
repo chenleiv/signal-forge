@@ -12,24 +12,43 @@ export function downloadCsv(headers: string[], rows: string[][], filename: strin
 }
 
 export async function downloadPdf(title: string, headers: string[], rows: string[][], filename: string): Promise<void> {
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-    import('jspdf'),
-    import('jspdf-autotable'),
-  ]);
+  const { jsPDF } = await import('jspdf');
   const doc = new jsPDF();
+
+  const colW   = 42;
+  const rowH   = 7;
+  const startX = 14;
+  let   y      = 14;
+
   doc.setFontSize(13);
   doc.setTextColor(40);
-  doc.text(title, 14, 15);
+  doc.text(title, startX, y);
+  y += 7;
   doc.setFontSize(8);
   doc.setTextColor(130);
-  doc.text(`Generated ${new Date().toLocaleString()}`, 14, 22);
-  autoTable(doc, {
-    head:       [headers],
-    body:       rows,
-    startY:     28,
-    styles:     { fontSize: 8, cellPadding: 3 },
-    headStyles: { fillColor: [30, 37, 53], textColor: [229, 231, 235], fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [245, 247, 250] },
+  doc.text(`Generated ${new Date().toLocaleString()}`, startX, y);
+  y += 8;
+
+  // Header row
+  doc.setFillColor(30, 37, 53);
+  doc.rect(startX, y, colW * headers.length, rowH, 'F');
+  doc.setTextColor(229, 231, 235);
+  doc.setFont('helvetica', 'bold');
+  headers.forEach((h, i) => doc.text(h, startX + colW * i + 2, y + 5));
+  y += rowH;
+
+  // Data rows
+  doc.setFont('helvetica', 'normal');
+  rows.forEach((row, ri) => {
+    if (y > 270) { doc.addPage(); y = 14; }
+    if (ri % 2 === 0) {
+      doc.setFillColor(245, 247, 250);
+      doc.rect(startX, y, colW * headers.length, rowH, 'F');
+    }
+    doc.setTextColor(40);
+    row.forEach((cell, i) => doc.text(String(cell).slice(0, 20), startX + colW * i + 2, y + 5));
+    y += rowH;
   });
+
   doc.save(filename);
 }
