@@ -3,6 +3,7 @@ import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } fro
 import { filter, map } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ThreatsService } from '../../core/services/threats.service';
+import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { ThemeService } from '../../core/services/theme';
 import { CommandConsole } from '../../features/command-console/command-console';
@@ -28,6 +29,8 @@ const PAGE_TITLES: Record<string, string> = {
 })
 export class AppLayout {
   readonly ws              = inject(ThreatsService);
+  private store            = inject(ThreatStoreService);
+  readonly alertBadge      = computed(() => this.store.newAlertCount());
   readonly settingsService = inject(SettingsService);
   // Injected to eagerly trigger the effect() that sets data-theme on <body>.
   readonly themeService    = inject(ThemeService);
