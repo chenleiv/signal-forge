@@ -1,25 +1,28 @@
 from __future__ import annotations
 import ipaddress
 import os
+import subprocess
+import sys
+import pathlib
 import httpx
 import asyncio
 import json
 import random
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
 from typing import Optional
 from uuid import uuid4
 from datetime import datetime, timezone, timedelta
+from jose import jwt
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-from starlette.requests import Request
-
-import pathlib
+from sqlalchemy import text as _sa_text
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import Request
 from database import AsyncSessionLocal, engine as db_engine, Base, get_db
 from db_ops import (
     db_get_incidents, db_get_incident, db_create_incident,
@@ -54,8 +57,6 @@ _ip_coords: dict[str, tuple[float, float]] = {}
 
 SECRET_KEY = os.environ.get("JWT_SECRET", "threatwatcher-dev-secret")
 
-
-from contextlib import asynccontextmanager
 
 async def _fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
     try:
@@ -92,9 +93,8 @@ async def _fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
 async def lifespan(app: FastAPI):
     # Run DB migrations if DB is configured
     if USE_DB:
-        import subprocess, sys as _sys
         result = subprocess.run(
-            [_sys.executable, "-m", "alembic", "upgrade", "head"],
+            [sys.executable, "-m", "alembic", "upgrade", "head"],
             capture_output=True, text=True, cwd=pathlib.Path(__file__).parent
         )
         if result.returncode != 0:
@@ -102,11 +102,8 @@ async def lifespan(app: FastAPI):
         else:
             print("[Alembic] Migrations up to date")
 
-        # Clean up auto-generated incidents — only user-created incidents belong in DB.
-        # If there are more than 50 incidents it means the old rule-triggered writes
-        # accumulated; wipe them so the list stays clean.
         if AsyncSessionLocal is not None:
-            from sqlalchemy import text as _sa_text
+            global _incident_counter
             async with AsyncSessionLocal() as _session:
                 _count_row = await _session.execute(_sa_text("SELECT COUNT(*) FROM incidents"))
                 _count = _count_row.scalar() or 0
@@ -115,11 +112,6 @@ async def lifespan(app: FastAPI):
                     await _session.commit()
                     print(f"[DB] Cleared {_count} auto-generated incidents from DB")
 
-        # Seed _incident_counter from DB max to avoid primary key collisions on restart
-        if AsyncSessionLocal is not None:
-            from sqlalchemy import text as _sa_text
-            global _incident_counter
-            async with AsyncSessionLocal() as _session:
                 _row = await _session.execute(
                     _sa_text("SELECT COALESCE(MAX(CAST(SUBSTR(id, 5) AS INTEGER)), 0) FROM incidents")
                 )
@@ -128,7 +120,6 @@ async def lifespan(app: FastAPI):
                     _incident_counter = _max - 1000
                     print(f"[DB] Seeded incident counter to {_incident_counter}")
 
-            # Load rules from DB into _rules for the simulation engine
             async with AsyncSessionLocal() as _session:
                 _rules.clear()
                 _rules.extend(await db_get_rules(_session))
@@ -449,6 +440,8 @@ minute_buckets: deque = deque(maxlen=15)
 _current_minute: str = ""
 _current_bucket_count: int = 0
 incidents_store: deque = deque(maxlen=50)
+alerts_store: deque = deque(maxlen=100)
+_alert_counter: int = 0
 
 # Behavioral detection: tracks when each IP was last flagged to avoid spam
 _behavioral_flagged: dict[str, dict] = {}  # ip -> {"repeated_at": dt, "escalation_at": dt}
@@ -459,8 +452,6 @@ _ESCALATION_SCORE_DELTA = 20              # points above overall avg to trigger 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     try:
-        from jose import jwt
-
         jwt.decode(credentials.credentials, SECRET_KEY, algorithms=["HS256"])
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
@@ -500,11 +491,31 @@ def _score_to_level(avg: float) -> str:
     return "low"
 
 
-def _find_incident(incident_id: str) -> dict:
-    for inc in incidents_store:
-        if inc["id"] == incident_id:
-            return inc
-    raise HTTPException(status_code=404, detail="Incident not found")
+def _find_incident(incident_id: str) -> dict | None:
+    return next((inc for inc in incidents_store if inc["id"] == incident_id), None)
+
+
+def _find_alert(alert_id: str) -> dict | None:
+    return next((a for a in alerts_store if a["id"] == alert_id), None)
+
+
+def _create_alert(source: str, type: str, severity: str, ip: str | None, message: str) -> dict:
+    global _alert_counter
+    _alert_counter += 1
+    now = datetime.now(timezone.utc).isoformat()
+    alert = {
+        "id": f"ALT-{_alert_counter:04d}",
+        "source": source,
+        "type": type,
+        "severity": severity,
+        "ip": ip,
+        "message": message,
+        "status": "new",
+        "created_at": now,
+        "acknowledged_at": None,
+    }
+    alerts_store.appendleft(alert)
+    return alert
 
 
 def _create_incident(trigger: dict) -> None:
@@ -541,14 +552,10 @@ def _eval_condition(cond: dict, event: dict) -> bool:
     ev    = event.get(field)
     if ev is None:
         return False
-    if op == ">":
+    if op in (">", "<"):
         try:
-            return float(ev) > float(val)
-        except (ValueError, TypeError):
-            return False
-    if op == "<":
-        try:
-            return float(ev) < float(val)
+            a, b = float(ev), float(val)
+            return a > b if op == ">" else a < b
         except (ValueError, TypeError):
             return False
     if op == "=":
@@ -662,12 +669,7 @@ def generate_threat() -> dict:
     if not THREAT_IPS:
         return {}
     ip = random.choice(list(THREAT_IPS.keys()))
-    level = random.choices(
-        [b[0] for b in _SEVERITY_BANDS],
-        weights=[b[3] for b in _SEVERITY_BANDS],
-        k=1,
-    )[0]
-    lo, hi = next((b[1], b[2]) for b in _SEVERITY_BANDS if b[0] == level)
+    level, lo, hi, _ = random.choices(_SEVERITY_BANDS, weights=[b[3] for b in _SEVERITY_BANDS], k=1)[0]
     score = random.randint(lo, hi)
     attack_type = random.choice(ATTACK_TYPES)
     region = random.choice(REGIONS)
@@ -694,16 +696,12 @@ def generate_threat() -> dict:
 @app.post("/auth/login")
 async def login(body: dict):
     if body.get("username") == "analyst" and body.get("password") == "signalforge":
-        from jose import jwt
-
         token = jwt.encode(
             {"sub": "analyst", "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
             SECRET_KEY,
             algorithm="HS256",
         )
         return {"access_token": token}
-    from fastapi import HTTPException
-
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
@@ -713,8 +711,6 @@ async def login(body: dict):
 @app.websocket("/ws/threats")
 async def threats_ws(ws: WebSocket, token: str = ""):
     try:
-        from jose import jwt
-
         jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
     except Exception:
         await ws.close(code=4001)
@@ -745,17 +741,23 @@ async def get_stats(request: Request, _=Depends(verify_token)):
     ip_levels: dict[str, str] = {}
 
     for ip, events in ip_store.items():
-        ip_counts[ip] = len(events)
-        avg = sum(e["score"] for e in events) / len(events)
-        ip_scores[ip] = avg
-        ip_levels[ip] = _score_to_level(avg)
+        if not events:
+            continue
+        score_sum = 0
+        count = 0
         for e in events:
-            level = e.get("threat_level", "low")
-            if level in severity_counts:
-                severity_counts[level] += 1
+            score_sum += e["score"]
+            count += 1
+            lvl = e.get("threat_level", "low")
+            if lvl in severity_counts:
+                severity_counts[lvl] += 1
             atype = e.get("attack_type", "SQLi")
             if atype in attack_types:
                 attack_types[atype] += 1
+        avg = score_sum / count
+        ip_counts[ip] = count
+        ip_scores[ip] = avg
+        ip_levels[ip] = _score_to_level(avg)
 
     top_ips = sorted(
         [
@@ -862,8 +864,7 @@ async def get_ip_ai_summary(
     if not GROQ_API_KEY:
         return {"summary": None}
 
-    from groq import Groq
-
+    from groq import Groq  # optional dep — only imported when key is present
     events = list(ip_store.get(ip, []))
     context = {
         "ip": ip,
@@ -937,10 +938,6 @@ async def run_command(request: Request, body: dict, _=Depends(verify_token)):
         }
     elif cmd == "clear":
         return {"output": "__clear__"}
-    else:
-        return {
-            "output": f"Unknown command: '{cmd}'. Type 'help' for available commands."
-        }
 
 
 # ── REST: geo intelligence ────────────────────────────────────
@@ -1057,6 +1054,8 @@ async def patch_incident(
             raise HTTPException(status_code=404, detail="Incident not found")
         return result
     inc = _find_incident(incident_id)
+    if inc is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
     if "status" in body:
         inc["status"] = body["status"]
     if "assigned_to" in body:
@@ -1142,6 +1141,8 @@ async def update_tasks(
             raise HTTPException(status_code=404, detail="Incident not found")
         return {"completed_tasks": result}
     inc = _find_incident(incident_id)
+    if inc is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
     inc["completed_tasks"] = completed
     inc["updated_at"] = datetime.now(timezone.utc).isoformat()
     return {"completed_tasks": inc["completed_tasks"]}
@@ -1162,6 +1163,8 @@ async def add_note(
             raise HTTPException(status_code=404, detail="Incident not found")
         return await db_add_note(db, incident_id, text=text, author=author)
     inc = _find_incident(incident_id)
+    if inc is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
     note = {"author": author, "text": text, "at": datetime.now(timezone.utc).isoformat()}
     inc["notes"].append(note)
     inc["updated_at"] = note["at"]
@@ -1259,20 +1262,23 @@ async def create_rule(body: dict, db: Optional[AsyncSession] = Depends(get_db), 
 
 @app.patch("/api/rules/{rule_id}")
 async def update_rule(rule_id: str, body: dict, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
-    for rule in _rules:
-        if rule["id"] == rule_id:
-            for key in ["name", "enabled", "conditions", "logic", "actions"]:
-                if key in body:
-                    rule[key] = body[key]
-            break
     if USE_DB and db is not None:
         updated = await db_update_rule(db, rule_id, body)
         if updated is None:
             raise HTTPException(status_code=404, detail="Rule not found")
+        for rule in _rules:
+            if rule["id"] == rule_id:
+                for key in ["name", "enabled", "conditions", "logic", "actions"]:
+                    if key in body:
+                        rule[key] = body[key]
+                break
         return updated
     rule_in_mem = next((r for r in _rules if r["id"] == rule_id), None)
     if rule_in_mem is None:
         raise HTTPException(status_code=404, detail="Rule not found")
+    for key in ["name", "enabled", "conditions", "logic", "actions"]:
+        if key in body:
+            rule_in_mem[key] = body[key]
     return rule_in_mem
 
 
