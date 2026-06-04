@@ -1,79 +1,87 @@
 <div class="alerts-page">
 
-    <div class="page-header">
-        <h1 class="page-title">Alerts</h1>
-        <span class="count-badge">{{ filtered().length }} alerts</span>
-        <button class="pause-btn" [class.paused]="paused()" (click)="togglePause()">
-            {{ paused() ? '▶ Resume' : '⏸ Pause' }}
+  <div class="alerts-layout">
+
+    <aside class="filter-panel">
+
+      <div class="filter-section">
+        <span class="filter-label">STATUS</span>
+        <button class="filter-btn" [class.active]="statusFilter() === 'all'"
+                (click)="statusFilter.set('all')">All</button>
+        <button class="filter-btn" [class.active]="statusFilter() === 'new'"
+                (click)="statusFilter.set('new')">
+          New
+          @if (newCount() > 0) { <span class="inline-badge">{{ newCount() }}</span> }
         </button>
+        <button class="filter-btn" [class.active]="statusFilter() === 'acknowledged'"
+                (click)="statusFilter.set('acknowledged')">Acknowledged</button>
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-label">SEVERITY</span>
+        @for (sev of severities; track sev) {
+          <button class="filter-btn filter-sev-{{ sev }}"
+                  [class.active]="sevFilter() === sev"
+                  (click)="sevFilter.set(sev)">{{ sev | titlecase }}</button>
+        }
+      </div>
+
+      <div class="filter-section">
+        <span class="filter-label">SOURCE</span>
+        <button class="filter-btn" [class.active]="sourceFilter() === 'all'"
+                (click)="sourceFilter.set('all')">All</button>
+        <button class="filter-btn" [class.active]="sourceFilter() === 'behavioral'"
+                (click)="sourceFilter.set('behavioral')">Behavioral</button>
+        <button class="filter-btn" [class.active]="sourceFilter() === 'rule'"
+                (click)="sourceFilter.set('rule')">Rule</button>
+      </div>
+
+    </aside>
+
+    <div class="alerts-main">
+
+      <div class="alerts-header">
+        <span class="alerts-title">Alerts</span>
+        <span class="count-badge">{{ filtered().length }} alerts</span>
+      </div>
+
+      <div class="alerts-list">
+        @for (alert of filtered(); track alert.id) {
+          <div class="alert-card status-{{ alert.status }}"
+               [style.--sev-color]="severityColor(alert.severity)">
+            <div class="card-top">
+              <span class="sev-dot"></span>
+              <span class="source-chip chip-{{ alert.source }}">{{ alert.source }}</span>
+              <span class="alert-type">{{ alert.type }}</span>
+              @if (alert.ip) { <span class="alert-ip">{{ alert.ip }}</span> }
+              <span class="alert-time">{{ timeAgo(alert.created_at) }}</span>
+            </div>
+            <div class="card-bottom">
+              <span class="alert-message">{{ alert.message }}</span>
+              <div class="alert-actions">
+                @if (caseMap()[alert.id]) {
+                  <span class="case-indicator">↗ {{ caseMap()[alert.id] }}</span>
+                }
+                @if (alert.status === 'new') {
+                  <button class="act-btn act-ack"     (click)="acknowledge(alert.id)">Acknowledge</button>
+                  @if (!caseMap()[alert.id]) {
+                    <button class="act-btn act-case"  (click)="createCase(alert.id)">Create Case</button>
+                  }
+                  <button class="act-btn act-dismiss" (click)="dismiss(alert.id)">Dismiss</button>
+                } @else if (alert.status === 'acknowledged') {
+                  <span class="ack-indicator">✓ Acknowledged</span>
+                  <button class="act-btn act-dismiss" (click)="dismiss(alert.id)">Dismiss</button>
+                }
+              </div>
+            </div>
+          </div>
+        } @empty {
+          <div class="empty-state">{{ emptyMessage() }}</div>
+        }
+      </div>
+
     </div>
 
-    <div class="filter-bar">
-        <button class="filter-btn" [class.active]="filterLevel() === 'all'" (click)="setFilter('all')">All</button>
-        <button class="filter-btn critical" [class.active]="filterLevel() === 'critical'"
-            (click)="setFilter('critical')">Critical</button>
-        <button class="filter-btn high" [class.active]="filterLevel() === 'high'"
-            (click)="setFilter('high')">High</button>
-        <button class="filter-btn medium" [class.active]="filterLevel() === 'medium'"
-            (click)="setFilter('medium')">Medium</button>
-        <button class="filter-btn low" [class.active]="filterLevel() === 'low'" (click)="setFilter('low')">Low</button>
-    </div>
-
-    <div class="alerts-list">
-        <div class="table-wrap">
-            <table class="alerts-table">
-                <thead>
-                    <tr>
-                        <th>Severity</th>
-                        <th>Time</th>
-                        <th>Source IP</th>
-                        <th>Attack Type</th>
-                        <th>Region</th>
-                        <th>Score</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (store.events().length === 0) {
-                      @for (i of [1,2,3,4,5,6,7,8]; track i) {
-                        <tr class="sk-row">
-                          <td><span class="sk-line" style="width:64px"></span></td>
-                          <td><span class="sk-line" style="width:55px"></span></td>
-                          <td><span class="sk-line" [style.width.px]="100 + (i * 11 % 30)"></span></td>
-                          <td><span class="sk-line" style="width:70px"></span></td>
-                          <td><span class="sk-line" style="width:28px"></span></td>
-                          <td><span class="sk-line" style="width:32px"></span></td>
-                          <td><span class="sk-line" style="width:44px"></span></td>
-                        </tr>
-                      }
-                    }
-                    @for (alert of filtered(); track alert.ip + alert.timestamp) {
-                    <tr class="alert-row" [class.ack]="isAcknowledged(alert)">
-                        <td><span class="sev-pill sev-{{ alert.threat_level }}">{{ alert.threat_level }}</span></td>
-                        <td class="mono">{{ alert.timestamp | date:'HH:mm:ss' }}</td>
-                        <td class="mono">{{ alert.ip }}</td>
-                        <td>{{ alert.attack_type }}</td>
-                        <td class="mono muted">{{ alert.region }}</td>
-                        <td class="mono" [class.score-critical]="alert.score >= 80"
-                            [class.score-high]="alert.score >= 60 && alert.score < 80">{{ alert.score }}</td>
-                        <td>
-                            @if (!isAcknowledged(alert)) {
-                            <button class="ack-btn" (click)="acknowledge(alert)">Acknowledge</button>
-                            } @else {
-                            <span class="ack-indicator">✓ Ack'd</span>
-                            }
-                        </td>
-                    </tr>
-                    } @empty {
-                    <tr>
-                        <td colspan="7" class="empty">No alerts — {{ filterLevel() !== 'all' ? 'try a different filter'
-                            : 'waiting for data...' }}</td>
-                    </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-    </div>
+  </div>
 
 </div>

@@ -1,45 +1,92 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
-import { DatePipe } from '@angular/common';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+  DestroyRef,
+} from '@angular/core';
+import { TitleCasePipe } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
-import { ThreatEvent, ThreatLevel } from '../../shared/models/threat.models';
+import { AlertSource, AlertStatus, SEVERITY_COLORS } from '../../shared/models/threat.models';
+
+type SevFilter = 'all' | 'critical' | 'high' | 'medium' | 'low';
 
 @Component({
   selector: 'app-alerts',
   standalone: true,
-  imports: [DatePipe],
+  imports: [TitleCasePipe],
   templateUrl: './alerts.html',
   styleUrl: './alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class Alerts {
-  // ── public signals ────────────────────────────────────────────
-  paused       = signal(false);
-  filterLevel  = signal<ThreatLevel | 'all'>('all');
-  acknowledged = signal<Set<string>>(new Set());
+  private store      = inject(ThreatStoreService);
+  private destroyRef = inject(DestroyRef);
+
+  readonly statusFilter = signal<AlertStatus | 'all'>('all');
+  readonly sevFilter    = signal<SevFilter>('all');
+  readonly sourceFilter = signal<AlertSource | 'all'>('all');
+  readonly caseMap      = signal<Record<string, string>>({});
+
+  readonly severities: SevFilter[] = ['all', 'critical', 'high', 'medium', 'low'];
 
   readonly filtered = computed(() => {
-    const level = this.filterLevel();
-    const list  = this.paused() ? this.snapshot() : this.store.events();
-    return list.filter(e => level === 'all' || e.threat_level === level);
+    const status = this.statusFilter();
+    const sev    = this.sevFilter();
+    const source = this.sourceFilter();
+    return this.store.alerts().filter(a =>
+      (status === 'all' || a.status === status) &&
+      (sev    === 'all' || a.severity === sev)  &&
+      (source === 'all' || a.source === source)
+    );
   });
 
-  // ── private injections ────────────────────────────────────────
-  protected readonly store = inject(ThreatStoreService);
+  readonly newCount = computed(() => this.store.newAlertCount());
 
-  // ── private state ─────────────────────────────────────────────
-  private readonly snapshot = signal<ThreatEvent[]>([]);
+  readonly emptyMessage = computed(() => {
+    const hasFilters =
+      this.statusFilter() !== 'all' ||
+      this.sevFilter()    !== 'all' ||
+      this.sourceFilter() !== 'all';
+    return hasFilters
+      ? 'no alerts match the current filters'
+      : 'no alerts yet — behavioral detection is monitoring';
+  });
 
-  // ── public methods ────────────────────────────────────────────
-  setFilter(level: ThreatLevel | 'all') { this.filterLevel.set(level); }
+  readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? SEVERITY_COLORS['low'];
 
-  acknowledge(e: ThreatEvent) {
-    this.acknowledged.update(s => new Set([...s, e.ip + e.timestamp]));
+  timeAgo(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const s = Math.floor(diff / 1000);
+    if (s < 60) return `${s}s ago`;
+    const m = Math.floor(s / 60);
+    if (m < 60) return `${m}m ago`;
+    return `${Math.floor(m / 60)}h ago`;
   }
 
-  isAcknowledged(e: ThreatEvent): boolean { return this.acknowledged().has(e.ip + e.timestamp); }
+  acknowledge(id: string) {
+    this.store.acknowledgeAlert(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(updated => {
+        this.store.alerts.update(list => list.map(a => a.id === id ? updated : a));
+      });
+  }
 
-  togglePause() {
-    if (!this.paused()) this.snapshot.set([...this.store.events()]);
-    this.paused.update(v => !v);
+  dismiss(id: string) {
+    this.store.dismissAlert(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.store.alerts.update(list => list.filter(a => a.id !== id));
+      });
+  }
+
+  createCase(id: string) {
+    this.store.createCaseFromAlert(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(incident => {
+        this.caseMap.update(m => ({ ...m, [id]: incident.id }));
+      });
   }
 }
