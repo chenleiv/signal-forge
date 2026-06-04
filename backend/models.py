@@ -58,3 +58,14 @@ class Rule(Base):
     actions:     Mapped[str]      = mapped_column(Text, nullable=False, default="[]")
     match_count: Mapped[int]      = mapped_column(Integer, nullable=False, default=0)
     created_at:  Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+
+class BehavioralSettings(Base):
+    __tablename__ = "behavioral_settings"
+
+    id:                    Mapped[int]      = mapped_column(Integer, primary_key=True)
+    repeated_threshold:    Mapped[int]      = mapped_column(Integer, nullable=False, default=8)
+    escalation_delta:      Mapped[int]      = mapped_column(Integer, nullable=False, default=20)
+    cooldown_min:          Mapped[int]      = mapped_column(Integer, nullable=False, default=30)
+    created_at:            Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    updated_at:            Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)

@@ -29,6 +29,7 @@ from db_ops import (
     db_patch_incident, db_add_note, db_update_tasks,
     db_find_open_incident_by_ip,
     db_get_rules, db_create_rule, db_update_rule, db_delete_rule,
+    db_get_behavioral_settings, db_update_behavioral_settings,
 )
 USE_DB: bool = db_engine is not None
 
@@ -125,6 +126,14 @@ async def lifespan(app: FastAPI):
                 _rules.extend(await db_get_rules(_session))
                 print(f"[DB] Loaded {len(_rules)} rules")
 
+                bs = await db_get_behavioral_settings(_session)
+                _behavioral_config.update({
+                    "cooldown_min": bs["cooldown_min"],
+                    "repeated_threshold": bs["repeated_threshold"],
+                    "escalation_delta": bs["escalation_delta"],
+                })
+                print(f"[DB] Loaded behavioral settings: {_behavioral_config}")
+
     # Fetch real threat IPs from AbuseIPDB (falls back to hardcoded list if no key)
     await _refresh_threat_ips()
 
@@ -150,7 +159,7 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(60)
             now = datetime.now(timezone.utc)
             window_start = now - timedelta(minutes=10)
-            cooldown = timedelta(minutes=_BEHAVIORAL_COOLDOWN_MIN)
+            cooldown = timedelta(minutes=_behavioral_config["cooldown_min"])
 
             for ip, events_deque in list(ip_store.items()):
                 events = list(events_deque)
@@ -166,7 +175,7 @@ async def lifespan(app: FastAPI):
                 ]
                 last_repeated = flagged.get("repeated_at")
                 if (
-                    len(recent) >= _REPEATED_EVENT_THRESHOLD
+                    len(recent) >= _behavioral_config["repeated_threshold"]
                     and (last_repeated is None or now - last_repeated > cooldown)
                 ):
                     flagged["repeated_at"] = now
@@ -189,7 +198,7 @@ async def lifespan(app: FastAPI):
                 recent_avg = sum(e["score"] for e in events[-5:]) / 5
                 last_escalation = flagged.get("escalation_at")
                 if (
-                    recent_avg - overall_avg >= _ESCALATION_SCORE_DELTA
+                    recent_avg - overall_avg >= _behavioral_config["escalation_delta"]
                     and (last_escalation is None or now - last_escalation > cooldown)
                 ):
                     flagged["escalation_at"] = now
@@ -439,9 +448,11 @@ _alert_counter: int = 0
 
 # Behavioral detection: tracks when each IP was last flagged to avoid spam
 _behavioral_flagged: dict[str, dict] = {}  # ip -> {"repeated_at": dt, "escalation_at": dt}
-_BEHAVIORAL_COOLDOWN_MIN = 30              # minutes before re-flagging same IP
-_REPEATED_EVENT_THRESHOLD = 8             # events in 10 min window
-_ESCALATION_SCORE_DELTA = 20              # points above overall avg to trigger escalation
+_behavioral_config: dict = {
+    "cooldown_min": 30,
+    "repeated_threshold": 8,
+    "escalation_delta": 20,
+}
 
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -1330,6 +1341,36 @@ async def delete_rule(rule_id: str, db: Optional[AsyncSession] = Depends(get_db)
     if USE_DB and db is not None:
         await db_delete_rule(db, rule_id)
     return {"ok": True}
+
+
+# ── REST: behavioral settings ─────────────────────────────────
+
+@app.get("/api/behavioral/settings")
+async def get_behavioral_settings(
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
+    if USE_DB and db is not None:
+        return await db_get_behavioral_settings(db)
+    return _behavioral_config
+
+
+@app.patch("/api/behavioral/settings")
+async def update_behavioral_settings(
+    body: dict,
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
+    if USE_DB and db is not None:
+        result = await db_update_behavioral_settings(db, body)
+        _behavioral_config.update({
+            "cooldown_min": result["cooldown_min"],
+            "repeated_threshold": result["repeated_threshold"],
+            "escalation_delta": result["escalation_delta"],
+        })
+        return result
+    for key in ["repeated_threshold", "escalation_delta", "cooldown_min"]:
+        if key in body:
+            _behavioral_config[key] = body[key]
+    return _behavioral_config
 
 
 @app.api_route("/health", methods=["GET", "HEAD"])
