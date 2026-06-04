@@ -174,16 +174,13 @@ async def lifespan(app: FastAPI):
                         set(e["attack_type"] for e in recent),
                         key=lambda t: sum(1 for e in recent if e["attack_type"] == t),
                     )
-                    trigger = {
-                        "ip": ip,
-                        "attack_type": "RepeatedIP",
-                        "threat_level": "high",
-                        "region": recent[-1].get("region", "unknown"),
-                        "score": len(recent),
-                        "dominant_attack": dominant,
-                        "event_count_10m": len(recent),
-                    }
-                    _create_incident(trigger)
+                    _create_alert(
+                        source="behavioral",
+                        type="RepeatedIP",
+                        severity="high",
+                        ip=ip,
+                        message=f"{ip} fired {len(recent)} events in 10 min (dominant: {dominant})",
+                    )
 
                 # ── Score escalation detection ─────────────────────
                 if len(events) < 6:
@@ -196,16 +193,13 @@ async def lifespan(app: FastAPI):
                     and (last_escalation is None or now - last_escalation > cooldown)
                 ):
                     flagged["escalation_at"] = now
-                    trigger = {
-                        "ip": ip,
-                        "attack_type": "Escalation",
-                        "threat_level": "critical",
-                        "region": events[-1].get("region", "unknown"),
-                        "score": int(recent_avg),
-                        "overall_avg": int(overall_avg),
-                        "recent_avg": int(recent_avg),
-                    }
-                    _create_incident(trigger)
+                    _create_alert(
+                        source="behavioral",
+                        type="Escalation",
+                        severity="critical",
+                        ip=ip,
+                        message=f"{ip} score escalated: overall avg {int(overall_avg)} → recent avg {int(recent_avg)}",
+                    )
 
     refresh_task = asyncio.create_task(_refresh_loop())
     behavioral_task = asyncio.create_task(_behavioral_loop())
@@ -568,6 +562,14 @@ def _eval_condition(cond: dict, event: dict) -> bool:
 def _execute_actions(rule: dict, event: dict) -> None:
     if "incident" in rule["actions"]:
         _create_incident(event)
+    if "alert" in rule["actions"]:
+        _create_alert(
+            source="rule",
+            type=rule["name"],
+            severity=event.get("threat_level", "medium"),
+            ip=event.get("ip"),
+            message=f"Rule '{rule['name']}' matched on {event.get('ip', 'unknown')}",
+        )
     if "block" in rule["actions"]:
         _blocked_ips.add(event["ip"])
 
