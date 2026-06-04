@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
+import { SEVERITY_COLORS } from '../../shared/models/threat.models';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
 import { ThreatEvent } from '../../shared/models/threat.models';
@@ -163,12 +164,6 @@ export class ThreatMap {
   }
 
   private severityColor(level: string): string {
-    const map: Record<string, string> = {
-      critical: '#ef4444',
-      high: '#f97316',
-      medium: '#f59e0b',
-      low: '#60a5fa',
-    };
-    return map[level] ?? '#60a5fa';
+    return SEVERITY_COLORS[level] ?? SEVERITY_COLORS['low'];
   }
 }

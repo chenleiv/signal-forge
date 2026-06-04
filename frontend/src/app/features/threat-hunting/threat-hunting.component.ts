@@ -11,10 +11,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
-import { HuntQuery, HuntResult, SavedHunt } from '../../shared/models/threat.models';
-
-const ATTACK_TYPES = ['SQLi', 'DDoS', 'BruteForce', 'PortScan', 'Malware'];
-const REGIONS      = ['US', 'EU', 'RU', 'CN', 'IL', 'BR'];
+import { HuntQuery, HuntResult, SavedHunt, ATTACK_TYPES, REGIONS, scoreToColor } from '../../shared/models/threat.models';
 
 @Component({
   selector: 'app-threat-hunting',
@@ -119,10 +116,5 @@ export class ThreatHuntingComponent {
 
   investigateIp(ip: string) { this.router.navigate(['/threats'], { queryParams: { ip } }); }
 
-  scoreColor(score: number): string {
-    if (score >= 80) return '#ef4444';
-    if (score >= 60) return '#f97316';
-    if (score >= 40) return '#f59e0b';
-    return '#60a5fa';
-  }
+  readonly scoreColor = scoreToColor;
 }

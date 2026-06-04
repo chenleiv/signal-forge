@@ -12,7 +12,7 @@ import {
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Incident, IncidentNote, IncidentStatus } from '../../../shared/models/threat.models';
+import { Incident, IncidentNote, IncidentStatus, SEVERITY_COLORS } from '../../../shared/models/threat.models';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
 
 const RESPONSE_TASKS: Record<string, string[]> = {
@@ -115,10 +115,7 @@ export class IncidentDetailComponent {
 
   investigateIp(ip: string) { this.router.navigate(['/threats'], { queryParams: { ip } }); }
 
-  severityColor(sev: string): string {
-    const map: Record<string, string> = { critical: '#ef4444', high: '#f97316', medium: '#f59e0b', low: '#60a5fa' };
-    return map[sev] ?? '#9ca3af';
-  }
+  readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? '#9ca3af';
 
   // ── private methods ───────────────────────────────────────────
   private patchAndEmit(patch: Parameters<ThreatStoreService['patchIncident']>[1], timelineLabel: string, timelineType: TimelineEntry['type']) {

@@ -65,8 +65,8 @@
             <td class="cell-count">{{ row.count }}</td>
             <td class="cell-level">
               <div class="sev-cell">
-                <span class="sev-dot" [ngClass]="'score-' + (row.threat_level ?? scoreClass(row.score).replace('score-', ''))"></span>
-                <span class="sev-label">{{ (row.threat_level ?? 'low') | titlecase }}</span>
+                <span class="sev-dot" [ngClass]="'score-' + row.threat_level"></span>
+                <span class="sev-label">{{ row.threat_level | titlecase }}</span>
               </div>
             </td>
             <td class="cell-action">Details →</td>

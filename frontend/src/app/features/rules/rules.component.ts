@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
-import { DetectionRule, RuleCondition, RuleAction } from '../../shared/models/threat.models';
+import { DetectionRule, RuleCondition, RuleAction, ATTACK_TYPES, REGIONS } from '../../shared/models/threat.models';
 
 const OPERATORS: Record<string, string[]> = {
   score:       ['>', '<', '='],
@@ -16,9 +16,6 @@ const OPERATORS: Record<string, string[]> = {
   region:      ['='],
   ip:          ['=', 'contains'],
 };
-
-const ATTACK_TYPES = ['SQLi', 'DDoS', 'BruteForce', 'PortScan', 'Malware'];
-const REGIONS      = ['US', 'EU', 'RU', 'CN', 'IL', 'BR'];
 
 @Component({
   selector: 'app-rules',
@@ -166,7 +163,7 @@ export class RulesComponent {
     else { this.selected.set(null); this.isNew.set(false); }
   }
 
-  valueOptions(field: string): string[] {
+  valueOptions(field: string): readonly string[] {
     if (field === 'attack_type') return ATTACK_TYPES;
     if (field === 'region')      return REGIONS;
     return [];
