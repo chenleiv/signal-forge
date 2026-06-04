@@ -1080,14 +1080,8 @@ async def get_ip_case(
     return {"case_id": None}
 
 
-@app.post("/api/incidents/from-ip")
-async def create_incident_from_ip(
-    body: dict,
-    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
-):
+async def _build_incident_for_ip(ip: str, db) -> dict:
     global _incident_counter
-    ip = body.get("ip", "unknown")
-
     if USE_DB and db is not None:
         existing = await db_find_open_incident_by_ip(db, ip)
         if existing:
@@ -1098,8 +1092,8 @@ async def create_incident_from_ip(
                 return {**inc, "existing": True}
 
     events = list(ip_store.get(ip, deque()))
-    attack_types = list({e["attack_type"] for e in events})
-    attack_type = attack_types[0] if attack_types else "PortScan"
+    attack_types_list = list({e["attack_type"] for e in events})
+    attack_type = attack_types_list[0] if attack_types_list else "PortScan"
     scores = [e["score"] for e in events]
     avg_score = sum(scores) / len(scores) if scores else 50
     level = _score_to_level(avg_score)
@@ -1122,13 +1116,20 @@ async def create_incident_from_ip(
         "notes": [],
         "completed_tasks": [],
     }
-
     if USE_DB and db is not None:
         saved = await db_create_incident(db, incident)
         return {**saved, "existing": False}
-
     incidents_store.appendleft(incident)
     return {**incident, "existing": False}
+
+
+@app.post("/api/incidents/from-ip")
+async def create_incident_from_ip(
+    body: dict,
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
+    ip = body.get("ip", "unknown")
+    return await _build_incident_for_ip(ip, db)
 
 
 @app.patch("/api/incidents/{incident_id}/tasks")
@@ -1171,6 +1172,44 @@ async def add_note(
     inc["notes"].append(note)
     inc["updated_at"] = note["at"]
     return note
+
+
+# ── REST: alerts ───────────────────────────────────────────────
+
+
+@app.get("/api/alerts")
+async def get_alerts(include_dismissed: bool = False, _=Depends(verify_token)):
+    if include_dismissed:
+        return list(alerts_store)
+    return [a for a in alerts_store if a["status"] != "dismissed"]
+
+
+@app.patch("/api/alerts/{alert_id}")
+async def patch_alert(alert_id: str, body: dict, _=Depends(verify_token)):
+    alert = _find_alert(alert_id)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    new_status = body.get("status")
+    if new_status not in ("acknowledged", "dismissed"):
+        raise HTTPException(status_code=422, detail="status must be 'acknowledged' or 'dismissed'")
+    alert["status"] = new_status
+    if new_status == "acknowledged":
+        alert["acknowledged_at"] = datetime.now(timezone.utc).isoformat()
+    return alert
+
+
+@app.post("/api/alerts/{alert_id}/case")
+async def create_case_from_alert(
+    alert_id: str,
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+):
+    alert = _find_alert(alert_id)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    ip = alert.get("ip")
+    if not ip:
+        raise HTTPException(status_code=400, detail="Alert has no associated IP")
+    return await _build_incident_for_ip(ip, db)
 
 
 # ── REST: threat hunting ──────────────────────────────────────
