@@ -64,3 +64,35 @@ _SERVICES         = ["SSH", "RDP", "FTP", "SMTP", "HTTP", "VNC"]
 _PROTOCOLS        = ["UDP", "TCP", "ICMP"]
 _SCAN_TYPES       = ["SYN", "ACK", "XMAS", "NULL", "FIN"]
 _ENDPOINTS        = ["/api/login", "/admin", "/wp-admin", "/api/users", "/graphql", "/.env"]
+
+DETECTION_SOURCES = ["sigma_rule", "behavioral_detection", "threat_intelligence", "correlation_engine", "yara_detection"]
+
+ASSET_NAMES = [
+    "Web Server", "Domain Controller", "Database Server",
+    "Mail Server", "VPN Gateway", "API Gateway",
+    "Load Balancer", "Dev Workstation",
+]
+
+ASSET_CRITICALITY: dict[str, int] = {
+    "Web Server": 70, "Domain Controller": 95, "Database Server": 90,
+    "Mail Server": 65, "VPN Gateway": 80, "API Gateway": 75,
+    "Load Balancer": 70, "Dev Workstation": 40,
+}
+
+GEO_RISK_SCORES: dict[str, int] = {
+    "RU": 85, "CN": 80, "KP": 95, "IR": 90, "NG": 75,
+    "RO": 60, "UA": 55, "BR": 45, "IN": 40,
+    "DE": 25, "US": 30, "GB": 20, "FR": 20, "NL": 30,
+    "SE": 15, "AU": 20, "CA": 20, "IL": 35, "SG": 30,
+    "TR": 50, "PL": 40, "JP": 20, "KR": 20, "IS": 15,
+}
+
+THREAT_CATEGORIES: dict[str, str] = {
+    "SQLi":       "Web Attack",
+    "DDoS":       "Availability Attack",
+    "BruteForce": "Credential Attack",
+    "PortScan":   "Reconnaissance",
+    "Malware":    "Malware",
+    "RepeatedIP": "Persistent Threat",
+    "Escalation": "Threat Escalation",
+}

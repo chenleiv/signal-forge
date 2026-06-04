@@ -1,4 +1,5 @@
 from __future__ import annotations
+from collections import Counter
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -6,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from store import alerts_store, _find_alert, verify_token
+from store import alerts_store, _blocked_ips, _find_alert, verify_token
 from routers.incidents import build_incident_for_ip
 
 router = APIRouter()
@@ -31,6 +32,37 @@ async def patch_alert(alert_id: str, body: dict, _=Depends(verify_token)):
     if new_status == "acknowledged":
         alert["acknowledged_at"] = datetime.now(timezone.utc).isoformat()
     return alert
+
+
+@router.get("/api/alerts/summary")
+async def get_alerts_summary(_=Depends(verify_token)):
+    active = [a for a in alerts_store if a["status"] != "dismissed"]
+    critical_count = sum(1 for a in active if a["severity"] == "critical")
+
+    acked = [a for a in alerts_store if a.get("acknowledged_at")]
+    if acked:
+        deltas: list[float] = []
+        for a in acked:
+            try:
+                created = datetime.fromisoformat(a["created_at"])
+                ack_dt  = datetime.fromisoformat(a["acknowledged_at"])
+                deltas.append((ack_dt - created).total_seconds() / 60)
+            except Exception:
+                pass
+        mttr_min = round(sum(deltas) / len(deltas), 1) if deltas else 0.0
+    else:
+        mttr_min = 0.0
+
+    type_counts = Counter(a["type"] for a in active)
+    top_attack = type_counts.most_common(1)[0][0] if type_counts else "None"
+
+    return {
+        "active_threats": len(active),
+        "critical_alerts": critical_count,
+        "mttr_min": mttr_min,
+        "top_attack_type": top_attack,
+        "blocked_indicators": len(_blocked_ips),
+    }
 
 
 @router.post("/api/alerts/{alert_id}/case")

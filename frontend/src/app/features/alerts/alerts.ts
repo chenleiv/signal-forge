@@ -5,33 +5,58 @@ import {
   computed,
   ChangeDetectionStrategy,
   DestroyRef,
+  OnInit,
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
-import { AlertSource, AlertStatus, SEVERITY_COLORS } from '../../shared/models/threat.models';
+import {
+  AlertStatus,
+  AlertSummaryMetrics,
+  DetectionSource,
+  SEVERITY_COLORS,
+  ThreatAlert,
+} from '../../shared/models/threat.models';
+import { AlertDetailDrawerComponent } from './alert-detail-drawer/alert-detail-drawer.component';
 
 type SevFilter = 'all' | 'critical' | 'high' | 'medium' | 'low';
+
+const DETECTION_SOURCE_LABELS: Record<string, string> = {
+  sigma_rule:           'Sigma Rule',
+  behavioral_detection: 'Behavioral',
+  threat_intelligence:  'Threat Intel',
+  correlation_engine:   'Correlation',
+  yara_detection:       'YARA',
+};
+
+const DETECTION_SOURCES: DetectionSource[] = [
+  'sigma_rule', 'behavioral_detection', 'threat_intelligence',
+  'correlation_engine', 'yara_detection',
+];
 
 @Component({
   selector: 'app-alerts',
   standalone: true,
-  imports: [TitleCasePipe, RouterLink],
+  imports: [TitleCasePipe, RouterLink, AlertDetailDrawerComponent],
   templateUrl: './alerts.html',
   styleUrl: './alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class Alerts {
+export class Alerts implements OnInit {
   private store      = inject(ThreatStoreService);
   private destroyRef = inject(DestroyRef);
 
   readonly statusFilter = signal<AlertStatus | 'all'>('all');
   readonly sevFilter    = signal<SevFilter>('all');
-  readonly sourceFilter = signal<AlertSource | 'all'>('all');
+  readonly sourceFilter = signal<DetectionSource | 'all'>('all');
   readonly caseMap      = signal<Record<string, string>>({});
+  readonly selectedAlert = signal<ThreatAlert | null>(null);
+  readonly summaryMetrics = signal<AlertSummaryMetrics | null>(null);
 
   readonly severities: SevFilter[] = ['all', 'critical', 'high', 'medium', 'low'];
+  readonly detectionSources = DETECTION_SOURCES;
+  readonly detectionSourceLabel = (s: string) => DETECTION_SOURCE_LABELS[s] ?? s;
 
   readonly filtered = computed(() => {
     const status = this.statusFilter();
@@ -40,7 +65,7 @@ export class Alerts {
     return this.store.alerts().filter(a =>
       (status === 'all' || a.status === status) &&
       (sev    === 'all' || a.severity === sev)  &&
-      (source === 'all' || a.source === source)
+      (source === 'all' || a.detection_source === source)
     );
   });
 
@@ -58,6 +83,12 @@ export class Alerts {
 
   readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? SEVERITY_COLORS['low'];
 
+  ngOnInit() {
+    this.store.fetchAlertSummary()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(m => this.summaryMetrics.set(m));
+  }
+
   timeAgo(iso: string): string {
     const diff = Date.now() - new Date(iso).getTime();
     const s = Math.floor(diff / 1000);
@@ -67,23 +98,40 @@ export class Alerts {
     return `${Math.floor(m / 60)}h ago`;
   }
 
-  acknowledge(id: string) {
+  selectAlert(alert: ThreatAlert) {
+    this.selectedAlert.set(alert);
+  }
+
+  closeDrawer() {
+    this.selectedAlert.set(null);
+  }
+
+  onCaseCreated(alertId: string, incidentId: string) {
+    this.caseMap.update(m => ({ ...m, [alertId]: incidentId }));
+  }
+
+  acknowledge(id: string, event: Event) {
+    event.stopPropagation();
     this.store.acknowledgeAlert(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(updated => {
         this.store.alerts.update(list => list.map(a => a.id === id ? updated : a));
+        if (this.selectedAlert()?.id === id) this.selectedAlert.set(updated);
       });
   }
 
-  dismiss(id: string) {
+  dismiss(id: string, event: Event) {
+    event.stopPropagation();
     this.store.dismissAlert(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         this.store.alerts.update(list => list.filter(a => a.id !== id));
+        if (this.selectedAlert()?.id === id) this.selectedAlert.set(null);
       });
   }
 
-  createCase(id: string) {
+  createCase(id: string, event: Event) {
+    event.stopPropagation();
     this.store.createCaseFromAlert(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(incident => {

@@ -1,10 +1,11 @@
 from __future__ import annotations
 import asyncio
+import hashlib
 import ipaddress
 import os
 import random
 from collections import defaultdict, deque
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, HTTPException
@@ -12,11 +13,16 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants import INCIDENT_TITLES, MITRE_MAP, ANALYSTS
+from constants import (
+    INCIDENT_TITLES, MITRE_MAP, ANALYSTS, GEO_DATA, COUNTRY_NAMES,
+    ASSET_NAMES, ASSET_CRITICALITY, GEO_RISK_SCORES, DETECTION_SOURCES,
+)
 from database import AsyncSessionLocal, get_db
 from db_ops import db_update_rule
 
-SECRET_KEY = os.environ.get("JWT_SECRET", "threatwatcher-dev-secret")
+SECRET_KEY = os.environ.get("JWT_SECRET")
+if not SECRET_KEY:
+    raise RuntimeError("JWT_SECRET environment variable is required")
 security = HTTPBearer()
 
 USE_DB: bool = False  # set by main after engine check
@@ -91,20 +97,102 @@ def _find_alert(alert_id: str) -> dict | None:
 
 # ── Creators ──────────────────────────────────────────────────
 
+def _det_rng(seed: str) -> random.Random:
+    h = hashlib.sha256(seed.encode()).digest()[:4]
+    return random.Random(int.from_bytes(h, "big"))
+
+
+def _build_alert_timeline(attack_type: str, now_dt: datetime, rng: random.Random) -> list[dict]:
+    entries: list[dict] = []
+    initial_dt = now_dt - timedelta(minutes=rng.randint(5, 15))
+    entries.append({
+        "event": "Initial Detection",
+        "description": f"First suspicious activity observed matching {attack_type} pattern",
+        "type": "detection",
+        "at": initial_dt.isoformat(),
+    })
+    if attack_type in ("BruteForce", "SQLi", "PortScan", "RepeatedIP"):
+        mid_dt = now_dt - timedelta(minutes=rng.randint(3, 8))
+        count = rng.randint(12, 87)
+        entries.append({
+            "event": "Failed Attempts",
+            "description": f"{count} failed attempts recorded against target",
+            "type": "attempt",
+            "at": mid_dt.isoformat(),
+        })
+    pre_dt = now_dt - timedelta(minutes=rng.randint(1, 3), seconds=rng.randint(0, 59))
+    entries.append({
+        "event": "Suspicious Behavior",
+        "description": f"Threat score escalated — pattern consistent with {attack_type}",
+        "type": "behavior",
+        "at": pre_dt.isoformat(),
+    })
+    entries.append({
+        "event": "Alert Triggered",
+        "description": "Security alert generated and queued for analyst review",
+        "type": "alert",
+        "at": now_dt.isoformat(),
+    })
+    return entries
+
+
 def _create_alert(source: str, type: str, severity: str, ip: str | None, message: str) -> dict:
     global _alert_counter
     _alert_counter += 1
-    now = datetime.now(timezone.utc).isoformat()
+    alert_id = f"ALT-{_alert_counter:04d}"
+    now_dt = datetime.now(timezone.utc)
+    now = now_dt.isoformat()
+
+    rng = _det_rng(f"{ip or 'none'}-{alert_id}")
+
+    if source == "behavioral":
+        detection_source = "behavioral_detection"
+    else:
+        detection_source = rng.choice([s for s in DETECTION_SOURCES if s != "behavioral_detection"])
+
+    confidence_score = rng.randint(55, 98)
+    affected_asset = rng.choice(ASSET_NAMES)
+
+    if ip and ip in GEO_DATA:
+        country = GEO_DATA[ip].get("country", "Unknown")
+        country_code = GEO_DATA[ip].get("country_code", "XX")
+    else:
+        country_code = rng.choice(list(COUNTRY_NAMES.keys()))
+        country = COUNTRY_NAMES[country_code]
+
+    mitre_tags = MITRE_MAP.get(type, ["T1071"])
+    mitre_technique = rng.choice(mitre_tags)
+
+    geo_risk = GEO_RISK_SCORES.get(country_code, 30)
+    recent_count = min(len(ip_store.get(ip, [])) if ip else 0, 33)
+    ip_rep = int(hashlib.sha256((ip or "0.0.0.0").encode()).digest()[0]) * 100 // 255
+    asset_crit = ASSET_CRITICALITY.get(affected_asset, 50)
+    risk_score = round(
+        geo_risk * 0.20
+        + recent_count * 3 * 0.20
+        + ip_rep * 0.25
+        + asset_crit * 0.15
+        + confidence_score * 0.20
+    )
+
     alert = {
-        "id": f"ALT-{_alert_counter:04d}",
+        "id": alert_id,
         "source": source,
+        "detection_source": detection_source,
         "type": type,
         "severity": severity,
         "ip": ip,
+        "country": country,
+        "country_code": country_code,
+        "affected_asset": affected_asset,
+        "mitre_technique": mitre_technique,
+        "confidence_score": confidence_score,
+        "risk_score": risk_score,
         "message": message,
         "status": "new",
         "created_at": now,
         "acknowledged_at": None,
+        "event_timeline": _build_alert_timeline(type, now_dt, rng),
     }
     alerts_store.appendleft(alert)
     return alert

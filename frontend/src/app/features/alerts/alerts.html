@@ -1,5 +1,46 @@
 <div class="alerts-page">
 
+  <!-- ── SOC Summary Metrics ──────────────────────────────────── -->
+  @if (summaryMetrics()) {
+    <div class="soc-metrics">
+      <div class="metric-chip">
+        <span class="metric-icon">⚡</span>
+        <div class="metric-body">
+          <span class="metric-value">{{ summaryMetrics()!.active_threats }}</span>
+          <span class="metric-label">Active Threats</span>
+        </div>
+      </div>
+      <div class="metric-chip metric-critical">
+        <span class="metric-icon">🔴</span>
+        <div class="metric-body">
+          <span class="metric-value">{{ summaryMetrics()!.critical_alerts }}</span>
+          <span class="metric-label">Critical Alerts</span>
+        </div>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-icon">⏱</span>
+        <div class="metric-body">
+          <span class="metric-value">{{ summaryMetrics()!.mttr_min }}m</span>
+          <span class="metric-label">Avg MTTR</span>
+        </div>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-icon">◆</span>
+        <div class="metric-body">
+          <span class="metric-value">{{ summaryMetrics()!.top_attack_type }}</span>
+          <span class="metric-label">Top Attack</span>
+        </div>
+      </div>
+      <div class="metric-chip">
+        <span class="metric-icon">🛡</span>
+        <div class="metric-body">
+          <span class="metric-value">{{ summaryMetrics()!.blocked_indicators }}</span>
+          <span class="metric-label">Blocked IPs</span>
+        </div>
+      </div>
+    </div>
+  }
+
   <div class="alerts-layout">
 
     <aside class="filter-panel">
@@ -30,10 +71,11 @@
         <span class="filter-label">SOURCE</span>
         <button class="filter-btn" [class.active]="sourceFilter() === 'all'"
                 (click)="sourceFilter.set('all')">All</button>
-        <button class="filter-btn" [class.active]="sourceFilter() === 'behavioral'"
-                (click)="sourceFilter.set('behavioral')">Behavioral</button>
-        <button class="filter-btn" [class.active]="sourceFilter() === 'rule'"
-                (click)="sourceFilter.set('rule')">Rule</button>
+        @for (src of detectionSources; track src) {
+          <button class="filter-btn"
+                  [class.active]="sourceFilter() === src"
+                  (click)="sourceFilter.set(src)">{{ detectionSourceLabel(src) }}</button>
+        }
       </div>
 
     </aside>
@@ -48,12 +90,17 @@
       <div class="alerts-list">
         @for (alert of filtered(); track alert.id) {
           <div class="alert-card status-{{ alert.status }}"
-               [style.--sev-color]="severityColor(alert.severity)">
+               [class.selected]="selectedAlert()?.id === alert.id"
+               [style.--sev-color]="severityColor(alert.severity)"
+               (click)="selectAlert(alert)">
             <div class="card-top">
               <span class="sev-dot"></span>
-              <span class="source-chip chip-{{ alert.source }}">{{ alert.source }}</span>
+              <span class="source-chip chip-{{ alert.detection_source }}">{{ detectionSourceLabel(alert.detection_source) }}</span>
               <span class="alert-type">{{ alert.type }}</span>
               @if (alert.ip) { <span class="alert-ip">{{ alert.ip }}</span> }
+              <span class="risk-score-badge" [style.background]="severityColor(alert.severity) + '22'" [style.color]="severityColor(alert.severity)">
+                {{ alert.risk_score }}
+              </span>
               <span class="alert-time">{{ timeAgo(alert.created_at) }}</span>
             </div>
             <div class="card-bottom">
@@ -63,14 +110,14 @@
                   <a class="case-indicator" [routerLink]="['/incidents']" [queryParams]="{ id: caseMap()[alert.id] }">↗ {{ caseMap()[alert.id] }}</a>
                 }
                 @if (alert.status === 'new') {
-                  <button class="act-btn act-ack"     (click)="acknowledge(alert.id)">Acknowledge</button>
+                  <button class="act-btn act-ack"     (click)="acknowledge(alert.id, $event)">Acknowledge</button>
                   @if (!caseMap()[alert.id]) {
-                    <button class="act-btn act-case"  (click)="createCase(alert.id)">Create Case</button>
+                    <button class="act-btn act-case"  (click)="createCase(alert.id, $event)">Create Case</button>
                   }
-                  <button class="act-btn act-dismiss" (click)="dismiss(alert.id)">Dismiss</button>
+                  <button class="act-btn act-dismiss" (click)="dismiss(alert.id, $event)">Dismiss</button>
                 } @else if (alert.status === 'acknowledged') {
                   <span class="ack-indicator">✓ Acknowledged</span>
-                  <button class="act-btn act-dismiss" (click)="dismiss(alert.id)">Dismiss</button>
+                  <button class="act-btn act-dismiss" (click)="dismiss(alert.id, $event)">Dismiss</button>
                 }
               </div>
             </div>
@@ -81,6 +128,17 @@
       </div>
 
     </div>
+
+    <!-- ── Alert Detail Drawer ──────────────────────────────── -->
+    @if (selectedAlert()) {
+      <div class="drawer-panel">
+        <app-alert-detail-drawer
+          [alert]="selectedAlert()"
+          (closed)="closeDrawer()"
+          (caseCreated)="onCaseCreated(selectedAlert()!.id, $event)">
+        </app-alert-detail-drawer>
+      </div>
+    }
 
   </div>
 

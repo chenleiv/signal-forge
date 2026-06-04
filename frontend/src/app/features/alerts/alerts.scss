@@ -2,13 +2,70 @@ $border: var(--c-border);
 $text:   var(--c-text);
 $muted:  var(--c-text-2);
 
-:host { display: block; height: 100%; overflow: hidden; }
+:host { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
 
-.alerts-page { height: 100%; overflow: hidden; }
+.alerts-page { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+// ── SOC Metrics Bar ───────────────────────────────────────────
+
+.soc-metrics {
+  display: flex;
+  gap: 12px;
+  padding: 10px 24px;
+  border-bottom: 1px solid $border;
+  flex-shrink: 0;
+  background: var(--c-panel);
+}
+
+.metric-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--c-input, #111827);
+  border: 1px solid $border;
+  border-radius: 6px;
+  flex: 1;
+  min-width: 0;
+
+  &.metric-critical { border-color: rgba(239,68,68,.3); }
+}
+
+.metric-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.metric-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.metric-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: $text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.metric-label {
+  font-size: 10px;
+  color: $muted;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+// ── Layout ────────────────────────────────────────────────────
 
 .alerts-layout {
   display: flex;
-  height: 100%;
+  flex: 1;
+  overflow: hidden;
 }
 
 // ── Filter panel ──────────────────────────────────────────────
@@ -134,7 +191,11 @@ $muted:  var(--c-text-2);
   gap: 8px;
   background: var(--c-panel);
   animation: slideIn 0.2s ease-out;
+  cursor: pointer;
+  transition: background 0.12s;
 
+  &:hover { background: var(--c-input, #111827); }
+  &.selected { background: var(--c-input, #111827); border-color: var(--sev-color, #60a5fa); }
   &.status-acknowledged { opacity: 0.65; }
 }
 
@@ -166,8 +227,11 @@ $muted:  var(--c-text-2);
   border-radius: 3px;
   letter-spacing: 0.04em;
 
-  &.chip-behavioral { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
-  &.chip-rule       { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+  &.chip-sigma_rule           { background: rgba(139,92,246,.15); color: #8b5cf6; }
+  &.chip-behavioral_detection { background: rgba(245,158,11,.15); color: #f59e0b; }
+  &.chip-threat_intelligence  { background: rgba(239,68,68,.15);  color: #ef4444; }
+  &.chip-correlation_engine   { background: rgba(59,130,246,.15); color: #3b82f6; }
+  &.chip-yara_detection       { background: rgba(16,185,129,.15); color: #10b981; }
 }
 
 .alert-type {
@@ -180,6 +244,13 @@ $muted:  var(--c-text-2);
   font-size: 11px;
   font-family: monospace;
   color: $muted;
+}
+
+.risk-score-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 3px;
 }
 
 .alert-time {
@@ -232,4 +303,14 @@ $muted:  var(--c-text-2);
   color: $muted;
   padding: 80px 40px;
   font-size: 13px;
+}
+
+// ── Drawer panel ──────────────────────────────────────────────
+
+.drawer-panel {
+  width: 420px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: $border transparent;
 }

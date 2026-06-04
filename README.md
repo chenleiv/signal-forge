@@ -135,3 +135,59 @@ FastAPI (port 8000)
 ```
 
 The frontend uses a central `ThreatStoreService` (Angular signals) as the single source of truth for all HTTP calls and cached state. WebSocket events are pushed into the store, and all components react to signal changes without direct component-to-component communication.
+
+---
+
+## AI-Assisted Engineering
+
+.claude/
+
+agents/
+├── frontend-architect
+├── backend-architect
+├── security-auditor
+└── quality-gatekeeper
+
+commands/
+├── feature
+├── debug
+└── ship
+
+## Workflow
+
+The workflow introduces specialized engineering agents responsible for architecture, security and quality validation.
+
+### Engineering Agents
+
+- Frontend Architect  
+  Reviews Angular architecture, Signals usage, RxJS patterns and performance considerations.
+
+- Backend Architect  
+  Reviews FastAPI structure, API boundaries, validation and service design.
+
+- Security Auditor  
+  Performs application security reviews including authentication, authorization, JWT handling, XSS risks and secret exposure.
+
+- Quality Gatekeeper  
+  Validates production readiness through type checking, linting, testing and build verification.
+
+
+### Development Flow
+
+Features follow a structured lifecycle:
+
+Plan
+→ Implement
+→ Architecture Review
+→ Security Review
+→ Quality Validation
+
+
+Before release, changes pass through:
+
+- Architecture validation
+- Security review
+- TypeScript checks
+- ESLint
+- Automated tests
+- Production build verification

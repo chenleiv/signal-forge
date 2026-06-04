@@ -15,6 +15,7 @@ import {
   HuntResult,
   DetectionRule,
   ThreatAlert,
+  AlertSummaryMetrics,
 } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
 
@@ -156,6 +157,10 @@ export class ThreatStoreService {
 
   fetchAlerts() {
     return this.http.get<ThreatAlert[]>('/api/alerts');
+  }
+
+  fetchAlertSummary() {
+    return this.http.get<AlertSummaryMetrics>('/api/alerts/summary');
   }
 
   acknowledgeAlert(id: string) {

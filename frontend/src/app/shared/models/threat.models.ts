@@ -168,15 +168,46 @@ export interface OtxData {
 
 export type AlertStatus = 'new' | 'acknowledged' | 'dismissed';
 export type AlertSource = 'behavioral' | 'rule';
+export type DetectionSource =
+  | 'sigma_rule'
+  | 'behavioral_detection'
+  | 'threat_intelligence'
+  | 'correlation_engine'
+  | 'yara_detection';
+
+export type AlertTimelineEntryType = 'detection' | 'attempt' | 'behavior' | 'alert' | 'response';
+
+export interface AlertTimelineEntry {
+  event: string;
+  description: string;
+  type: AlertTimelineEntryType;
+  at: string;
+}
+
+export interface AlertSummaryMetrics {
+  active_threats: number;
+  critical_alerts: number;
+  mttr_min: number;
+  top_attack_type: string;
+  blocked_indicators: number;
+}
 
 export interface ThreatAlert {
   id: string;
   source: AlertSource;
+  detection_source: DetectionSource;
   type: string;
   severity: ThreatLevel;
   ip: string | null;
+  country: string;
+  country_code: string;
+  affected_asset: string;
+  mitre_technique: string;
+  confidence_score: number;
+  risk_score: number;
   message: string;
   status: AlertStatus;
   created_at: string;
   acknowledged_at: string | null;
+  event_timeline: AlertTimelineEntry[];
 }
