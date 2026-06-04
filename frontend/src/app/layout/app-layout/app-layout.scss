@@ -1,14 +1,14 @@
 // ── Palo Alto / XSIAM Palette ────────────────────────────────
-$bg:       var(--c-bg);
-$sb-bg:    var(--c-panel);
+$bg: var(--c-bg);
+$sb-bg: var(--c-panel);
 $panel-bg: var(--c-panel);
-$border:   var(--c-border);
+$border: var(--c-border);
 
-$accent:    var(--c-accent);
-$text:      var(--c-text);
+$accent: var(--c-accent);
+$text: var(--c-text);
 $secondary: var(--c-text-2);
-$muted:     var(--c-muted);
-$green:     #16a34a;
+$muted: var(--c-muted);
+$green: #16a34a;
 
 // ── Root ─────────────────────────────────────────────────────
 :host {
@@ -352,18 +352,4 @@ $green:     #16a34a;
   font-weight: 700;
   color: $secondary;
   letter-spacing: 0.5px;
-}
-
-// ── Nav badge ─────────────────────────────────────────────────
-.nav-badge {
-  margin-left: auto;
-  background: #ef4444;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 8px;
-  min-width: 16px;
-  text-align: center;
-  line-height: 14px;
 }
