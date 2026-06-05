@@ -23,10 +23,6 @@ Load:
 - .claude/skills/angular19/SKILL.md
 
 
-Use detailed memory only when required:
-
-.claude/memory/archive/
-
 ---
 
 # Scope

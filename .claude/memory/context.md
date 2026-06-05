@@ -154,3 +154,24 @@ Avoid:
 
 - unrelated refactors
 - over engineering
+
+---
+
+## Engineering Priority
+
+1. Security
+2. Correctness
+3. Maintainability
+4. Performance
+
+---
+
+## TypeScript Rules
+
+Prefer union types over string:
+
+type AlertSeverity = 'low' | 'medium' | 'high' | 'critical'
+
+Avoid: `any`, type assertions without reason, duplicated types.
+
+Use strict typing. Handle nullable values safely.

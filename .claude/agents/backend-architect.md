@@ -23,10 +23,6 @@ Load:
 - .claude/skills/fastapi/SKILL.md
 
 
-Use detailed memory only when needed:
-
-.claude/memory/archive/
-
 ---
 
 # Scope

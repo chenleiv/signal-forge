@@ -23,8 +23,6 @@ Load:
 - .claude/skills/security/SKILL.md
 
 
-Use archive memory only for complex decisions.
-
 ---
 
 # Scope

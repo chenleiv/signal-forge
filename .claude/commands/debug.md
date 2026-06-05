@@ -33,8 +33,13 @@ Inspect:
 
 - errors
 - logs
-- recent changes
 - affected modules
+
+Run:
+
+git log --oneline -10
+
+Identify recent changes that may have introduced the issue.
 
 ---
 

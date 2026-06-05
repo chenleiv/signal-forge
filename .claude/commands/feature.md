@@ -104,6 +104,19 @@ Rules:
 
 ---
 
+# After Implementation
+
+Run validation for changed areas.
+
+Frontend changes:
+
+Run:
+npm run build
+
+Fix build errors before marking COMPLETE.
+
+Never return COMPLETE with failing build.
+
 # Finish
 
 Recommend:

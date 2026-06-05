@@ -1,5 +1,18 @@
 {
-  "hooks": {},
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /Users/chenleiv/signal-forge/.claude/hooks/build-check.sh",
+            "timeout": 120,
+            "statusMessage": "Validating frontend build..."
+          }
+        ]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "Bash(git status*)",
@@ -16,7 +29,12 @@
       "Bash(python -m pytest*)",
       "Bash(alembic history*)",
       "Bash(alembic current*)",
-      "Bash(alembic heads*)"
+      "Bash(alembic heads*)",
+      "Bash(find frontend*)",
+      "Bash(find backend*)",
+      "Bash(ls *)",
+      "Bash(git show*)",
+      "Bash(git blame*)"
     ]
   }
 }
