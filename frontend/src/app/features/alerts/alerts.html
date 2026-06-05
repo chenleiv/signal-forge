@@ -131,7 +131,8 @@
 
     <!-- ── Alert Detail Drawer ──────────────────────────────── -->
     @if (selectedAlert()) {
-      <div class="drawer-panel">
+      <div class="drawer-panel" [style.width.px]="drawerWidth()">
+        <div class="resize-handle" (mousedown)="startResize($event)"></div>
         <app-alert-detail-drawer
           [alert]="selectedAlert()"
           (closed)="closeDrawer()"

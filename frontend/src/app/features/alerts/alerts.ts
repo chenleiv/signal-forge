@@ -6,6 +6,7 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   OnInit,
+  NgZone,
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -43,10 +44,15 @@ const DETECTION_SOURCES: DetectionSource[] = [
   styleUrl: './alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
+const DRAWER_MIN = 280;
+const DRAWER_MAX = 700;
+
 export class Alerts implements OnInit {
   private store      = inject(ThreatStoreService);
   private destroyRef = inject(DestroyRef);
+  private zone       = inject(NgZone);
 
+  readonly drawerWidth  = signal(420);
   readonly statusFilter = signal<AlertStatus | 'all'>('all');
   readonly sevFilter    = signal<SevFilter>('all');
   readonly sourceFilter = signal<DetectionSource | 'all'>('all');
@@ -137,5 +143,29 @@ export class Alerts implements OnInit {
       .subscribe(incident => {
         this.caseMap.update(m => ({ ...m, [id]: incident.id }));
       });
+  }
+
+  startResize(event: MouseEvent) {
+    event.preventDefault();
+    const startX     = event.clientX;
+    const startWidth = this.drawerWidth();
+
+    const onMove = (e: MouseEvent) => {
+      const delta = startX - e.clientX;
+      const next  = Math.min(DRAWER_MAX, Math.max(DRAWER_MIN, startWidth + delta));
+      this.drawerWidth.set(next);
+    };
+
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    this.zone.runOutsideAngular(() => {
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    this.destroyRef.onDestroy(onUp);
   }
 }
