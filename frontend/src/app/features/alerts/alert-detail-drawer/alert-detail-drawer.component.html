@@ -81,7 +81,7 @@
         <svg viewBox="0 0 80 80">
           <circle cx="40" cy="40" r="32" stroke="#1f2937" stroke-width="8" fill="none"/>
           <circle cx="40" cy="40" r="32" stroke="var(--risk-color)" stroke-width="8" fill="none"
-                  stroke-dasharray="{{ (alert()!.risk_score / 100) * 201 }} 201"
+                  [attr.stroke-dasharray]="(alert()!.risk_score / 100) * 201 + ' 201'"
                   stroke-dashoffset="50"
                   stroke-linecap="round"
                   transform="rotate(-90 40 40)"/>
