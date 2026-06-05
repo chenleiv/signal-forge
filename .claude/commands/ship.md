@@ -147,6 +147,12 @@ PASS / ISSUES / SKIPPED
 Quality:
 PASS / FAIL
 
+Commands Run:
+-
+
+Validation Result:
+-
+
 
 AGENTS RUN:
 -
