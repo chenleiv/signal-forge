@@ -101,17 +101,32 @@ $panel:  var(--c-panel);
   &.case:not(:disabled):hover { color: #3b82f6; border-color: #3b82f6; }
 }
 
+// ── Scrollable body ───────────────────────────────────────────
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: $border transparent;
+}
+
 // ── Sections ──────────────────────────────────────────────────
 
 .drawer-section {
   padding: 14px 18px;
   border-bottom: 1px solid $border;
-  flex-shrink: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: $border transparent;
 
-  &:last-child { border-bottom: none; flex: 1; }
+  &:last-child { border-bottom: none; }
+}
+
+// ── Description ───────────────────────────────────────────────
+
+.alert-message {
+  font-size: 12px;
+  color: $muted;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .section-title {
@@ -373,35 +388,3 @@ $panel:  var(--c-panel);
   font-family: monospace;
 }
 
-// ── Threat Intelligence grid ──────────────────────────────────
-
-.intel-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.intel-card {
-  background: var(--c-input, #111827);
-  border: 1px solid $border;
-  border-radius: 5px;
-  padding: 8px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.intel-label {
-  font-size: 10px;
-  color: $muted;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.intel-val {
-  font-size: 12px;
-  color: $text;
-  font-weight: 500;
-  word-break: break-all;
-  &.mono { font-family: monospace; }
-}

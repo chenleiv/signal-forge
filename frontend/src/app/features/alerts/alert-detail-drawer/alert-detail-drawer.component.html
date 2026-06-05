@@ -32,146 +32,125 @@
     </button>
   </div>
 
-  <!-- ── Summary ────────────────────────────────────────────── -->
-  <section class="drawer-section">
-    <div class="section-title">Summary</div>
-    <div class="info-grid">
-      <span class="info-key">Alert ID</span>
-      <span class="info-val mono">{{ alert()!.id }}</span>
+  <div class="drawer-body">
 
-      <span class="info-key">Severity</span>
-      <span class="info-val">
-        <span class="sev-badge sev-{{ alert()!.severity }}">{{ alert()!.severity }}</span>
-      </span>
+    <!-- ── Summary ────────────────────────────────────────────── -->
+    <section class="drawer-section">
+      <div class="section-title">Summary</div>
+      <div class="info-grid">
+        <span class="info-key">Alert ID</span>
+        <span class="info-val mono">{{ alert()!.id }}</span>
 
-      <span class="info-key">Detection Source</span>
-      <span class="info-val">
-        <span class="source-chip src-{{ alert()!.detection_source }}">{{ detectionLabel(alert()!.detection_source) }}</span>
-      </span>
-
-      <span class="info-key">Confidence</span>
-      <span class="info-val">
-        <span class="confidence-bar">
-          <span class="confidence-fill" [style.width.%]="alert()!.confidence_score"></span>
+        <span class="info-key">Severity</span>
+        <span class="info-val">
+          <span class="sev-badge sev-{{ alert()!.severity }}">{{ alert()!.severity }}</span>
         </span>
-        {{ alert()!.confidence_score }}%
-      </span>
 
-      @if (alert()!.ip) {
-        <span class="info-key">Source IP</span>
-        <span class="info-val mono">{{ alert()!.ip }}</span>
-      }
+        <span class="info-key">Detection Source</span>
+        <span class="info-val">
+          <span class="source-chip src-{{ alert()!.detection_source }}">{{ detectionLabel(alert()!.detection_source) }}</span>
+        </span>
 
-      <span class="info-key">Country</span>
-      <span class="info-val">{{ alert()!.country }}</span>
+        <span class="info-key">Confidence</span>
+        <span class="info-val">
+          <span class="confidence-bar">
+            <span class="confidence-fill" [style.width.%]="alert()!.confidence_score"></span>
+          </span>
+          {{ alert()!.confidence_score }}%
+        </span>
 
-      <span class="info-key">Affected Asset</span>
-      <span class="info-val">{{ alert()!.affected_asset }}</span>
+        @if (alert()!.ip) {
+          <span class="info-key">Source IP</span>
+          <span class="info-val mono">{{ alert()!.ip }}</span>
+        }
 
-      <span class="info-key">Detected</span>
-      <span class="info-val">{{ alert()!.created_at | date:'MMM d, HH:mm:ss' }}</span>
-    </div>
-  </section>
+        <span class="info-key">Country</span>
+        <span class="info-val">{{ alert()!.country }} ({{ alert()!.country_code }})</span>
 
-  <!-- ── Risk Score ─────────────────────────────────────────── -->
-  <section class="drawer-section">
-    <div class="section-title">Risk Score</div>
-    <div class="risk-row">
-      <div class="risk-gauge" [style.--risk-color]="riskColor(alert()!.risk_score)">
-        <svg viewBox="0 0 80 80">
-          <circle cx="40" cy="40" r="32" stroke="#1f2937" stroke-width="8" fill="none"/>
-          <circle cx="40" cy="40" r="32" stroke="var(--risk-color)" stroke-width="8" fill="none"
-                  [attr.stroke-dasharray]="(alert()!.risk_score / 100) * 201 + ' 201'"
-                  stroke-dashoffset="50"
-                  stroke-linecap="round"
-                  transform="rotate(-90 40 40)"/>
-        </svg>
-        <div class="risk-score-label">
-          <span class="risk-num">{{ alert()!.risk_score }}</span>
-          <span class="risk-sub">/ 100</span>
-        </div>
+        <span class="info-key">Affected Asset</span>
+        <span class="info-val">{{ alert()!.affected_asset }}</span>
+
+        <span class="info-key">Detected</span>
+        <span class="info-val">{{ alert()!.created_at | date:'MMM d, HH:mm:ss' }}</span>
       </div>
-      <div class="risk-meta">
-        <span class="risk-level" [style.color]="riskColor(alert()!.risk_score)">{{ riskLabel(alert()!.risk_score) }} Risk</span>
-        <div class="risk-factors">
-          <div class="factor-row">
-            <span class="factor-name">Geo Risk</span>
-            <span class="factor-bar"><span class="factor-fill" style="width:{{ (alert()!.risk_score * 0.2) }}px"></span></span>
-          </div>
-          <div class="factor-row">
-            <span class="factor-name">IP Reputation</span>
-            <span class="factor-bar"><span class="factor-fill" style="width:{{ (alert()!.risk_score * 0.25) }}px"></span></span>
-          </div>
-          <div class="factor-row">
-            <span class="factor-name">Asset Criticality</span>
-            <span class="factor-bar"><span class="factor-fill" style="width:{{ (alert()!.risk_score * 0.15) }}px"></span></span>
-          </div>
-          <div class="factor-row">
-            <span class="factor-name">Detection Confidence</span>
-            <span class="factor-bar"><span class="factor-fill" style="width:{{ (alert()!.risk_score * 0.20) }}px"></span></span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <!-- ── MITRE ATT&CK ───────────────────────────────────────── -->
-  <section class="drawer-section">
-    <div class="section-title">MITRE ATT&amp;CK</div>
-    <div class="mitre-row">
-      <span class="mitre-chip">{{ alert()!.mitre_technique }}</span>
-      <span class="mitre-type">{{ alert()!.type }}</span>
-    </div>
-  </section>
+    <!-- ── Description ────────────────────────────────────────── -->
+    @if (alert()!.message) {
+      <section class="drawer-section">
+        <div class="section-title">Description</div>
+        <p class="alert-message">{{ alert()!.message }}</p>
+      </section>
+    }
 
-  <!-- ── Attack Timeline ────────────────────────────────────── -->
-  <section class="drawer-section">
-    <div class="section-title">Attack Timeline</div>
-    <div class="timeline">
-      @for (entry of alert()!.event_timeline; track entry.at) {
-        <div class="tl-entry tl-{{ entry.type }}">
-          <div class="tl-icon">{{ timelineIcon(entry.type) }}</div>
-          <div class="tl-body">
-            <div class="tl-event">{{ entry.event }}</div>
-            <div class="tl-desc">{{ entry.description }}</div>
-            <div class="tl-time">{{ entry.at | date:'HH:mm:ss' }}</div>
+    <!-- ── Risk Score ─────────────────────────────────────────── -->
+    <section class="drawer-section">
+      <div class="section-title">Risk Score</div>
+      <div class="risk-row">
+        <div class="risk-gauge" [style.--risk-color]="riskColor(alert()!.risk_score)">
+          <svg viewBox="0 0 80 80">
+            <circle cx="40" cy="40" r="32" stroke="#1f2937" stroke-width="8" fill="none"/>
+            <circle cx="40" cy="40" r="32" stroke="var(--risk-color)" stroke-width="8" fill="none"
+                    [attr.stroke-dasharray]="(alert()!.risk_score / 100) * 201 + ' 201'"
+                    stroke-dashoffset="50"
+                    stroke-linecap="round"
+                    transform="rotate(-90 40 40)"/>
+          </svg>
+          <div class="risk-score-label">
+            <span class="risk-num">{{ alert()!.risk_score }}</span>
+            <span class="risk-sub">/ 100</span>
           </div>
         </div>
-      }
-    </div>
-  </section>
-
-  <!-- ── Threat Intelligence ────────────────────────────────── -->
-  <section class="drawer-section">
-    <div class="section-title">Threat Intelligence</div>
-    <div class="intel-grid">
-      @if (alert()!.ip) {
-        <div class="intel-card">
-          <span class="intel-label">Indicator</span>
-          <span class="intel-val mono">{{ alert()!.ip }}</span>
+        <div class="risk-meta">
+          <span class="risk-level" [style.color]="riskColor(alert()!.risk_score)">{{ riskLabel(alert()!.risk_score) }} Risk</span>
+          <div class="risk-factors">
+            <div class="factor-row">
+              <span class="factor-name">Geo Risk</span>
+              <span class="factor-bar"><span class="factor-fill" [style.width.px]="alert()!.risk_score * 0.2"></span></span>
+            </div>
+            <div class="factor-row">
+              <span class="factor-name">IP Reputation</span>
+              <span class="factor-bar"><span class="factor-fill" [style.width.px]="alert()!.risk_score * 0.25"></span></span>
+            </div>
+            <div class="factor-row">
+              <span class="factor-name">Asset Criticality</span>
+              <span class="factor-bar"><span class="factor-fill" [style.width.px]="alert()!.risk_score * 0.15"></span></span>
+            </div>
+            <div class="factor-row">
+              <span class="factor-name">Detection Confidence</span>
+              <span class="factor-bar"><span class="factor-fill" [style.width.px]="alert()!.risk_score * 0.20"></span></span>
+            </div>
+          </div>
         </div>
-      }
-      <div class="intel-card">
-        <span class="intel-label">Location</span>
-        <span class="intel-val">{{ alert()!.country }} ({{ alert()!.country_code }})</span>
       </div>
-      <div class="intel-card">
-        <span class="intel-label">Threat Category</span>
-        <span class="intel-val">{{ alert()!.type }}</span>
+    </section>
+
+    <!-- ── MITRE ATT&CK ───────────────────────────────────────── -->
+    <section class="drawer-section">
+      <div class="section-title">MITRE ATT&amp;CK</div>
+      <div class="mitre-row">
+        <span class="mitre-chip">{{ alert()!.mitre_technique }}</span>
+        <span class="mitre-type">{{ alert()!.type }}</span>
       </div>
-      <div class="intel-card">
-        <span class="intel-label">Detection Engine</span>
-        <span class="intel-val">{{ detectionLabel(alert()!.detection_source) }}</span>
+    </section>
+
+    <!-- ── Attack Timeline ────────────────────────────────────── -->
+    <section class="drawer-section">
+      <div class="section-title">Attack Timeline</div>
+      <div class="timeline">
+        @for (entry of alert()!.event_timeline; track entry.at) {
+          <div class="tl-entry tl-{{ entry.type }}">
+            <div class="tl-icon">{{ timelineIcon(entry.type) }}</div>
+            <div class="tl-body">
+              <div class="tl-event">{{ entry.event }}</div>
+              <div class="tl-desc">{{ entry.description }}</div>
+              <div class="tl-time">{{ entry.at | date:'HH:mm:ss' }}</div>
+            </div>
+          </div>
+        }
       </div>
-      <div class="intel-card">
-        <span class="intel-label">Confidence Score</span>
-        <span class="intel-val">{{ alert()!.confidence_score }}%</span>
-      </div>
-      <div class="intel-card">
-        <span class="intel-label">Last Seen</span>
-        <span class="intel-val">{{ alert()!.created_at | date:'MMM d, HH:mm' }}</span>
-      </div>
-    </div>
-  </section>
+    </section>
+
+  </div><!-- /.drawer-body -->
 
 }
