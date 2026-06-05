@@ -91,6 +91,7 @@ export class ThreatDetailDrawerComponent {
       this.existingCaseId.set(null);
       this.eventFilter.set('');
       this.typeFilter.set('all');
+      this.isBlocked.set(false);
 
       this.store.fetchIpHistory(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))

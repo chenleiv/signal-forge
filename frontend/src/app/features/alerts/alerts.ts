@@ -6,7 +6,6 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
   OnInit,
-  NgZone,
 } from '@angular/core';
 import { TitleCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -36,6 +35,9 @@ const DETECTION_SOURCES: DetectionSource[] = [
   'correlation_engine', 'yara_detection',
 ];
 
+const DRAWER_MIN = 320;
+const DRAWER_MAX = 700;
+
 @Component({
   selector: 'app-alerts',
   standalone: true,
@@ -43,16 +45,20 @@ const DETECTION_SOURCES: DetectionSource[] = [
   templateUrl: './alerts.html',
   styleUrl: './alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(document:mousemove)': 'onMouseMove($event)',
+    '(document:mouseup)': 'onMouseUp()',
+  },
 })
-const DRAWER_MIN = 280;
-const DRAWER_MAX = 700;
-
 export class Alerts implements OnInit {
   private store      = inject(ThreatStoreService);
   private destroyRef = inject(DestroyRef);
-  private zone       = inject(NgZone);
 
-  readonly drawerWidth  = signal(420);
+  drawerWidth   = signal(420);
+  private dragging      = false;
+  private dragStartX    = 0;
+  private dragStartWidth = 0;
+
   readonly statusFilter = signal<AlertStatus | 'all'>('all');
   readonly sevFilter    = signal<SevFilter>('all');
   readonly sourceFilter = signal<DetectionSource | 'all'>('all');
@@ -145,27 +151,21 @@ export class Alerts implements OnInit {
       });
   }
 
-  startResize(event: MouseEvent) {
-    event.preventDefault();
-    const startX     = event.clientX;
-    const startWidth = this.drawerWidth();
+  startResize(e: MouseEvent) {
+    this.dragging      = true;
+    this.dragStartX    = e.clientX;
+    this.dragStartWidth = this.drawerWidth();
+    e.preventDefault();
+    e.stopPropagation();
+  }
 
-    const onMove = (e: MouseEvent) => {
-      const delta = startX - e.clientX;
-      const next  = Math.min(DRAWER_MAX, Math.max(DRAWER_MIN, startWidth + delta));
-      this.drawerWidth.set(next);
-    };
+  onMouseMove(e: MouseEvent) {
+    if (!this.dragging) return;
+    const delta = this.dragStartX - e.clientX;
+    this.drawerWidth.set(Math.min(DRAWER_MAX, Math.max(DRAWER_MIN, this.dragStartWidth + delta)));
+  }
 
-    const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-
-    this.zone.runOutsideAngular(() => {
-      document.addEventListener('mousemove', onMove);
-      document.addEventListener('mouseup', onUp);
-    });
-
-    this.destroyRef.onDestroy(onUp);
+  onMouseUp() {
+    this.dragging = false;
   }
 }
