@@ -19,6 +19,7 @@ Senior engineer reviewing realtime event systems.
 Load:
 
 - .claude/memory/context.md
+- .claude/skills/websocket/SKILL.md
 
 ---
 

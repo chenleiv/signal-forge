@@ -4,6 +4,20 @@ Compact project context loaded by all agents.
 
 ---
 
+## Paths
+
+```
+frontend/src/app/         Angular features
+backend/                  FastAPI backend
+backend/routers/          API routes
+backend/services/         Business logic
+backend/models/           DB models / schemas
+.claude/memory/           Project context
+.claude/skills/           Review skills
+```
+
+---
+
 ## Product
 
 SignalForge is a SOC threat monitoring platform.
