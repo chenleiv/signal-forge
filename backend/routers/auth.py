@@ -12,11 +12,11 @@ router = APIRouter()
 _COOKIE = "sf_session"
 _MAX_AGE = 8 * 3600  # 8 hours
 
-# Same-origin deployment: SameSite=Lax is enough.
-# Secure only when not local HTTP dev (set ENV=development in .env).
+# Secure=True + SameSite=None in production (cross-origin between static site and API).
+# Set ENV=development in .env for local HTTP dev (insecure + lax).
 _DEV = os.environ.get("ENV") == "development"
 _COOKIE_SECURE   = not _DEV
-_COOKIE_SAMESITE = "lax"
+_COOKIE_SAMESITE = "lax" if _DEV else "none"
 
 
 def _decode_session(request: Request) -> None:
@@ -69,7 +69,7 @@ async def me(request: Request):
 async def ws_ticket(request: Request):
     _decode_session(request)
     ticket = jwt.encode(
-        {"sub": "analyst", "ws": True, "exp": datetime.now(timezone.utc) + timedelta(seconds=30)},
+        {"sub": "analyst", "ws": True, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
         SECRET_KEY,
         algorithm="HS256",
     )
