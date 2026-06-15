@@ -13,8 +13,20 @@ export class ThreatsService {
   private settingsService = inject(SettingsService);
 
   private destroyed = false;
+  private slowTimer: ReturnType<typeof setTimeout> | null = null;
 
-  readonly status = signal<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  readonly status         = signal<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  readonly slowConnection = signal(false);
+
+  private startSlowTimer() {
+    if (this.slowTimer) return;
+    this.slowTimer = setTimeout(() => this.slowConnection.set(true), 5000);
+  }
+
+  private clearSlowTimer() {
+    if (this.slowTimer) { clearTimeout(this.slowTimer); this.slowTimer = null; }
+    this.slowConnection.set(false);
+  }
 
   connect() {
     this.statsSub?.unsubscribe();
@@ -22,11 +34,13 @@ export class ThreatsService {
     this.socket?.close();
     this.destroyed = false;
     this.status.set('reconnecting');
+    this.startSlowTimer();
     const token = localStorage.getItem('sf_token') ?? '';
     const wsUrl = `${this.settingsService.settings().wsUrl}?token=${token}`;
     this.socket = new WebSocket(wsUrl);
 
     this.socket.onopen = () => {
+      this.clearSlowTimer();
       this.status.set('connected');
     };
 

@@ -119,6 +119,12 @@
           <span class="chip-dot" [class.dot-reconnecting]="ws.status() === 'reconnecting'"></span>
           {{ ws.status() === 'connected' ? 'LIVE FEED' : 'RECONNECTING...' }}
         </div>
+        @if (ws.slowConnection()) {
+          <div class="topbar-wakeup">
+            <span class="wakeup-dot"></span>
+            Server is waking up, please wait…
+          </div>
+        }
         <span class="topbar-time">{{ time() }}</span>
       </div>
     </header>

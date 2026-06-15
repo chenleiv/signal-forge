@@ -328,6 +328,29 @@ $green: #16a34a;
   }
 }
 
+.topbar-wakeup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: rgba(255, 204, 0, 0.7);
+  letter-spacing: 0.04em;
+  animation: fadeInDown 0.4s ease;
+}
+
+.wakeup-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffcc00;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 // Console toggle button
 .console-toggle-btn {
   display: flex;
