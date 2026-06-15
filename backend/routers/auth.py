@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -11,6 +12,9 @@ router = APIRouter()
 _COOKIE = "sf_session"
 _MAX_AGE = 8 * 3600  # 8 hours
 
+# Render.com sets RENDER=true automatically; dev uses HTTP so no Secure flag needed
+_PRODUCTION = os.environ.get("RENDER") == "true"
+
 
 def _decode_session(request: Request) -> None:
     token = request.cookies.get(_COOKIE)
@@ -22,39 +26,36 @@ def _decode_session(request: Request) -> None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
-def _is_secure(request: Request) -> bool:
-    return request.headers.get("x-forwarded-proto") == "https" or request.url.scheme == "https"
-
-
-def _set_session_cookie(response: Response, request: Request) -> None:
+def _set_session_cookie(response: Response) -> None:
     token = jwt.encode(
         {"sub": "analyst", "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
         SECRET_KEY,
         algorithm="HS256",
     )
-    secure = _is_secure(request)
     response.set_cookie(
         key=_COOKIE,
         value=token,
         httponly=True,
-        secure=secure,
-        samesite="none" if secure else "lax",
+        secure=_PRODUCTION,
+        samesite="none" if _PRODUCTION else "lax",
         max_age=_MAX_AGE,
     )
 
 
 @router.post("/auth/login")
-async def login(body: dict, request: Request, response: Response):
+async def login(body: dict, response: Response):
     if body.get("username") == "analyst" and body.get("password") == "signalforge":
-        _set_session_cookie(response, request)
+        _set_session_cookie(response)
         return {"ok": True}
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
 @router.post("/auth/logout")
-async def logout(request: Request, response: Response):
-    secure = _is_secure(request)
-    response.delete_cookie(key=_COOKIE, httponly=True, secure=secure, samesite="none" if secure else "lax")
+async def logout(response: Response):
+    response.delete_cookie(
+        key=_COOKIE, httponly=True,
+        secure=_PRODUCTION, samesite="none" if _PRODUCTION else "lax",
+    )
     return {"ok": True}
 
 
