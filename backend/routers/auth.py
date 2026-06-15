@@ -22,13 +22,17 @@ def _decode_session(request: Request) -> None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
+def _is_secure(request: Request) -> bool:
+    return request.headers.get("x-forwarded-proto") == "https" or request.url.scheme == "https"
+
+
 def _set_session_cookie(response: Response, request: Request) -> None:
     token = jwt.encode(
         {"sub": "analyst", "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
         SECRET_KEY,
         algorithm="HS256",
     )
-    secure = request.url.scheme == "https"
+    secure = _is_secure(request)
     response.set_cookie(
         key=_COOKIE,
         value=token,
@@ -48,8 +52,9 @@ async def login(body: dict, request: Request, response: Response):
 
 
 @router.post("/auth/logout")
-async def logout(response: Response):
-    response.delete_cookie(key=_COOKIE, httponly=True, samesite="lax")
+async def logout(request: Request, response: Response):
+    secure = _is_secure(request)
+    response.delete_cookie(key=_COOKIE, httponly=True, secure=secure, samesite="none" if secure else "lax")
     return {"ok": True}
 
 
