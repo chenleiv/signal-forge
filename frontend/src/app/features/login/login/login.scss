@@ -232,3 +232,31 @@ $accent:    var(--c-accent);
     color: $muted;
     letter-spacing: 0.03em;
 }
+
+.slow-connection {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11px;
+    color: $muted;
+    justify-content: center;
+    animation: fadeIn 0.4s ease;
+}
+
+.slow-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--c-accent);
+    animation: pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.3; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}

@@ -69,6 +69,13 @@
         }
       </button>
 
+      @if (slowConnection()) {
+        <div class="slow-connection">
+          <span class="slow-dot"></span>
+          Server is waking up, please wait…
+        </div>
+      }
+
     </form>
 
     <button class="demo-btn" type="button" (click)="demoLogin()">
