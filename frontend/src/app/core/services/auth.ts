@@ -40,4 +40,11 @@ export class AuthService {
       map(r => r.ticket),
     );
   }
+
+  ping(): Observable<void> {
+    return this.http.get('/health').pipe(
+      map(() => void 0),
+      catchError(() => of(void 0)),
+    );
+  }
 }
