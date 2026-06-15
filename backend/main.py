@@ -1,6 +1,7 @@
 from __future__ import annotations
 from dotenv import load_dotenv
 load_dotenv()
+import pathlib
 import asyncio
 import json
 import pathlib
@@ -238,3 +239,10 @@ async def get_stats(request: Request, _=Depends(verify_token)):
 @app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
+
+
+# Serve Angular static files — must be mounted LAST so API routes take priority
+_static = pathlib.Path(__file__).parent / "static"
+if _static.exists():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=str(_static), html=True), name="static")

@@ -12,11 +12,11 @@ router = APIRouter()
 _COOKIE = "sf_session"
 _MAX_AGE = 8 * 3600  # 8 hours
 
-# Default to production-safe (HTTPS) cookie attributes.
-# Set ENV=development explicitly to relax for local HTTP dev.
+# Same-origin deployment: SameSite=Lax is enough.
+# Secure only when not local HTTP dev (set ENV=development in .env).
 _DEV = os.environ.get("ENV") == "development"
-_COOKIE_SECURE  = not _DEV      # True in prod, False in dev
-_COOKIE_SAMESITE = "lax" if _DEV else "none"
+_COOKIE_SECURE   = not _DEV
+_COOKIE_SAMESITE = "lax"
 
 
 def _decode_session(request: Request) -> None:
