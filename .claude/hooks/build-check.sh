@@ -27,7 +27,7 @@ fi
 
 # Backend validation — runs on Python changes
 if echo "$CHANGED" | grep -qE '\.py$'; then
-  cd backend && python -m pytest --tb=short -q > /tmp/sf-pytest.log 2>&1
+  cd backend && python3 -m pytest --tb=short -q > /tmp/sf-pytest.log 2>&1
   PYTEST_EXIT=$?
   cd ..
 

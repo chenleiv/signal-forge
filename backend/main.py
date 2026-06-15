@@ -92,7 +92,7 @@ async def lifespan(app: FastAPI):
 
     async def _refresh_loop():
         while True:
-            await asyncio.sleep(6 * 3600)
+            await asyncio.sleep(24 * 3600)
             await refresh_threat_ips()
 
     async def _behavioral_loop():

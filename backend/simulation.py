@@ -27,17 +27,33 @@ def _load_cache() -> dict[str, int]:
     try:
         if _CACHE_FILE.exists():
             data = json.loads(_CACHE_FILE.read_text())
-            if isinstance(data, dict) and data:
-                print(f"[AbuseIPDB] Loaded {len(data)} threat IPs from cache")
-                return data
+            if isinstance(data, dict) and data.get("ips"):
+                print(f"[AbuseIPDB] Loaded {len(data['ips'])} threat IPs from cache")
+                return data["ips"]
     except Exception:
         pass
     return {}
 
 
+def _cache_is_fresh() -> bool:
+    try:
+        if _CACHE_FILE.exists():
+            data = json.loads(_CACHE_FILE.read_text())
+            saved_at = data.get("saved_at")
+            if saved_at:
+                age = datetime.now(timezone.utc).timestamp() - saved_at
+                return age < 24 * 3600
+    except Exception:
+        pass
+    return False
+
+
 def _save_cache(ip_scores: dict[str, int]) -> None:
     try:
-        _CACHE_FILE.write_text(json.dumps(ip_scores))
+        _CACHE_FILE.write_text(json.dumps({
+            "saved_at": datetime.now(timezone.utc).timestamp(),
+            "ips": ip_scores,
+        }))
     except Exception:
         pass
 
@@ -79,6 +95,10 @@ async def refresh_threat_ips() -> None:
         THREAT_IPS = _load_cache()
         if not THREAT_IPS:
             print("[AbuseIPDB] No API key and no cache — simulation paused")
+        return
+    if _cache_is_fresh():
+        THREAT_IPS = _load_cache()
+        print(f"[AbuseIPDB] Cache is fresh — skipping API call ({len(THREAT_IPS)} IPs)")
         return
     try:
         async with httpx.AsyncClient() as client:
