@@ -11,15 +11,7 @@ import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
-import { ThreatAlert, SEVERITY_COLORS } from '../../../shared/models/threat.models';
-
-export const DETECTION_SOURCE_LABELS: Record<string, string> = {
-  sigma_rule:           'Sigma Rule',
-  behavioral_detection: 'Behavioral Detection',
-  threat_intelligence:  'Threat Intelligence',
-  correlation_engine:   'Correlation Engine',
-  yara_detection:       'YARA Detection',
-};
+import { ThreatAlert, DETECTION_SOURCE_LABELS, SEVERITY_COLORS, scoreToColor } from '../../../shared/models/threat.models';
 
 @Component({
   selector: 'app-alert-detail-drawer',
@@ -37,7 +29,7 @@ export class AlertDetailDrawerComponent {
   readonly creatingCase = signal(false);
   readonly caseId       = signal<string | null>(null);
 
-  readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? SEVERITY_COLORS['low'];
+  readonly severityColor  = (sev: string) => SEVERITY_COLORS[sev] ?? SEVERITY_COLORS['low'];
   readonly detectionLabel = (src: string) => DETECTION_SOURCE_LABELS[src] ?? src;
 
   private readonly store      = inject(ThreatStoreService);
@@ -67,18 +59,13 @@ export class AlertDetailDrawerComponent {
       });
   }
 
+  readonly riskColor = scoreToColor;
+
   riskLabel(score: number): string {
     if (score >= 80) return 'Critical';
     if (score >= 60) return 'High';
     if (score >= 40) return 'Medium';
     return 'Low';
-  }
-
-  riskColor(score: number): string {
-    if (score >= 80) return '#ef4444';
-    if (score >= 60) return '#f97316';
-    if (score >= 40) return '#f59e0b';
-    return '#60a5fa';
   }
 
   timelineIcon(type: string): string {

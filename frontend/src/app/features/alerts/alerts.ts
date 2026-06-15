@@ -15,20 +15,13 @@ import {
   AlertStatus,
   AlertSummaryMetrics,
   DetectionSource,
+  DETECTION_SOURCE_LABELS,
   SEVERITY_COLORS,
   ThreatAlert,
 } from '../../shared/models/threat.models';
 import { AlertDetailDrawerComponent } from './alert-detail-drawer/alert-detail-drawer.component';
 
 type SevFilter = 'all' | 'critical' | 'high' | 'medium' | 'low';
-
-const DETECTION_SOURCE_LABELS: Record<string, string> = {
-  sigma_rule:           'Sigma Rule',
-  behavioral_detection: 'Behavioral',
-  threat_intelligence:  'Threat Intel',
-  correlation_engine:   'Correlation',
-  yara_detection:       'YARA',
-};
 
 const DETECTION_SOURCES: DetectionSource[] = [
   'sigma_rule', 'behavioral_detection', 'threat_intelligence',

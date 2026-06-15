@@ -20,7 +20,8 @@ async def test_refresh_uses_api_when_key_set(monkeypatch):
     mock_client.get.return_value = mock_response
 
     with patch("simulation.httpx.AsyncClient") as mock_cls, \
-         patch("simulation._save_cache"):
+         patch("simulation._save_cache"), \
+         patch("simulation._cache_is_fresh", return_value=False):
         mock_cls.return_value.__aenter__.return_value = mock_client
         await m.refresh_threat_ips()
 

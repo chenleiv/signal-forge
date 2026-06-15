@@ -3,14 +3,16 @@ import { Subscription, timer, switchMap, catchError, EMPTY } from 'rxjs';
 import { ThreatStoreService } from './threat-store.service';
 import { ThreatEvent } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
+import { AuthService } from './auth';
 
 @Injectable({ providedIn: 'root' })
 export class ThreatsService {
   private socket!: WebSocket;
   private statsSub?: Subscription;
   private alertSub?: Subscription;
-  private store = inject(ThreatStoreService);
+  private store         = inject(ThreatStoreService);
   private settingsService = inject(SettingsService);
+  private authService   = inject(AuthService);
 
   private destroyed = false;
   private slowTimer: ReturnType<typeof setTimeout> | null = null;
@@ -35,8 +37,15 @@ export class ThreatsService {
     this.destroyed = false;
     this.status.set('reconnecting');
     this.startSlowTimer();
-    const token = localStorage.getItem('sf_token') ?? '';
-    const wsUrl = `${this.settingsService.settings().wsUrl}?token=${token}`;
+
+    this.authService.getWsTicket().subscribe({
+      next: ticket => this.openSocket(ticket),
+      error: () => { this.clearSlowTimer(); this.status.set('disconnected'); },
+    });
+  }
+
+  private openSocket(ticket: string) {
+    const wsUrl = `${this.settingsService.settings().wsUrl}?ticket=${ticket}`;
     this.socket = new WebSocket(wsUrl);
 
     this.socket.onopen = () => {

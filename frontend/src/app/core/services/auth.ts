@@ -1,31 +1,43 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { tap } from 'rxjs/operators';
-
-const TOKEN_KEY = 'sf_token';
+import { Observable, of } from 'rxjs';
+import { map, catchError, tap } from 'rxjs/operators';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private http = inject(HttpClient);
+  private http   = inject(HttpClient);
   private router = inject(Router);
 
-  private token = signal<string | null>(localStorage.getItem(TOKEN_KEY));
-
-  readonly isAuthenticated = computed(() => !!this.token());
+  private readonly _authenticated = signal(false);
+  readonly isAuthenticated = computed(() => this._authenticated());
 
   login(username: string, password: string) {
-    return this.http.post<{ access_token: string }>('/auth/login', { username, password }).pipe(
-      tap((res) => {
-        this.token.set(res.access_token);
-        localStorage.setItem(TOKEN_KEY, res.access_token);
-      }),
+    return this.http.post<{ ok: boolean }>('/auth/login', { username, password }).pipe(
+      tap(() => this._authenticated.set(true)),
     );
   }
 
   logout() {
-    this.token.set(null);
-    localStorage.removeItem(TOKEN_KEY);
+    this.http.post('/auth/logout', {}).subscribe();
+    this._authenticated.set(false);
     this.router.navigate(['/login']);
+  }
+
+  checkAuth(): Observable<boolean> {
+    return this.http.get('/auth/me').pipe(
+      tap(() => this._authenticated.set(true)),
+      map(() => true),
+      catchError(() => {
+        this._authenticated.set(false);
+        return of(false);
+      }),
+    );
+  }
+
+  getWsTicket(): Observable<string> {
+    return this.http.get<{ ticket: string }>('/auth/ws-ticket').pipe(
+      map(r => r.ticket),
+    );
   }
 }

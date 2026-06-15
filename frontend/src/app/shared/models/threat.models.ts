@@ -4,6 +4,14 @@ export type AttackType = 'SQLi' | 'DDoS' | 'BruteForce' | 'PortScan' | 'Malware'
 export const ATTACK_TYPES = ['SQLi', 'DDoS', 'BruteForce', 'PortScan', 'Malware'] as const;
 export const REGIONS      = ['US', 'EU', 'RU', 'CN', 'IL', 'BR'] as const;
 
+export const DETECTION_SOURCE_LABELS: Record<string, string> = {
+  sigma_rule:           'Sigma Rule',
+  behavioral_detection: 'Behavioral',
+  threat_intelligence:  'Threat Intel',
+  correlation_engine:   'Correlation',
+  yara_detection:       'YARA',
+};
+
 export const SEVERITY_COLORS: Record<string, string> = {
   critical: '#ef4444',
   high:     '#f97316',

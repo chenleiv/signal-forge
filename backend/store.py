@@ -8,8 +8,7 @@ from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, HTTPException
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Request
 from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +22,8 @@ from db_ops import db_update_rule
 SECRET_KEY = os.environ.get("JWT_SECRET")
 if not SECRET_KEY:
     raise RuntimeError("JWT_SECRET environment variable is required")
-security = HTTPBearer()
+
+_COOKIE = "sf_session"
 
 USE_DB: bool = False  # set by main after engine check
 
@@ -57,9 +57,12 @@ _saved_hunts: list[dict] = []
 
 # ── Auth helpers ──────────────────────────────────────────────
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def verify_token(request: Request):
+    token = request.cookies.get(_COOKIE)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        jwt.decode(credentials.credentials, SECRET_KEY, algorithms=["HS256"])
+        jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 

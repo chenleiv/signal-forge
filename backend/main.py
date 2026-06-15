@@ -165,6 +165,7 @@ app.add_middleware(
     allow_origins=["https://signal-forge-tane.onrender.com", "http://localhost:4200"],
     allow_methods=["*"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 app.include_router(auth.router)
@@ -177,9 +178,11 @@ app.include_router(behavioral.router)
 
 
 @app.websocket("/ws/threats")
-async def threats_ws(ws: WebSocket, token: str = ""):
+async def threats_ws(ws: WebSocket, ticket: str = ""):
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(ticket, SECRET_KEY, algorithms=["HS256"])
+        if not payload.get("ws"):
+            raise ValueError("not a ws ticket")
     except Exception:
         await ws.close(code=4001)
         return

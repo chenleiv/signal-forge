@@ -3,14 +3,15 @@ import {
   ElementRef,
   inject,
   effect,
+  afterNextRender,
+  DestroyRef,
   ChangeDetectionStrategy,
   signal,
 } from '@angular/core';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
-import { SEVERITY_COLORS } from '../../shared/models/threat.models';
+import { SEVERITY_COLORS, ThreatEvent } from '../../shared/models/threat.models';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
-import { ThreatEvent } from '../../shared/models/threat.models';
 
 @Component({
   selector: 'app-threat-map',
@@ -24,10 +25,18 @@ export class ThreatMap {
   private store = inject(ThreatStoreService);
   readonly filterLevel = signal<string>('all');
 
-  private svg: any;
-  private projection: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private svg: d3.Selection<SVGSVGElement, unknown, any, any> | null = null;
+  private projection: d3.GeoProjection | null = null;
 
   constructor() {
+    afterNextRender(() => this.initMap());
+
+    inject(DestroyRef).onDestroy(() => {
+      this.svg?.remove();
+      this.svg = null;
+    });
+
     effect(() => {
       const events = this.store.events();
       const filter = this.filterLevel();
@@ -38,15 +47,6 @@ export class ThreatMap {
         }
       }
     });
-  }
-
-  ngOnInit() {
-    this.initMap();
-  }
-
-  ngOnDestroy() {
-    if (this.svg) this.svg.remove();
-    this.svg = null;
   }
 
   setFilterLevel(level: string) {
@@ -84,7 +84,7 @@ export class ThreatMap {
       .selectAll('path')
       .data((topojson.feature(world, world.objects.countries) as any).features)
       .join('path')
-      .attr('d', path)
+      .attr('d', path as unknown as string)
       .attr('fill', '#1a2540')
       .attr('stroke', '#2a3a60')
       .attr('stroke-width', 0.5);
@@ -143,8 +143,6 @@ export class ThreatMap {
       .attr('opacity', 0)
       .remove();
 
-    // Pulse dot at source
-    // Impact flash at target
     this.svg
       .select('.attacks')
       .append('circle')
