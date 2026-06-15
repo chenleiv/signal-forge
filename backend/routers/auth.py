@@ -12,8 +12,11 @@ router = APIRouter()
 _COOKIE = "sf_session"
 _MAX_AGE = 8 * 3600  # 8 hours
 
-# Render.com sets RENDER=true automatically; dev uses HTTP so no Secure flag needed
-_PRODUCTION = os.environ.get("RENDER") == "true"
+# Default to production-safe (HTTPS) cookie attributes.
+# Set ENV=development explicitly to relax for local HTTP dev.
+_DEV = os.environ.get("ENV") == "development"
+_COOKIE_SECURE  = not _DEV      # True in prod, False in dev
+_COOKIE_SAMESITE = "lax" if _DEV else "none"
 
 
 def _decode_session(request: Request) -> None:
@@ -36,8 +39,8 @@ def _set_session_cookie(response: Response) -> None:
         key=_COOKIE,
         value=token,
         httponly=True,
-        secure=_PRODUCTION,
-        samesite="none" if _PRODUCTION else "lax",
+        secure=_COOKIE_SECURE,
+        samesite=_COOKIE_SAMESITE,
         max_age=_MAX_AGE,
     )
 
@@ -52,10 +55,7 @@ async def login(body: dict, response: Response):
 
 @router.post("/auth/logout")
 async def logout(response: Response):
-    response.delete_cookie(
-        key=_COOKIE, httponly=True,
-        secure=_PRODUCTION, samesite="none" if _PRODUCTION else "lax",
-    )
+    response.delete_cookie(key=_COOKIE, httponly=True, secure=_COOKIE_SECURE, samesite=_COOKIE_SAMESITE)
     return {"ok": True}
 
 
