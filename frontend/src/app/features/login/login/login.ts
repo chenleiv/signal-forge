@@ -23,16 +23,6 @@ export class Login {
   private readonly auth   = inject(AuthService);
   private readonly router = inject(Router);
   private slowTimer: ReturnType<typeof setTimeout> | null = null;
-  private startupTimer: ReturnType<typeof setTimeout> | null = null;
-
-  constructor() {
-    // Show "Server is waking up" if the server is slow to respond on cold start
-    this.startupTimer = setTimeout(() => this.slowConnection.set(true), 3000);
-    this.auth.ping().subscribe(() => {
-      if (this.startupTimer) { clearTimeout(this.startupTimer); this.startupTimer = null; }
-      this.slowConnection.set(false);
-    });
-  }
 
   // ── public methods ────────────────────────────────────────────
   submit() {
