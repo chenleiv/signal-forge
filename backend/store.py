@@ -58,7 +58,8 @@ _saved_hunts: list[dict] = []
 # ── Auth helpers ──────────────────────────────────────────────
 
 def verify_token(request: Request):
-    token = request.cookies.get(_COOKIE)
+    auth = request.headers.get("Authorization", "")
+    token = auth[7:] if auth.startswith("Bearer ") else request.cookies.get(_COOKIE)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
