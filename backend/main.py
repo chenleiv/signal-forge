@@ -244,8 +244,6 @@ def health():
 _static = pathlib.Path(__file__).parent / "static"
 if _static.exists():
     from fastapi.responses import FileResponse
-    from fastapi.staticfiles import StaticFiles
-    app.mount("/assets", StaticFiles(directory=str(_static / "assets")), name="assets")
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
