@@ -298,6 +298,8 @@ $muted:  var(--c-text-2);
 .ack-indicator  { font-size: 10px; font-weight: 600; color: #16a34a; }
 .case-indicator { font-size: 10px; font-weight: 600; color: #3b82f6; }
 
+.sk-card { pointer-events: none; }
+
 .empty-state {
   text-align: center;
   color: $muted;
