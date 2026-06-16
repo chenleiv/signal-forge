@@ -240,8 +240,16 @@ def health():
     return {"status": "ok"}
 
 
-# Serve Angular static files — must be mounted LAST so API routes take priority
+# Serve Angular SPA — catch-all returns index.html for unknown paths (client-side routing)
 _static = pathlib.Path(__file__).parent / "static"
 if _static.exists():
+    from fastapi.responses import FileResponse
     from fastapi.staticfiles import StaticFiles
-    app.mount("/", StaticFiles(directory=str(_static), html=True), name="static")
+    app.mount("/assets", StaticFiles(directory=str(_static / "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        file_path = _static / full_path
+        if file_path.is_file():
+            return FileResponse(str(file_path))
+        return FileResponse(str(_static / "index.html"))
