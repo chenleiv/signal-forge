@@ -71,7 +71,7 @@ $muted:  var(--c-text-2);
 // ── Filter panel ──────────────────────────────────────────────
 
 .filter-panel {
-  width: 200px;
+  width: 160px;
   flex-shrink: 0;
   border-right: 1px solid $border;
   padding: 24px 16px;
@@ -261,22 +261,22 @@ $muted:  var(--c-text-2);
 
 .card-bottom {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
 }
 
 .alert-message {
   font-size: 12px;
   color: $muted;
-  flex: 1;
+  line-height: 1.4;
 }
 
 .alert-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .act-btn {
