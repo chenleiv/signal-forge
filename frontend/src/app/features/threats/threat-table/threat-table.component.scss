@@ -90,8 +90,8 @@ $sev-low:      #60a5fa;
 
 .btn-export {
   padding: 4px 12px;
-  background: rgba(0, 201, 184, 0.1);
-  border: 1px solid rgba(0, 201, 184, 0.35);
+  background: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.35);
   color: $accent;
   border-radius: 3px;
   font-size: 11px;
@@ -99,7 +99,7 @@ $sev-low:      #60a5fa;
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover { background: rgba(0, 201, 184, 0.2); }
+  &:hover { background: rgba(59, 130, 246, 0.2); }
 }
 
 .export-dropdown {

@@ -244,7 +244,7 @@ $accent: var(--c-accent);
     }
 
     &.saved {
-        background: #16a34a;
+        background: rgba(255,255,255,.65);
 
         &:hover {
             background: #15803d;

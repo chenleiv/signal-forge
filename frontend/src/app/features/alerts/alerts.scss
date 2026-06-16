@@ -231,7 +231,7 @@ $muted:  var(--c-text-2);
   &.chip-behavioral_detection { background: rgba(245,158,11,.15); color: #f59e0b; }
   &.chip-threat_intelligence  { background: rgba(239,68,68,.15);  color: #ef4444; }
   &.chip-correlation_engine   { background: rgba(59,130,246,.15); color: #3b82f6; }
-  &.chip-yara_detection       { background: rgba(16,185,129,.15); color: #10b981; }
+  &.chip-yara_detection       { background: rgba(255,255,255,.08); color: rgba(255,255,255,.65); }
 }
 
 .alert-type {
@@ -291,12 +291,14 @@ $muted:  var(--c-text-2);
   transition: all 0.12s;
 
   &:hover          { color: $text; border-color: $muted; }
-  &.act-ack:hover  { color: #16a34a; border-color: #16a34a; }
+  &.act-ack:hover  { color: rgba(255,255,255,.85); border-color: rgba(255,255,255,.3); }
   &.act-case:hover { color: #3b82f6; border-color: #3b82f6; }
 }
 
-.ack-indicator  { font-size: 10px; font-weight: 600; color: #16a34a; }
+.ack-indicator  { font-size: 10px; font-weight: 600; color: rgba(255,255,255,.6); }
 .case-indicator { font-size: 10px; font-weight: 600; color: #3b82f6; }
+
+.sk-card { pointer-events: none; }
 
 .empty-state {
   text-align: center;

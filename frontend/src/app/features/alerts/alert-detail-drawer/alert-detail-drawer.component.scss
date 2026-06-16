@@ -188,7 +188,7 @@ $panel:  var(--c-panel);
   &.src-behavioral_detection { background: rgba(245,158,11,.15); color: #f59e0b; }
   &.src-threat_intelligence  { background: rgba(239,68,68,.15);  color: #ef4444; }
   &.src-correlation_engine   { background: rgba(59,130,246,.15); color: #3b82f6; }
-  &.src-yara_detection       { background: rgba(16,185,129,.15); color: #10b981; }
+  &.src-yara_detection       { background: rgba(255,255,255,.08); color: rgba(255,255,255,.65); }
 }
 
 .confidence-bar {
@@ -361,7 +361,7 @@ $panel:  var(--c-panel);
   .tl-attempt  &  { background: rgba(239,68,68,.15);  color: #ef4444; }
   .tl-behavior &  { background: rgba(245,158,11,.15); color: #f59e0b; }
   .tl-alert    &  { background: rgba(249,115,22,.15); color: #f97316; }
-  .tl-response &  { background: rgba(16,185,129,.15); color: #10b981; }
+  .tl-response &  { background: rgba(255,255,255,.08); color: rgba(255,255,255,.65); }
 }
 
 .tl-body {

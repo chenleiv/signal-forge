@@ -88,6 +88,26 @@
       </div>
 
       <div class="alerts-list">
+        @if (loading()) {
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="alert-card sk-card">
+              <div class="card-top">
+                <span class="sk-circle" style="width:8px;height:8px;flex-shrink:0"></span>
+                <span class="sk-line" [style.width.px]="48 + (i * 11 % 28)"></span>
+                <span class="sk-line" [style.width.px]="70 + (i * 17 % 50)"></span>
+                <span class="sk-line" style="width:36px"></span>
+                <span class="sk-line" style="width:52px;margin-left:auto"></span>
+              </div>
+              <div class="card-bottom">
+                <span class="sk-line" [style.width.%]="55 + (i * 9 % 35)"></span>
+                <div class="alert-actions">
+                  <span class="sk-line" style="width:72px;height:22px;border-radius:3px"></span>
+                  <span class="sk-line" style="width:72px;height:22px;border-radius:3px"></span>
+                </div>
+              </div>
+            </div>
+          }
+        }
         @for (alert of filtered(); track alert.id) {
           <div class="alert-card status-{{ alert.status }}"
                [class.selected]="selectedAlert()?.id === alert.id"
