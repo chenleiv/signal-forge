@@ -249,7 +249,12 @@ if _static.exists():
 
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
-        file_path = _static / full_path
+        static_root = _static.resolve()
+        try:
+            file_path = (static_root / full_path).resolve()
+            file_path.relative_to(static_root)
+        except (ValueError, OSError):
+            return FileResponse(str(static_root / "index.html"))
         if file_path.is_file():
             return FileResponse(str(file_path))
-        return FileResponse(str(_static / "index.html"))
+        return FileResponse(str(static_root / "index.html"))
