@@ -82,12 +82,12 @@ async def lifespan(app: FastAPI):
 
     await refresh_threat_ips()
 
-    if IPINFO_TOKEN:
-        async with httpx.AsyncClient() as client:
-            for ip_addr in list(THREAT_IPS.keys())[:20]:
-                data = await fetch_ipinfo(client, ip_addr)
-                if data:
-                    if "lat" in data:
+    async def _prefetch_ipinfo():
+        if IPINFO_TOKEN:
+            async with httpx.AsyncClient() as client:
+                for ip_addr in list(THREAT_IPS.keys())[:20]:
+                    data = await fetch_ipinfo(client, ip_addr)
+                    if data and "lat" in data:
                         _store._ip_coords[ip_addr] = (data["lat"], data["lng"])
 
     async def _refresh_loop():
@@ -142,12 +142,14 @@ async def lifespan(app: FastAPI):
 
     refresh_task    = asyncio.create_task(_refresh_loop())
     behavioral_task = asyncio.create_task(_behavioral_loop())
+    prefetch_task   = asyncio.create_task(_prefetch_ipinfo())
 
     yield
 
     refresh_task.cancel()
     behavioral_task.cancel()
-    for task in (behavioral_task, refresh_task):
+    prefetch_task.cancel()
+    for task in (behavioral_task, refresh_task, prefetch_task):
         try:
             await task
         except asyncio.CancelledError:
