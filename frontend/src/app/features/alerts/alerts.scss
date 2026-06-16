@@ -298,8 +298,6 @@ $muted:  var(--c-text-2);
 .ack-indicator  { font-size: 10px; font-weight: 600; color: #16a34a; }
 .case-indicator { font-size: 10px; font-weight: 600; color: #3b82f6; }
 
-.sk-card { pointer-events: none; }
-
 .empty-state {
   text-align: center;
   color: $muted;
@@ -332,14 +330,14 @@ $muted:  var(--c-text-2);
   &:hover .handle-bar,
   &:active .handle-bar {
     background: var(--c-accent);
-    box-shadow: 0 0 6px rgba(0, 201, 184, 0.6);
+    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
   }
 }
 
 .handle-bar {
   width: 1px;
   height: 48px;
-  background: var(--c-border);
+  background: #2a3347;
   border-radius: 2px;
   transition: all 0.15s;
 }

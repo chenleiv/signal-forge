@@ -187,7 +187,7 @@ $accent:    var(--c-accent);
     gap: 8px;
     margin-top: 2px;
 
-    &:hover:not(:disabled) { background: #00a89a; }
+    &:hover:not(:disabled) { background: #2563eb; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 

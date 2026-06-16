@@ -56,9 +56,8 @@ export class Alerts implements OnInit {
   readonly sevFilter    = signal<SevFilter>('all');
   readonly sourceFilter = signal<DetectionSource | 'all'>('all');
   readonly caseMap      = signal<Record<string, string>>({});
-  readonly selectedAlert  = signal<ThreatAlert | null>(null);
+  readonly selectedAlert = signal<ThreatAlert | null>(null);
   readonly summaryMetrics = signal<AlertSummaryMetrics | null>(null);
-  readonly loading        = signal(true);
 
   readonly severities: SevFilter[] = ['all', 'critical', 'high', 'medium', 'low'];
   readonly detectionSources = DETECTION_SOURCES;
@@ -90,13 +89,6 @@ export class Alerts implements OnInit {
   readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? SEVERITY_COLORS['low'];
 
   ngOnInit() {
-    this.store.fetchAlerts()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(alerts => {
-        this.store.alerts.set(alerts);
-        this.loading.set(false);
-      });
-
     this.store.fetchAlertSummary()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(m => this.summaryMetrics.set(m));
