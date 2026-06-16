@@ -14,14 +14,14 @@ body {
 }
 
 :root[data-theme="dark"] {
-  --c-bg:     #0f0f1a;
-  --c-panel:  #1a1a2a;
-  --c-border: #252538;
-  --c-text:   #e8e8f0;
-  --c-text-2: #8888aa;
-  --c-muted:  #44445a;
+  --c-bg:     #16161e;
+  --c-panel:  #1e1e2a;
+  --c-border: #2a2a3c;
+  --c-text:   #e0e0ee;
+  --c-text-2: #8080a0;
+  --c-muted:  #40405a;
   --c-accent: #00c9b8;
-  --c-input:  #0a0a14;
+  --c-input:  #0e0e18;
 }
 
 :root[data-theme="light"] {
