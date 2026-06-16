@@ -83,7 +83,7 @@ $accent:    var(--c-accent);
   width: 100%;
 
   &::placeholder { color: $muted; }
-  &:focus { border-color: rgba(59, 130, 246, 0.4); }
+  &:focus { border-color: rgba(0, 201, 184, 0.4); }
   option { background: var(--c-input); }
 }
 
@@ -109,8 +109,8 @@ $accent:    var(--c-accent);
 .btn-run {
   flex: 1;
   padding: 6px 10px;
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(0, 201, 184, 0.12);
+  border: 1px solid rgba(0, 201, 184, 0.35);
   color: $accent;
   border-radius: 3px;
   font-size: 11px;
@@ -118,7 +118,7 @@ $accent:    var(--c-accent);
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover:not(:disabled) { background: rgba(59, 130, 246, 0.22); }
+  &:hover:not(:disabled) { background: rgba(0, 201, 184, 0.22); }
   &:disabled { opacity: 0.5; cursor: default; }
 }
 
@@ -139,8 +139,8 @@ $accent:    var(--c-accent);
   width: 100%;
   padding: 5px;
   background: transparent;
-  border: 1px dashed rgba(59, 130, 246, 0.3);
-  color: rgba(59, 130, 246, 0.7);
+  border: 1px dashed rgba(0, 201, 184, 0.3);
+  color: rgba(0, 201, 184, 0.7);
   border-radius: 3px;
   font-size: 10px;
   cursor: pointer;
@@ -180,8 +180,8 @@ $accent:    var(--c-accent);
   transition: all 0.15s;
 
   &:hover {
-    border-color: rgba(59, 130, 246, 0.35);
-    background: rgba(59, 130, 246, 0.04);
+    border-color: rgba(0, 201, 184, 0.35);
+    background: rgba(0, 201, 184, 0.04);
   }
 }
 

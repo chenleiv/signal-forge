@@ -332,14 +332,14 @@ $muted:  var(--c-text-2);
   &:hover .handle-bar,
   &:active .handle-bar {
     background: var(--c-accent);
-    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 6px rgba(0, 201, 184, 0.6);
   }
 }
 
 .handle-bar {
   width: 1px;
   height: 48px;
-  background: #2a3347;
+  background: var(--c-border);
   border-radius: 2px;
   transition: all 0.15s;
 }

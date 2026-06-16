@@ -66,8 +66,8 @@ $accent:    var(--c-accent);
 
 .btn-export {
   padding: 4px 12px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.35);
+  background: rgba(0, 201, 184, 0.1);
+  border: 1px solid rgba(0, 201, 184, 0.35);
   color: $accent;
   border-radius: 3px;
   font-size: 11px;
@@ -75,7 +75,7 @@ $accent:    var(--c-accent);
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover { background: rgba(59, 130, 246, 0.2); }
+  &:hover { background: rgba(0, 201, 184, 0.2); }
 }
 
 .export-dropdown {
@@ -188,7 +188,7 @@ $accent:    var(--c-accent);
     }
 
     &.row-selected {
-      background: rgba(59, 130, 246, 0.07);
+      background: rgba(0, 201, 184, 0.07);
       border-left: 2px solid $accent;
     }
   }
@@ -259,7 +259,7 @@ $accent:    var(--c-accent);
   left: 50%;
   transform: translateX(-50%);
   background: var(--c-border);
-  border: 1px solid rgba(59, 130, 246, 0.35);
+  border: 1px solid rgba(0, 201, 184, 0.35);
   color: #93c5fd;
   font-size: 11px;
   padding: 8px 16px;
@@ -319,14 +319,14 @@ $accent:    var(--c-accent);
   &:hover .handle-bar,
   &:active .handle-bar {
     background: $accent;
-    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 6px rgba(0, 201, 184, 0.6);
   }
 }
 
 .handle-bar {
   width: 1px;
   height: 70px;
-  background: #2a3347;
+  background: var(--c-border);
   border-radius: 2px;
   transition: all 0.15s;
 }
