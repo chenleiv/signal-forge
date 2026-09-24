@@ -129,11 +129,26 @@
       </div>
     </header>
 
+    @if (demo.enabled()) {
+      <div class="demo-banner" role="status">
+        <span class="demo-badge">DEMO</span>
+        Read-only demo &mdash; write actions are blocked server-side for security.
+        Run locally for full functionality.
+      </div>
+    }
+
     <section class="content">
       <router-outlet></router-outlet>
     </section>
 
     <app-command-console #consoleRef />
+
+    @if (demo.notice(); as msg) {
+      <div class="demo-toast" role="alert">
+        <span>{{ msg }}</span>
+        <button type="button" class="demo-toast-close" (click)="demo.dismiss()" aria-label="Dismiss">&times;</button>
+      </div>
+    }
 
 
   </div>

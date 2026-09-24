@@ -4,6 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { apiBaseUrlInterceptor } from './core/interceptors/api-base-url.interceptor';
 import { provideEchartsCore } from 'ngx-echarts';
 import { authInterceptor } from './core/interceptors/auth.interceptor';
+import { demoModeInterceptor } from './core/interceptors/demo-mode.interceptor';
 
 import { routes } from './app.routes';
 
@@ -11,7 +12,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([apiBaseUrlInterceptor, authInterceptor])),
+    provideHttpClient(withInterceptors([apiBaseUrlInterceptor, authInterceptor, demoModeInterceptor])),
     provideEchartsCore({ echarts: () => import('echarts') }),
   ],
 };

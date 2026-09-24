@@ -7,6 +7,7 @@ import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { SettingsService } from '../../core/services/settings.service';
 import { ThemeService } from '../../core/services/theme';
 import { CommandConsole } from '../../features/command-console/command-console';
+import { DemoModeService } from '../../core/services/demo-mode.service';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Live Operations',
@@ -34,6 +35,7 @@ export class AppLayout {
   readonly settingsService = inject(SettingsService);
   // Injected to eagerly trigger the effect() that sets data-theme on <body>.
   readonly themeService    = inject(ThemeService);
+  readonly demo            = inject(DemoModeService);
   private router           = inject(Router);
   private destroyRef       = inject(DestroyRef);
 
@@ -56,6 +58,7 @@ export class AppLayout {
       this.ws.disconnect();
     });
     this.ws.connect();
+    this.demo.load();
   }
 
   private tick() {

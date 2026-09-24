@@ -264,6 +264,12 @@ async def get_stats(request: Request, _=Depends(verify_token)):
     return {"severity_counts": severity_counts, "attack_types": attack_types, "events_per_min": buckets, "top_ips": top_ips}
 
 
+@app.get("/api/config")
+async def get_config():
+    # Public, non-sensitive: lets the UI explain read-only demo mode up front.
+    return {"demo_mode": DEMO_MODE}
+
+
 @app.api_route("/health", methods=["GET", "HEAD"])
 def health():
     return {"status": "ok"}
