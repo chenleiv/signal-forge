@@ -14,3 +14,4 @@ backend/.env
 .claude/settings.local.json
 # Dependencies (anywhere)
 node_modules/
+backend/threat_ips_cache.json
