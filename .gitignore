@@ -12,3 +12,5 @@ backend/.env
 # OS
 .DS_Store
 .claude/settings.local.json
+# Dependencies (anywhere)
+node_modules/
