@@ -183,7 +183,7 @@ app.include_router(behavioral.router)
 async def threats_ws(ws: WebSocket, ticket: str = ""):
     try:
         payload = jwt.decode(ticket, SECRET_KEY, algorithms=["HS256"])
-        if not payload.get("ws"):
+        if payload.get("typ") != "ws":
             raise ValueError("not a ws ticket")
     except Exception:
         await ws.close(code=4001)

@@ -9,11 +9,11 @@ from store import SECRET_KEY
 
 router = APIRouter()
 
-_COOKIE  = "sf_session"
+_COOKIE = "sf_session"
 _MAX_AGE = 8 * 3600
 
 # HttpOnly + Secure in production; set ENV=development in .env for local HTTP dev
-_DEV           = os.environ.get("ENV") == "development"
+_DEV = os.environ.get("ENV") == "development"
 _COOKIE_SECURE = not _DEV
 
 
@@ -22,19 +22,30 @@ def _decode_session(request: Request) -> None:
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        if payload.get("typ") != "session":
+            raise ValueError("wrong token type")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
 
 def _set_session_cookie(response: Response) -> None:
     token = jwt.encode(
-        {"sub": "analyst", "exp": datetime.now(timezone.utc) + timedelta(hours=8)},
-        SECRET_KEY, algorithm="HS256",
+        {
+            "sub": "analyst",
+            "typ": "session",
+            "exp": datetime.now(timezone.utc) + timedelta(hours=8),
+        },
+        SECRET_KEY,
+        algorithm="HS256",
     )
     response.set_cookie(
-        key=_COOKIE, value=token, httponly=True,
-        secure=_COOKIE_SECURE, samesite="lax", max_age=_MAX_AGE,
+        key=_COOKIE,
+        value=token,
+        httponly=True,
+        secure=_COOKIE_SECURE,
+        samesite="lax",
+        max_age=_MAX_AGE,
     )
 
 
@@ -48,7 +59,9 @@ async def login(body: dict, response: Response):
 
 @router.post("/auth/logout")
 async def logout(response: Response):
-    response.delete_cookie(key=_COOKIE, httponly=True, secure=_COOKIE_SECURE, samesite="lax")
+    response.delete_cookie(
+        key=_COOKIE, httponly=True, secure=_COOKIE_SECURE, samesite="lax"
+    )
     return {"ok": True}
 
 
@@ -62,7 +75,12 @@ async def me(request: Request):
 async def ws_ticket(request: Request):
     _decode_session(request)
     ticket = jwt.encode(
-        {"sub": "analyst", "ws": True, "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
-        SECRET_KEY, algorithm="HS256",
+        {
+            "sub": "analyst",
+            "typ": "ws",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        },
+        SECRET_KEY,
+        algorithm="HS256",
     )
     return {"ticket": ticket}

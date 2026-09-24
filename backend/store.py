@@ -62,7 +62,9 @@ def verify_token(request: Request):
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
-        jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        if payload.get("typ") != "session":
+            raise ValueError("wrong token type")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
