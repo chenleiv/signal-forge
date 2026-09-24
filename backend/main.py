@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import asyncio
 import json
+import os
 import pathlib
 import random
 import subprocess
@@ -14,6 +15,7 @@ from typing import Optional
 import httpx
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from jose import jwt
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
@@ -161,6 +163,31 @@ app = FastAPI(title="SignalForge API", lifespan=lifespan)
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ── Read-only demo mode ───────────────────────────────────────
+# Public demo: block every state-changing request server-side.
+# Fail closed: demo mode is ON unless DEMO_MODE is explicitly "false".
+DEMO_MODE = os.environ.get("DEMO_MODE", "true").strip().lower() != "false"
+
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+ALLOWED_WRITES = {
+    ("POST", "/auth/login"),
+    ("POST", "/auth/logout"),
+}
+
+
+# Registered before CORSMiddleware so CORS stays the outer layer and
+# 403 responses still carry CORS headers.
+@app.middleware("http")
+async def demo_read_only(request: Request, call_next):
+    if (
+        DEMO_MODE
+        and request.method not in SAFE_METHODS
+        and (request.method, request.url.path) not in ALLOWED_WRITES
+    ):
+        return JSONResponse({"detail": "Read-only demo"}, status_code=403)
+    return await call_next(request)
+
 
 app.add_middleware(
     CORSMiddleware,
