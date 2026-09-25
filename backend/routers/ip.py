@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from typing import Optional
 
 import httpx
@@ -26,6 +27,24 @@ _ai_summary_cache: dict[str, str] = {}
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
+
+
+_SAFE_CODE = re.compile(r"^[a-z0-9_]{1,64}$")
+
+
+def _safe_error_fields(exc: Exception) -> tuple[str, Optional[int], Optional[str]]:
+    """Allowlisted, log-safe fields from an external API error.
+
+    Never logs the free-text message: third-party errors may echo secrets
+    (CWE-532) or contain newlines that forge log lines (CWE-117).
+    """
+    status = getattr(exc, "status_code", None)
+    status = status if isinstance(status, int) else None
+    body = getattr(exc, "body", None)
+    err = body.get("error", body) if isinstance(body, dict) else None
+    code = err.get("code") if isinstance(err, dict) else None
+    code = code if isinstance(code, str) and _SAFE_CODE.match(code) else None
+    return type(exc).__name__, status, code
 
 
 async def enrich_ip(ip: str) -> Optional[dict]:
@@ -113,8 +132,9 @@ async def get_ip_ai_summary(
         if not summary:
             raise ValueError("empty completion")
     except Exception as exc:
-        # Log details server-side only; the client just gets "no summary".
-        logger.warning("AI summary failed for %s: %s: %s", ip, type(exc).__name__, exc)
+        # Server-side log with allowlisted fields only; the client just gets "no summary".
+        name, status, code = _safe_error_fields(exc)
+        logger.warning("AI summary failed for %s: %s status=%s code=%s", ip, name, status, code)
         return {"summary": None}
     _ai_summary_cache[ip] = summary
     return {"summary": summary}
