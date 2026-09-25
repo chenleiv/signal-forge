@@ -4,8 +4,8 @@ import { HttpClient } from '@angular/common/http';
 const NOTICE_MS = 4000;
 
 /**
- * UI side of read-only demo mode. The server is the security boundary
- * (it rejects writes with 403); this service only explains that to the user.
+ * UI side of demo mode. The server is the security boundary (it rejects
+ * writes with 403); this service only tells the user what is happening.
  */
 @Injectable({ providedIn: 'root' })
 export class DemoModeService {
@@ -22,9 +22,19 @@ export class DemoModeService {
     });
   }
 
+  /** A write was simulated locally instead of being sent. */
+  showSimulated(): void {
+    this.show('Demo mode: change simulated in your browser, not saved.');
+  }
+
+  /** Fallback: the server rejected a write we did not simulate. */
   showBlocked(): void {
     this.enabled.set(true);
-    this.notice.set('This action is disabled in the read-only demo.');
+    this.show('This action is not available in the demo.');
+  }
+
+  private show(message: string): void {
+    this.notice.set(message);
     if (this.noticeTimer) clearTimeout(this.noticeTimer);
     this.noticeTimer = setTimeout(() => this.notice.set(null), NOTICE_MS);
   }
