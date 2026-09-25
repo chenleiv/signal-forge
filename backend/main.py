@@ -39,6 +39,28 @@ from routers import auth, ip, incidents, alerts, hunting, rules, behavioral
 USE_DB: bool = db_engine is not None
 _store.USE_DB = USE_DB
 
+# ── Live event stream ─────────────────────────────────────────
+# ONE generator feeds all connected clients (fan-out). Previously each
+# WebSocket ran its own generator, so N open tabs recorded N x the events.
+STREAM_INTERVAL: tuple[float, float] = (0.5, 1.5)
+CLIENT_QUEUE_SIZE = 100
+_clients: set[asyncio.Queue[str]] = set()
+
+
+async def _stream_loop() -> None:
+    while True:
+        if _clients:
+            threat = generate_threat()
+            if threat:
+                _record_event(threat)
+                message = json.dumps(threat)
+                for queue in list(_clients):
+                    try:
+                        queue.put_nowait(message)
+                    except asyncio.QueueFull:
+                        pass  # slow client: drop this event rather than block everyone
+        await asyncio.sleep(random.uniform(*STREAM_INTERVAL))
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -145,13 +167,15 @@ async def lifespan(app: FastAPI):
     refresh_task    = asyncio.create_task(_refresh_loop())
     behavioral_task = asyncio.create_task(_behavioral_loop())
     prefetch_task   = asyncio.create_task(_prefetch_ipinfo())
+    stream_task     = asyncio.create_task(_stream_loop())
 
     yield
 
     refresh_task.cancel()
     behavioral_task.cancel()
     prefetch_task.cancel()
-    for task in (behavioral_task, refresh_task, prefetch_task):
+    stream_task.cancel()
+    for task in (behavioral_task, refresh_task, prefetch_task, stream_task):
         try:
             await task
         except asyncio.CancelledError:
@@ -217,15 +241,15 @@ async def threats_ws(ws: WebSocket, ticket: str = ""):
         return
 
     await ws.accept()
+    queue: asyncio.Queue[str] = asyncio.Queue(maxsize=CLIENT_QUEUE_SIZE)
+    _clients.add(queue)
     try:
         while True:
-            threat = generate_threat()
-            if threat:
-                _record_event(threat)
-                await ws.send_text(json.dumps(threat))
-            await asyncio.sleep(random.uniform(0.5, 1.5))
-    except WebSocketDisconnect:
+            await ws.send_text(await queue.get())
+    except (WebSocketDisconnect, RuntimeError):
         pass
+    finally:
+        _clients.discard(queue)
 
 
 @app.get("/api/stats")
