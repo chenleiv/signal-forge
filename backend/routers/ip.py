@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import logging
 import os
 from typing import Optional
 
@@ -15,6 +16,8 @@ from simulation import fetch_ipinfo, IPINFO_TOKEN
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 GROQ_API_KEY      = os.environ.get("GROQ_API_KEY", "")
+# Groq retires models over time; override without a code change via GROQ_MODEL.
+GROQ_MODEL        = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
 
 _abuse_cache: dict[str, dict] = {}
 _geo_cache: dict[str, dict] = {}
@@ -22,6 +25,7 @@ _ai_summary_cache: dict[str, str] = {}
 
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
+logger = logging.getLogger("uvicorn.error")
 
 
 async def enrich_ip(ip: str) -> Optional[dict]:
@@ -85,7 +89,6 @@ async def get_ip_ai_summary(
     if not GROQ_API_KEY:
         return {"summary": None}
 
-    from groq import Groq
     events = list(ip_store.get(ip, []))
     context = {
         "ip": ip,
@@ -95,13 +98,24 @@ async def get_ip_ai_summary(
         "regions": list({e["region"] for e in events}),
         "mitre_tags": list({t for e in events for t in MITRE_MAP.get(e["attack_type"], [])}),
     }
-    client = Groq(api_key=GROQ_API_KEY)
-    response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
-        max_tokens=150,
-        messages=[{"role": "user", "content": f"You are a SOC analyst. Write a 2-sentence threat intelligence summary for this IP activity: {json.dumps(context)}. Be specific and technical."}],
-    )
-    summary = response.choices[0].message.content
+    try:
+        from groq import AsyncGroq
+        client = AsyncGroq(api_key=GROQ_API_KEY)
+        response = await client.chat.completions.create(
+            model=GROQ_MODEL,
+            # gpt-oss is a reasoning model: keep reasoning short and leave
+            # room in the budget for the actual answer.
+            reasoning_effort="low",
+            max_tokens=500,
+            messages=[{"role": "user", "content": f"You are a SOC analyst. Write a 2-sentence threat intelligence summary for this IP activity: {json.dumps(context)}. Be specific and technical."}],
+        )
+        summary = (response.choices[0].message.content or "").strip()
+        if not summary:
+            raise ValueError("empty completion")
+    except Exception as exc:
+        # Log details server-side only; the client just gets "no summary".
+        logger.warning("AI summary failed for %s: %s: %s", ip, type(exc).__name__, exc)
+        return {"summary": None}
     _ai_summary_cache[ip] = summary
     return {"summary": summary}
 
