@@ -137,10 +137,10 @@ async def update_tasks(
 @router.post("/api/incidents/{incident_id}/notes")
 async def add_note(
     incident_id: str, body: dict,
-    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+    db: Optional[AsyncSession] = Depends(get_db), user: str = Depends(verify_token)
 ):
     text   = body.get("text", "").strip()
-    author = body.get("author", "analyst1")
+    author = user  # from the verified session, never from the request body
     if not text:
         raise HTTPException(status_code=400, detail="Note text is required")
     if USE_DB and db is not None:

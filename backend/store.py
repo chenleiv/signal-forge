@@ -57,7 +57,12 @@ _saved_hunts: list[dict] = []
 
 # ── Auth helpers ──────────────────────────────────────────────
 
-def verify_token(request: Request):
+def verify_token(request: Request) -> str:
+    """Validate the session cookie and return the authenticated username.
+
+    Routes that need to know *who* is acting must use this return value,
+    never an identity field sent by the client.
+    """
     token = request.cookies.get(_COOKIE)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -65,8 +70,12 @@ def verify_token(request: Request):
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         if payload.get("typ") != "session":
             raise ValueError("wrong token type")
+        user = payload.get("sub")
+        if not isinstance(user, str) or not user:
+            raise ValueError("missing subject")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return user
 
 
 def validate_ip(ip: str) -> str:

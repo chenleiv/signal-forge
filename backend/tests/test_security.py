@@ -187,3 +187,18 @@ def test_demo_ignores_method_override_header(demo):
 def test_demo_still_allows_reads_and_login(demo):
     assert demo.get("/api/rules").status_code == 200
     assert demo.post("/auth/logout").status_code == 200
+
+
+# ── 6. Identity comes from the session, not the request ───────────
+
+def test_note_author_cannot_be_spoofed(logged_in):
+    """A client must not be able to write notes in someone else's name."""
+    case = logged_in.post("/api/incidents/from-ip", json={"ip": PUBLIC_IP}).json()
+
+    r = logged_in.post(
+        f"/api/incidents/{case['id']}/notes",
+        json={"text": "Containment approved.", "author": "CISO"},
+    )
+
+    assert r.status_code == 200
+    assert r.json()["author"] == "analyst"   # the logged-in user, not "CISO"

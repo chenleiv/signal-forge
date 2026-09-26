@@ -104,8 +104,9 @@ export class ThreatStoreService {
     return this.http.patch<Incident>(`/api/incidents/${id}`, patch);
   }
 
-  addIncidentNote(id: string, text: string, author = 'analyst1') {
-    return this.http.post<IncidentNote>(`/api/incidents/${id}/notes`, { text, author });
+  addIncidentNote(id: string, text: string) {
+    // The server sets the author from the session; the client never sends it.
+    return this.http.post<IncidentNote>(`/api/incidents/${id}/notes`, { text });
   }
 
   updateIncidentTasks(id: string, completed_tasks: number[]) {

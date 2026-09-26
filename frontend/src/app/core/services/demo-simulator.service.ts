@@ -84,7 +84,7 @@ export class DemoSimulatorService {
 
     if ((p = path.match(/^\/api\/incidents\/([^/]+)\/notes$/)) && m === 'POST') {
       const note: IncidentNote = {
-        author: String(body['author'] ?? 'analyst1'),
+        author: 'analyst',
         text: String(body['text'] ?? ''),
         at: this.now(),
       };
