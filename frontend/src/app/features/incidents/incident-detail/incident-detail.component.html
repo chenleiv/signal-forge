@@ -26,6 +26,9 @@
       <button class="status-btn"
               [class.active]="incident()!.status === s"
               [class.past]="statusFlow.indexOf(s) < statusFlow.indexOf(incident()!.status)"
+              [class.is-disabled]="!work().allowed"
+              [attr.aria-disabled]="!work().allowed || null"
+              [attr.title]="reason(work())"
               (click)="updateStatus(s)">
         {{ s }}
       </button>
@@ -50,12 +53,19 @@
     </div>
     <div class="meta-item">
       <span class="meta-label">Assigned</span>
-      <select class="assignee-select" (change)="updateAssignee($any($event.target).value)">
-        <option value="" [selected]="!incident()!.assigned_to">Unassigned</option>
-        @for (a of analysts; track a) {
-          <option [value]="a" [selected]="incident()!.assigned_to === a">{{ a }}</option>
+      @if (reassign().allowed) {
+        <select class="assignee-select" (change)="updateAssignee($any($event.target).value)">
+          <option value="" [selected]="!incident()!.assigned_to">Unassigned</option>
+          @for (u of users(); track u.username) {
+            <option [value]="u.username" [selected]="incident()!.assigned_to === u.username">{{ u.display_name }}</option>
+          }
+        </select>
+      } @else {
+        <span class="meta-val">{{ displayName(incident()!.assigned_to) }}</span>
+        @if (take().allowed) {
+          <button class="take-btn" type="button" (click)="takeCase()">Take case</button>
         }
-      </select>
+      }
     </div>
     @if (incident()!.source_ip) {
       <div class="meta-item">
@@ -81,7 +91,10 @@
       <span class="section-title">RESPONSE TASKS ({{ completedTasks().size }}/{{ tasks().length }})</span>
       <div class="tasks-list">
         @for (task of tasks(); track $index) {
-          <div class="task-item" (click)="toggleTask($index)" [class.done]="completedTasks().has($index)">
+          <div class="task-item" (click)="toggleTask($index)" [class.done]="completedTasks().has($index)"
+               [class.is-disabled]="!work().allowed"
+               [attr.aria-disabled]="!work().allowed || null"
+               [attr.title]="reason(work())">
             <div class="task-check">
               @if (completedTasks().has($index)) {
                 <svg viewBox="0 0 12 12" fill="none" width="10" height="10">
@@ -97,10 +110,14 @@
 
     <div class="section">
       <span class="section-title">NOTES ({{ notes().length }})</span>
-      <div class="note-input-row">
+      <div class="note-input-row" [attr.title]="reason(work())">
         <input class="note-input" [value]="newNote()" (input)="newNote.set($any($event.target).value)"
+               [readOnly]="!work().allowed" [attr.aria-disabled]="!work().allowed || null"
                placeholder="Add investigation note…" (keydown.enter)="addNote()" />
-        <button class="note-add-btn" (click)="addNote()" [disabled]="!newNote().trim()">Add</button>
+        <button class="note-add-btn" (click)="addNote()"
+                [class.is-disabled]="!work().allowed"
+                [attr.aria-disabled]="!work().allowed || null"
+                [disabled]="!newNote().trim()">Add</button>
       </div>
       @if (notes().length > 0) {
         <div class="notes-list">

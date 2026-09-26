@@ -35,7 +35,7 @@
           </svg>
           <input class="field-input" type="text" [value]="username()"
             (input)="username.set($any($event.target).value)"
-            placeholder="analyst" autocomplete="off"/>
+            placeholder="alice" autocomplete="off"/>
         </div>
       </div>
 
@@ -78,9 +78,15 @@
 
     </form>
 
-    <button class="demo-btn" type="button" (click)="demoLogin()">
-      ▶ Try Demo  <span class="demo-hint">analyst / signalforge</span>
-    </button>
+    @if (demo.enabled()) {
+      <div class="demo-accounts">
+        @for (acc of demoAccounts; track acc.username) {
+          <button class="demo-btn" type="button" (click)="demoLogin(acc)" [disabled]="loading()">
+            ▶ {{ acc.label }}  <span class="demo-hint">{{ acc.username }} / {{ acc.password }}</span>
+          </button>
+        }
+      </div>
+    }
 
   </div>
 

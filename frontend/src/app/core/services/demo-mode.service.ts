@@ -33,6 +33,11 @@ export class DemoModeService {
     this.show('This action is not available in the demo.');
   }
 
+  /** The server denied an action for this user (403 with its reason). */
+  showDenied(reason: string): void {
+    this.show(reason);
+  }
+
   private show(message: string): void {
     this.notice.set(message);
     if (this.noticeTimer) clearTimeout(this.noticeTimer);

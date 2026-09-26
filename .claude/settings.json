@@ -36,5 +36,10 @@
       "Bash(git show*)",
       "Bash(git blame*)"
     ]
-  }
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "includeCoAuthoredBy": false
 }

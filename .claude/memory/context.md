@@ -40,7 +40,7 @@ Core domains:
 
 Frontend:
 
-Angular 19
+Angular 21
 TypeScript
 RxJS
 Signals

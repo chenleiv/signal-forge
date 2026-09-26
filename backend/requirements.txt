@@ -3,6 +3,7 @@ python-dotenv
 uvicorn[standard]
 httpx
 python-jose[cryptography]
+bcrypt>=4.1
 anthropic
 groq
 slowapi

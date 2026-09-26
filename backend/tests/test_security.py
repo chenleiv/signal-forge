@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 import main
+from tests.conftest import ANALYST_PASSWORD
 from store import SECRET_KEY
 
 COOKIE = "sf_session"
@@ -24,13 +25,13 @@ def client():
 
 @pytest.fixture
 def logged_in(client):
-    r = client.post("/auth/login", json={"username": "analyst", "password": "signalforge"})
+    r = client.post("/auth/login", json={"username": "alice", "password": ANALYST_PASSWORD})
     assert r.status_code == 200
     return client
 
 
 def _token(claims: dict, key: str = SECRET_KEY) -> str:
-    base = {"sub": "analyst", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    base = {"sub": "alice", "role": "analyst", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
     return jwt.encode({**base, **claims}, key, algorithm="HS256")
 
 
@@ -85,7 +86,7 @@ class TestJwtAttacks:
             return base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
 
         exp = int((datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp())
-        unsigned = f'{b64({"alg": "none", "typ": "JWT"})}.{b64({"sub": "analyst", "typ": "session", "exp": exp})}.'
+        unsigned = f'{b64({"alg": "none", "typ": "JWT"})}.{b64({"sub": "alice", "role": "analyst", "typ": "session", "exp": exp})}.'
         assert _as_session(client, unsigned).get("/api/stats").status_code == 401
 
 
@@ -201,4 +202,25 @@ def test_note_author_cannot_be_spoofed(logged_in):
     )
 
     assert r.status_code == 200
-    assert r.json()["author"] == "analyst"   # the logged-in user, not "CISO"
+    assert r.json()["author"] == "alice"   # the logged-in user, not "CISO"
+
+
+# ── 7. Tampered role claim ────────────────────────────────────────
+
+def test_tampered_role_claim_is_rejected(logged_in):
+    """Flip role analyst -> admin in a real session token without re-signing."""
+    def b64d(part: str) -> dict:
+        return json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
+
+    def b64e(d: dict) -> str:
+        return base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
+
+    header, payload, signature = logged_in.cookies.get(COOKIE).split(".")
+    claims = b64d(payload)
+    assert claims["role"] == "analyst"
+    forged = f"{header}.{b64e({**claims, 'role': 'admin'})}.{signature}"
+
+    attacker = _as_session(TestClient(main.app), forged)
+    assert attacker.get("/auth/me").status_code == 401
+    assert attacker.post("/api/rules", json={"name": "backdoor"}).status_code == 401
+    assert attacker.patch("/api/behavioral/settings", json={"cooldown_min": 0}).status_code == 401

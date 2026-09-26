@@ -10,10 +10,18 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Incident, IncidentNote, IncidentStatus, SEVERITY_COLORS } from '../../../shared/models/threat.models';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
+import { AuthService } from '../../../core/services/auth';
+import {
+  Decision,
+  canAssign,
+  canReassign,
+  canTakeIncident,
+  canWorkOnIncident,
+} from '../../../core/auth/permissions';
 
 const RESPONSE_TASKS: Record<string, string[]> = {
   SQLi:       ['Isolate source IP', 'Review DB query logs', 'Check WAF rules', 'Patch vulnerable endpoints', 'Notify DBA team'],
@@ -53,12 +61,23 @@ export class IncidentDetailComponent {
 
   readonly tasks      = computed(() => RESPONSE_TASKS[this.incident()?.attack_type ?? 'SQLi'] ?? []);
   readonly statusFlow = STATUS_FLOW;
-  readonly analysts   = ['analyst1', 'analyst2', 'analyst3', 'analyst4', 'analyst5'];
 
   // ── private injections ────────────────────────────────────────
   private readonly store      = inject(ThreatStoreService);
   private readonly router     = inject(Router);
+  private readonly auth       = inject(AuthService);
+
+  /** Assignable users; the server validates assigned_to against the same list. */
+  readonly users = toSignal(this.store.getUsers(), { initialValue: [] });
   private readonly destroyRef = inject(DestroyRef);
+
+  // ── permissions (UX only; the server re-checks every write) ──
+  private readonly user = this.auth.currentUser;
+  readonly work     = computed(() => this.decide(inc => canWorkOnIncident(this.user(), inc)));
+  readonly take     = computed(() => this.decide(inc => canTakeIncident(this.user(), inc)));
+  readonly reassign = computed(() => canReassign(this.user()));
+  /** Tooltip text for a disabled control, or null when allowed. */
+  readonly reason   = (d: Decision): string | null => (d.allowed ? null : d.reason);
 
   // ── constructor ───────────────────────────────────────────────
   constructor() {
@@ -79,19 +98,28 @@ export class IncidentDetailComponent {
   // ── public methods ────────────────────────────────────────────
   close() { this.closed.emit(); }
 
+  // Every handler re-checks its permission: aria-disabled controls stay clickable.
   updateStatus(status: IncidentStatus) {
-    if (this.incident()?.status === status) return;
+    if (!this.work().allowed || this.incident()?.status === status) return;
     this.patchAndEmit({ status }, `Status → ${status}`, 'status');
   }
 
   updateAssignee(value: string) {
+    const inc = this.incident();
     const assigned_to = value || null;
+    if (!inc || !canAssign(this.user(), inc, assigned_to).allowed) return;
     this.patchAndEmit({ assigned_to }, `Assigned → ${assigned_to ?? 'Unassigned'}`, 'assign');
+  }
+
+  takeCase() {
+    const me = this.user();
+    if (!me || !this.take().allowed) return;
+    this.patchAndEmit({ assigned_to: me.username }, `Taken by ${me.display_name}`, 'assign');
   }
 
   toggleTask(index: number) {
     const inc = this.incident();
-    if (!inc) return;
+    if (!inc || !this.work().allowed) return;
     const next = new Set(this.completedTasks());
     next.has(index) ? next.delete(index) : next.add(index);
     this.completedTasks.set(next);
@@ -103,7 +131,7 @@ export class IncidentDetailComponent {
   addNote() {
     const text = this.newNote().trim();
     const inc  = this.incident();
-    if (!text || !inc) return;
+    if (!text || !inc || !this.work().allowed) return;
     this.store.addIncidentNote(inc.id, text)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(note => {
@@ -117,7 +145,17 @@ export class IncidentDetailComponent {
 
   readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? '#9ca3af';
 
+  displayName(username: string | null): string {
+    if (!username) return 'Unassigned';
+    return this.users().find(u => u.username === username)?.display_name ?? username;
+  }
+
   // ── private methods ───────────────────────────────────────────
+  private decide(check: (inc: Incident) => Decision): Decision {
+    const inc = this.incident();
+    return inc ? check(inc) : { allowed: false, reason: 'No incident selected' };
+  }
+
   private patchAndEmit(patch: Parameters<ThreatStoreService['patchIncident']>[1], timelineLabel: string, timelineType: TimelineEntry['type']) {
     const inc = this.incident();
     if (!inc) return;

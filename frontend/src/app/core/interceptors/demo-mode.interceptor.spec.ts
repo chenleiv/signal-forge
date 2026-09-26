@@ -4,23 +4,32 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { firstValueFrom } from 'rxjs';
 
 import { demoModeInterceptor } from './demo-mode.interceptor';
+import { signal } from '@angular/core';
 import { DemoModeService } from '../services/demo-mode.service';
+import { AuthService } from '../services/auth';
+import { CurrentUser } from '../auth/permissions';
+
+const ADMIN: CurrentUser = { username: 'admin', display_name: 'Sarah Kim', role: 'admin' };
+const ALICE: CurrentUser = { username: 'alice', display_name: 'Alice Chen', role: 'analyst' };
 
 describe('demoModeInterceptor', () => {
   let http: HttpClient;
   let server: HttpTestingController;
   let demo: DemoModeService;
+  const user = signal<CurrentUser | null>(ADMIN);
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([demoModeInterceptor])),
         provideHttpClientTesting(),
+        { provide: AuthService, useValue: { currentUser: user } },
       ],
     });
     http   = TestBed.inject(HttpClient);
     server = TestBed.inject(HttpTestingController);
     demo   = TestBed.inject(DemoModeService);
+    user.set(ADMIN);
   });
 
   // Fails the test if any request reached the "server" that we didn't expect.
@@ -56,6 +65,18 @@ describe('demoModeInterceptor', () => {
       );
       expect(demo.notice()).toContain('not available');
     });
+
+    it('refuses a write the user may not make, locally, like the server would', () => {
+      user.set(ALICE);
+      let status = 0;
+      let detail = '';
+      http.delete('/api/rules/r1').subscribe({ error: e => { status = e.status; detail = e.error.detail; } });
+
+      server.expectNone('/api/rules/r1');  // never sent
+      expect(status).toBe(403);
+      expect(detail).toBe('Admin role required');
+      expect(demo.notice()).toBe('Admin role required');
+    });
   });
 
   describe('outside demo mode', () => {
@@ -72,17 +93,24 @@ describe('demoModeInterceptor', () => {
   });
 
   describe('403 handling', () => {
-    it('shows the demo notice only for the read-only-demo 403', () => {
+    it('shows the server reason, not the demo message, for a permission 403', () => {
       let errorStatus = 0;
       http.post('/api/other', {}).subscribe({ error: (e) => (errorStatus = e.status) });
 
       server.expectOne('/api/other').flush(
-        { detail: 'Forbidden for your role' },
+        { detail: 'Only the assignee or an admin can change this incident' },
         { status: 403, statusText: 'Forbidden' },
       );
 
-      expect(demo.notice()).toBeNull();   // unrelated 403: no misleading demo message
+      expect(demo.notice()).toBe('Only the assignee or an admin can change this incident');
+      expect(demo.enabled()).toBe(false);  // a permission 403 does not mean demo mode
       expect(errorStatus).toBe(403);       // error still reaches the component
+    });
+
+    it('shows nothing for a 403 without a text reason', () => {
+      http.post('/api/other', {}).subscribe({ error: () => {} });
+      server.expectOne('/api/other').flush({ detail: { html: '<b>x</b>' } }, { status: 403, statusText: 'Forbidden' });
+      expect(demo.notice()).toBeNull();
     });
   });
 });

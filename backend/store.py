@@ -13,15 +13,26 @@ from jose import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import (
-    INCIDENT_TITLES, MITRE_MAP, ANALYSTS, GEO_DATA, COUNTRY_NAMES,
+    INCIDENT_TITLES, MITRE_MAP, GEO_DATA, COUNTRY_NAMES,
     ASSET_NAMES, ASSET_CRITICALITY, GEO_RISK_SCORES, DETECTION_SOURCES,
 )
 from database import AsyncSessionLocal, get_db
 from db_ops import db_update_rule
+from users import ROLES, CurrentUser, analyst_usernames
 
 SECRET_KEY = os.environ.get("JWT_SECRET")
 if not SECRET_KEY:
     raise RuntimeError("JWT_SECRET environment variable is required")
+
+# Public demo: block every state-changing request server-side (see main.py).
+# Fail closed: demo mode is ON unless DEMO_MODE is explicitly "false".
+DEMO_MODE = os.environ.get("DEMO_MODE", "true").strip().lower() != "false"
+
+# Outside demo mode the only seeded account is `admin`, and its password must
+# come from the operator — never a public default.
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+if not DEMO_MODE and not 12 <= len(ADMIN_PASSWORD.encode()) <= 72:
+    raise RuntimeError("ADMIN_PASSWORD (12-72 bytes) is required when DEMO_MODE=false")
 
 _COOKIE = "sf_session"
 
@@ -42,6 +53,7 @@ alerts_store: deque = deque(maxlen=100)
 _alert_counter: int = 0
 
 _blocked_ips: set[str] = set()
+MAX_BLOCKED_IPS = 1000
 _ip_coords: dict[str, tuple[float, float]] = {}
 
 _behavioral_flagged: dict[str, dict] = {}
@@ -55,13 +67,25 @@ _rules: list[dict] = []
 _saved_hunts: list[dict] = []
 
 
+def block_ip(ip: str) -> bool:
+    """Add a (validated) IP to the blocklist. False when the list is full:
+    new entries are rejected rather than growing the set without bound."""
+    if ip in _blocked_ips:
+        return True
+    if len(_blocked_ips) >= MAX_BLOCKED_IPS:
+        return False
+    _blocked_ips.add(ip)
+    return True
+
+
 # ── Auth helpers ──────────────────────────────────────────────
 
-def verify_token(request: Request) -> str:
-    """Validate the session cookie and return the authenticated username.
+def verify_token(request: Request) -> CurrentUser:
+    """Validate the session cookie and return the authenticated user.
 
     Routes that need to know *who* is acting must use this return value,
-    never an identity field sent by the client.
+    never an identity field sent by the client. The role comes from the
+    signed token, so a role change takes effect at the next login (<= 8h).
     """
     token = request.cookies.get(_COOKIE)
     if not token:
@@ -70,12 +94,15 @@ def verify_token(request: Request) -> str:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         if payload.get("typ") != "session":
             raise ValueError("wrong token type")
-        user = payload.get("sub")
-        if not isinstance(user, str) or not user:
+        username = payload.get("sub")
+        role = payload.get("role")
+        if not isinstance(username, str) or not username:
             raise ValueError("missing subject")
+        if role not in ROLES:
+            raise ValueError("missing or unknown role")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return user
+    return CurrentUser(username=username, role=role)
 
 
 def validate_ip(ip: str) -> str:
@@ -229,7 +256,7 @@ def _create_incident(trigger: dict) -> None:
         "source_ip": trigger.get("ip"),
         "source_region": trigger["region"],
         "event_count": random.randint(5, 50),
-        "assigned_to": random.choice(ANALYSTS),
+        "assigned_to": random.choice([*analyst_usernames(), None]),
         "created_at": now,
         "updated_at": now,
         "mitre_tags": MITRE_MAP.get(attack_type, []),
@@ -272,7 +299,7 @@ def _execute_actions(rule: dict, event: dict) -> None:
             message=f"Rule '{rule['name']}' matched on {event.get('ip', 'unknown')}",
         )
     if "block" in rule["actions"]:
-        _blocked_ips.add(event["ip"])
+        block_ip(event["ip"])  # silently skipped when the blocklist is full
 
 
 def _evaluate_rules(event: dict) -> None:

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
 from db_ops import db_get_behavioral_settings, db_update_behavioral_settings
+from authz import require_admin
 from store import _behavioral_config, verify_token, USE_DB
 import store as _store
 
@@ -24,7 +25,7 @@ async def get_behavioral_settings(
 @router.patch("/api/behavioral/settings")
 async def update_behavioral_settings(
     body: dict,
-    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+    db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)
 ):
     if USE_DB and db is not None:
         result = await db_update_behavioral_settings(db, body)

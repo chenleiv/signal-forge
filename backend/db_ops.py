@@ -3,11 +3,11 @@ import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models import Incident, Note, IncidentTask, Rule, BehavioralSettings
+from models import Incident, Note, IncidentTask, Rule, BehavioralSettings, User
 
 
 def _incident_to_dict(inc: Incident) -> dict:
@@ -91,25 +91,32 @@ async def db_create_incident(session: AsyncSession, data: dict) -> dict:
     return _incident_to_dict(inc)
 
 
+class StaleIncident(Exception):
+    """The incident's assignee changed between the permission check and the write."""
+
+
 async def db_patch_incident(
-    session: AsyncSession, incident_id: str, patch: dict
+    session: AsyncSession, incident_id: str, patch: dict, *, expected_assignee: str | None
 ) -> dict | None:
-    result = await session.execute(
-        select(Incident)
-        .options(selectinload(Incident.notes), selectinload(Incident.tasks))
-        .where(Incident.id == incident_id)
+    """Apply `patch` only if the incident is still assigned to `expected_assignee`
+    (the value the permission check saw): a single conditional UPDATE, so two
+    analysts cannot both take the same incident. Raises StaleIncident if it moved."""
+    values = {k: patch[k] for k in ("status", "assigned_to") if k in patch}
+    values["updated_at"] = datetime.now(timezone.utc)
+    same_assignee = (
+        Incident.assigned_to.is_(None) if expected_assignee is None
+        else Incident.assigned_to == expected_assignee
     )
-    inc = result.scalar_one_or_none()
-    if inc is None:
-        return None
-    if "status" in patch:
-        inc.status = patch["status"]
-    if "assigned_to" in patch:
-        inc.assigned_to = patch["assigned_to"]
-    inc.updated_at = datetime.now(timezone.utc)
+    result = await session.execute(
+        update(Incident).where(Incident.id == incident_id, same_assignee).values(**values)
+    )
+    # ORM-enabled UPDATE: cached Incident objects are synchronized too.
     await session.commit()
-    await session.refresh(inc, ["notes", "tasks"])
-    return _incident_to_dict(inc)
+    if result.rowcount == 0:
+        if await db_get_incident(session, incident_id) is None:
+            return None
+        raise StaleIncident(incident_id)
+    return await db_get_incident(session, incident_id)
 
 
 async def db_add_note(
@@ -296,3 +303,41 @@ async def db_update_behavioral_settings(session: AsyncSession, patch: dict) -> d
     await session.commit()
     await session.refresh(bs)
     return _behavioral_settings_to_dict(bs)
+
+
+# ── Users ─────────────────────────────────────────────────────
+# Internal only: these dicts carry password_hash. Routes expose users
+# through users.public_user().
+
+def _user_to_dict(u: User) -> dict:
+    return {
+        "username": u.username,
+        "display_name": u.display_name,
+        "role": u.role,
+        "password_hash": u.password_hash,
+    }
+
+
+async def db_get_users(session: AsyncSession) -> list[dict]:
+    result = await session.execute(select(User))
+    return [_user_to_dict(u) for u in result.scalars().all()]
+
+
+async def db_create_user(session: AsyncSession, data: dict) -> dict:
+    user = User(
+        username=data["username"],
+        display_name=data["display_name"],
+        role=data["role"],
+        password_hash=data["password_hash"],
+        created_at=datetime.now(timezone.utc),
+    )
+    session.add(user)
+    await session.commit()
+    return _user_to_dict(user)
+
+
+async def db_set_password_hash(session: AsyncSession, username: str, password_hash: str) -> None:
+    user = await session.get(User, username)
+    if user is not None:
+        user.password_hash = password_hash
+        await session.commit()

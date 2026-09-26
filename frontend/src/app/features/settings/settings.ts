@@ -13,7 +13,7 @@ import { ThemeService } from '../../core/services/theme';
 })
 export class Settings {
   private svc = inject(SettingsService);
-  private auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   readonly themeService = inject(ThemeService);
 
   form = signal<AppSettings>({ ...this.svc.settings() });

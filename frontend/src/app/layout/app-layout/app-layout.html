@@ -89,11 +89,11 @@
 
     <div class="sidebar-footer">
       <a class="user-row" routerLink="/settings">
-        <div class="user-avatar">SF</div>
+        <div class="user-avatar">{{ initials() }}</div>
         <div class="user-info">
-          <span class="user-name">{{ settingsService.settings().analystName }}</span>
+          <span class="user-name">{{ auth.currentUser()?.display_name }}</span>
           <span class="user-status">
-            <span class="status-dot"></span>{{ settingsService.settings().analystRole }}
+            <span class="status-dot"></span>{{ auth.currentUser()?.role }}
           </span>
         </div>
       </a>

@@ -1,9 +1,9 @@
 ---
-name: angular19
-description: Angular 19 frontend review rules
+name: angular21
+description: Angular 21 frontend review rules
 ---
 
-# Angular 19 Skill
+# Angular 21 Skill
 
 Role:
 Senior Angular reviewer.
@@ -12,7 +12,7 @@ Context:
 SignalForge SOC frontend.
 
 Stack:
-- Angular 19
+- Angular 21
 - TypeScript
 - Signals
 - RxJS

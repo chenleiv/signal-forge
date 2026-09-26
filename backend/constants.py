@@ -49,7 +49,6 @@ INCIDENT_TITLES = {
     "Escalation": "Threat score escalation — attacker intensifying",
 }
 
-ANALYSTS = ["Alice Chen", "Bob Martinez", "Sarah Kim", "James Liu", None]
 
 _SEVERITY_BANDS = [
     ("low",       1,  39, 0.15),
@@ -96,3 +95,16 @@ THREAT_CATEGORIES: dict[str, str] = {
     "RepeatedIP": "Persistent Threat",
     "Escalation": "Threat Escalation",
 }
+
+
+# Response playbook per attack type. completed_tasks are indexes into these
+# lists. Keep in sync with RESPONSE_TASKS in the frontend incident detail.
+RESPONSE_TASKS: dict[str, list[str]] = {
+    "SQLi":       ["Isolate source IP", "Review DB query logs", "Check WAF rules", "Patch vulnerable endpoints", "Notify DBA team"],
+    "DDoS":       ["Enable rate limiting", "Block source CIDR", "Alert upstream provider", "Scale load balancers", "Monitor bandwidth"],
+    "BruteForce": ["Block source IP", "Reset targeted accounts", "Enforce MFA", "Review auth logs", "Notify account owners"],
+    "PortScan":   ["Block source IP", "Audit exposed ports", "Update firewall rules", "Check IDS alerts"],
+    "Malware":    ["Isolate affected host", "Run AV/EDR scan", "Collect forensic artifacts", "Revoke compromised creds", "Notify IR team"],
+}
+
+MAX_NOTE_LENGTH = 2000

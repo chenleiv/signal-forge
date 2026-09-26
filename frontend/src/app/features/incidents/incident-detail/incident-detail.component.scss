@@ -410,3 +410,21 @@ $green: rgba(255,255,255,.65);
   font-family: monospace;
   font-weight: 600;
 }
+
+// Not allowed for the current user: still focusable (aria-disabled) so the
+// tooltip explains why; handlers ignore the click.
+.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.take-btn {
+  margin-left: 8px;
+  padding: 2px 10px;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid $accent;
+  background: transparent;
+  color: $accent;
+  cursor: pointer;
+}

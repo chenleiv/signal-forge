@@ -18,17 +18,14 @@
                 <h2 class="card-title">User Profile</h2>
             </div>
             <div class="field-grid">
+                <!-- Read-only: identity and role come from the server session. -->
                 <div class="field">
-                    <label>Analyst Name</label>
-                    <input [value]="form().analystName"
-                        (input)="form.update(s => ({...s, analystName: $any($event.target).value}))"
-                        placeholder="SOC Analyst" />
+                    <label>Name</label>
+                    <input [value]="auth.currentUser()?.display_name ?? ''" readonly />
                 </div>
                 <div class="field">
                     <label>Role</label>
-                    <input [value]="form().analystRole"
-                        (input)="form.update(s => ({...s, analystRole: $any($event.target).value}))"
-                        placeholder="Tier 1" />
+                    <input [value]="auth.currentUser()?.role ?? ''" readonly />
                 </div>
             </div>
         </section>

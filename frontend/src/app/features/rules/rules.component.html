@@ -3,7 +3,9 @@
   <div class="rules-sidebar">
     <div class="sidebar-header">
       <span class="sidebar-title">DETECTION RULES</span>
-      <button class="btn-new" (click)="newRule()">+ New</button>
+      @if (manage().allowed) {
+        <button class="btn-new" (click)="newRule()">+ New</button>
+      }
     </div>
 
     @if (loading()) {
@@ -30,15 +32,19 @@
       @for (rule of rules(); track rule.id) {
         <div class="rule-item" [class.active]="selected()?.id === rule.id" (click)="selectRule(rule)">
           <button class="rule-toggle" [class.on]="rule.enabled"
+                  [class.is-disabled]="!manage().allowed"
+                  [attr.aria-disabled]="!manage().allowed || null"
                   (click)="toggleEnabled(rule, $event)"
-                  [title]="rule.enabled ? 'Disable' : 'Enable'">
+                  [title]="manageReason() ?? (rule.enabled ? 'Disable' : 'Enable')">
             <span class="toggle-dot"></span>
           </button>
           <div class="rule-info">
             <span class="rule-name">{{ rule.name }}</span>
             <span class="rule-meta">{{ rule.match_count }} hits · {{ rule.actions.join(' + ') }}</span>
           </div>
-          <button class="rule-del" (click)="deleteRule(rule, $event)">✕</button>
+          @if (manage().allowed) {
+            <button class="rule-del" (click)="deleteRule(rule, $event)">✕</button>
+          }
         </div>
       }
     </div>
@@ -55,6 +61,10 @@
       </div>
     } @else {
       <div class="editor-body">
+        @if (!manage().allowed) {
+          <div class="readonly-banner" role="note">Only admins can change detection rules.</div>
+        }
+        <fieldset class="editor-fieldset" [disabled]="!manage().allowed">
 
         <div class="editor-section">
           <label class="field-label">RULE NAME</label>
@@ -130,12 +140,16 @@
           <div class="query-preview">{{ queryPreview() }}</div>
         </div>
 
-        <div class="editor-footer">
-          <button class="btn-cancel" (click)="cancel()">Cancel</button>
-          <button class="btn-save" (click)="save()" [disabled]="!editName().trim()">
-            {{ isNew() ? 'Create Rule' : 'Save Changes' }}
-          </button>
-        </div>
+        </fieldset>
+
+        @if (manage().allowed) {
+          <div class="editor-footer">
+            <button class="btn-cancel" (click)="cancel()">Cancel</button>
+            <button class="btn-save" (click)="save()" [disabled]="!editName().trim()">
+              {{ isNew() ? 'Create Rule' : 'Save Changes' }}
+            </button>
+          </div>
+        }
 
       </div>
     }

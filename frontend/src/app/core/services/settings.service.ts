@@ -8,8 +8,6 @@ export interface AppSettings {
   criticalThreshold: number;
   highThreshold: number;
   mediumThreshold: number;
-  analystName: string;
-  analystRole: string;
 }
 
 const DEFAULTS: AppSettings = {
@@ -19,9 +17,10 @@ const DEFAULTS: AppSettings = {
   criticalThreshold: 80,
   highThreshold: 60,
   mediumThreshold: 40,
-  analystName: 'SOC Analyst',
-  analystRole: 'Tier 1',
 };
+
+// Removed fields that older saved settings may still contain.
+const LEGACY_KEYS = ['analystName', 'analystRole'];
 
 const STORAGE_KEY = 'sf_settings';
 
@@ -43,7 +42,10 @@ export class SettingsService {
   private load(): AppSettings {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+      if (!raw) return { ...DEFAULTS };
+      const saved = JSON.parse(raw);
+      for (const key of LEGACY_KEYS) delete saved[key];
+      return { ...DEFAULTS, ...saved };
     } catch {
       return { ...DEFAULTS };
     }

@@ -1,6 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpRequest } from '@angular/common/http';
 import { ThreatStoreService } from './threat-store.service';
+import { AuthService } from './auth';
+import {
+  Decision,
+  canManageConfiguration,
+  canPatchIncident,
+  canWorkOnIncident,
+} from '../auth/permissions';
 import {
   AttackType,
   Incident,
@@ -28,12 +35,17 @@ const ATTACK_TYPES: readonly AttackType[] = [
  * matching GET responses, so the UI stays consistent across polling and
  * navigation. Everything resets on page reload.
  *
+ * Permissions: `authorize` applies the same matrix as the server (shared
+ * helper in core/auth/permissions.ts), so the demo never "succeeds" at an
+ * action the real system would deny.
+ *
  * Security note: this is UX only. The server independently rejects writes
  * in demo mode, so bypassing this code gains an attacker nothing.
  */
 @Injectable({ providedIn: 'root' })
 export class DemoSimulatorService {
   private store = inject(ThreatStoreService);
+  private auth  = inject(AuthService);
   private seq = 0;
 
   // Last server copy of each item, so PATCH can return a full object.
@@ -47,6 +59,28 @@ export class DemoSimulatorService {
   private incPatches     = new Map<string, Partial<Incident>>();
   private incNotes       = new Map<string, IncidentNote[]>();
   private ipCases        = new Map<string, string>();
+
+  // ── Permissions ───────────────────────────────────────────
+
+  /** Would the real server allow this write for the current user? */
+  authorize(req: HttpRequest<unknown>, path: string): Decision {
+    const user = this.auth.currentUser();
+    const m = req.method;
+    const body = (req.body ?? {}) as Json;
+    let p: RegExpMatchArray | null;
+
+    if (/^\/api\/(rules(\/[^/]+)?|behavioral\/settings)$/.test(path) && m !== 'GET') {
+      return canManageConfiguration(user);
+    }
+    if ((p = path.match(/^\/api\/incidents\/([^/]+)\/(notes|tasks)$/))) {
+      const inc = this.currentIncident(p[1]);
+      if (inc) return canWorkOnIncident(user, inc);
+    } else if ((p = path.match(/^\/api\/incidents\/([^/]+)$/)) && m === 'PATCH') {
+      const inc = this.currentIncident(p[1]);
+      if (inc) return canPatchIncident(user, inc, body as { status?: unknown; assigned_to?: string | null });
+    }
+    return { allowed: true };
+  }
 
   // ── Writes ────────────────────────────────────────────────
 
@@ -84,7 +118,7 @@ export class DemoSimulatorService {
 
     if ((p = path.match(/^\/api\/incidents\/([^/]+)\/notes$/)) && m === 'POST') {
       const note: IncidentNote = {
-        author: 'analyst',
+        author: this.auth.currentUser()?.username ?? 'unknown',
         text: String(body['text'] ?? ''),
         at: this.now(),
       };
@@ -168,7 +202,7 @@ export class DemoSimulatorService {
       source_ip: ip ?? undefined,
       source_region: latest?.region ?? 'US',
       event_count: events.length,
-      assigned_to: null,
+      assigned_to: this.auth.currentUser()?.username ?? null,  // creator, like the server
       created_at: now,
       updated_at: now,
       mitre_tags: [],
@@ -178,6 +212,12 @@ export class DemoSimulatorService {
     this.incCreated.unshift(incident);
     if (ip) this.ipCases.set(ip, incident.id);
     return { ...incident, existing: false };
+  }
+
+  /** The incident as the UI currently sees it (server copy + local overlay). */
+  private currentIncident(id: string): Incident | undefined {
+    const base = this.incCreated.find(i => i.id === id) ?? this.seenIncidents.get(id);
+    return base ? this.withIncidentOverlay(base) : undefined;
   }
 
   private patchIncident(id: string, patch: Partial<Incident>): Incident {

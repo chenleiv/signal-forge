@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from store import alerts_store, _blocked_ips, _find_alert, verify_token
 from routers.incidents import build_incident_for_ip
+from users import CurrentUser
 
 router = APIRouter()
 
@@ -68,7 +69,7 @@ async def get_alerts_summary(_=Depends(verify_token)):
 @router.post("/api/alerts/{alert_id}/case")
 async def create_case_from_alert(
     alert_id: str,
-    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+    db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
     alert = _find_alert(alert_id)
     if alert is None:
@@ -76,4 +77,4 @@ async def create_case_from_alert(
     ip = alert.get("ip")
     if not ip:
         raise HTTPException(status_code=400, detail="Alert has no associated IP")
-    return await build_incident_for_ip(ip, db)
+    return await build_incident_for_ip(ip, db, user)

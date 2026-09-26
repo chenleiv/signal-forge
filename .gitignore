@@ -8,6 +8,9 @@ backend/venv/
 backend/__pycache__/
 backend/*.pyc
 backend/.env
+# Local SQLite DB: holds user password hashes, never commit it
+backend/*.db
+backend/*.db-journal
 
 # OS
 .DS_Store

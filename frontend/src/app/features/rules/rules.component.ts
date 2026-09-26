@@ -8,6 +8,8 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
+import { AuthService } from '../../core/services/auth';
+import { canManageConfiguration } from '../../core/auth/permissions';
 import { DetectionRule, RuleCondition, RuleAction, ATTACK_TYPES, REGIONS } from '../../shared/models/threat.models';
 
 const OPERATORS: Record<string, string[]> = {
@@ -28,6 +30,11 @@ const OPERATORS: Record<string, string[]> = {
 export class RulesComponent {
   private store      = inject(ThreatStoreService);
   private destroyRef = inject(DestroyRef);
+  private auth       = inject(AuthService);
+
+  /** Rules are admin-only to change (UX only; the server enforces it). */
+  readonly manage       = computed(() => canManageConfiguration(this.auth.currentUser()));
+  readonly manageReason = computed(() => { const d = this.manage(); return d.allowed ? null : d.reason; });
 
   rules    = signal<DetectionRule[]>([]);
   loading  = signal(true);
@@ -62,7 +69,9 @@ export class RulesComponent {
     this.editActions.set(new Set<RuleAction>(rule?.actions ?? ['alert']));
   }
 
+  // Every write handler re-checks the permission: aria-disabled controls stay clickable.
   newRule() {
+    if (!this.manage().allowed) return;
     this.selected.set(null);
     this.isNew.set(true);
     this.loadEditor();
@@ -108,6 +117,7 @@ export class RulesComponent {
   }
 
   save() {
+    if (!this.manage().allowed) return;
     const payload = {
       name:       this.editName().trim() || 'Unnamed Rule',
       logic:      this.editLogic(),
@@ -137,6 +147,7 @@ export class RulesComponent {
 
   toggleEnabled(rule: DetectionRule, e: Event) {
     e.stopPropagation();
+    if (!this.manage().allowed) return;
     this.store.updateRule(rule.id, { enabled: !rule.enabled })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(updated => {
@@ -147,6 +158,7 @@ export class RulesComponent {
 
   deleteRule(rule: DetectionRule, e: Event) {
     e.stopPropagation();
+    if (!this.manage().allowed) return;
     this.store.deleteRule(rule.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
