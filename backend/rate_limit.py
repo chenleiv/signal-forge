@@ -11,7 +11,8 @@ from starlette.requests import Request
 # Number of reverse proxies in front of the app that append to
 # X-Forwarded-For (Render: 1). 0 = ignore the header, use the socket address.
 try:
-    TRUSTED_PROXY_HOPS = int(os.environ.get("TRUSTED_PROXY_HOPS", "1"))
+    # An empty value (e.g. copied from .env.example) means "use the default".
+    TRUSTED_PROXY_HOPS = int(os.environ.get("TRUSTED_PROXY_HOPS") or "1")
 except ValueError:
     TRUSTED_PROXY_HOPS = -1
 if TRUSTED_PROXY_HOPS < 0:

@@ -20,7 +20,7 @@ from simulation import fetch_ipinfo, IPINFO_TOKEN
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 GROQ_API_KEY      = os.environ.get("GROQ_API_KEY", "")
 # Groq retires models over time; override without a code change via GROQ_MODEL.
-GROQ_MODEL        = os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b")
+GROQ_MODEL        = os.environ.get("GROQ_MODEL") or "openai/gpt-oss-20b"  # empty = default
 
 _abuse_cache: dict[str, dict] = {}
 _geo_cache: dict[str, dict] = {}
