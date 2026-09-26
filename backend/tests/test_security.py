@@ -203,3 +203,24 @@ def test_note_author_cannot_be_spoofed(logged_in):
 
     assert r.status_code == 200
     assert r.json()["author"] == "alice"   # the logged-in user, not "CISO"
+
+
+# ── 7. Tampered role claim ────────────────────────────────────────
+
+def test_tampered_role_claim_is_rejected(logged_in):
+    """Flip role analyst -> admin in a real session token without re-signing."""
+    def b64d(part: str) -> dict:
+        return json.loads(base64.urlsafe_b64decode(part + "=" * (-len(part) % 4)))
+
+    def b64e(d: dict) -> str:
+        return base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
+
+    header, payload, signature = logged_in.cookies.get(COOKIE).split(".")
+    claims = b64d(payload)
+    assert claims["role"] == "analyst"
+    forged = f"{header}.{b64e({**claims, 'role': 'admin'})}.{signature}"
+
+    attacker = _as_session(TestClient(main.app), forged)
+    assert attacker.get("/auth/me").status_code == 401
+    assert attacker.post("/api/rules", json={"name": "backdoor"}).status_code == 401
+    assert attacker.patch("/api/behavioral/settings", json={"cooldown_min": 0}).status_code == 401
