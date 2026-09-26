@@ -184,6 +184,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SignalForge API", lifespan=lifespan)
 
+# TEMPORARY (branch chore/proxy-hops-probe, never merge): with
+# XFF_COUNT_PROBE=1, log the NUMBER of X-Forwarded-For entries (never the
+# addresses) for the first 5 requests, to set TRUSTED_PROXY_HOPS correctly.
+_XFF_PROBE_LEFT = 5 if os.environ.get("XFF_COUNT_PROBE") == "1" else 0
+
+
+@app.middleware("http")
+async def xff_count_probe(request: Request, call_next):
+    global _XFF_PROBE_LEFT
+    if _XFF_PROBE_LEFT > 0:
+        _XFF_PROBE_LEFT -= 1
+        lines = request.headers.getlist("x-forwarded-for")
+        count = sum(1 for line in lines for e in line.split(",") if e.strip())
+        print(f"[xff-probe] X-Forwarded-For entries: {count} (header lines: {len(lines)})", flush=True)
+    return await call_next(request)
+
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
