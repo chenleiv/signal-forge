@@ -16,6 +16,7 @@ import {
   DetectionRule,
   ThreatAlert,
   AlertSummaryMetrics,
+  UserSummary,
 } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
 
@@ -98,6 +99,10 @@ export class ThreatStoreService {
 
   fetchIncidents() {
     return this.http.get<Incident[]>('/api/incidents');
+  }
+
+  getUsers() {
+    return this.http.get<UserSummary[]>('/api/users');
   }
 
   patchIncident(id: string, patch: { status?: IncidentStatus; assigned_to?: string | null }) {

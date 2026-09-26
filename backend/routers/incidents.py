@@ -11,19 +11,33 @@ from database import get_db
 from db_ops import (
     db_get_incidents, db_get_incident, db_create_incident,
     db_patch_incident, db_add_note, db_update_tasks,
-    db_find_open_incident_by_ip,
+    db_find_open_incident_by_ip, StaleIncident,
 )
 from store import (
     ip_store, incidents_store, _incident_counter,
     _score_to_level, _find_incident, validate_ip, verify_token, USE_DB,
 )
 import store as _store
+from authz import check_incident_patch, check_work_on_incident
 from users import CurrentUser
 
 router = APIRouter()
 
 
-async def build_incident_for_ip(ip: str, db) -> dict:
+async def _load_incident(incident_id: str, db) -> dict:
+    """Current state of an incident, for permission checks. 404 if missing."""
+    if USE_DB and db is not None:
+        inc = await db_get_incident(db, incident_id)
+    else:
+        inc = _find_incident(incident_id)
+    if inc is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return inc
+
+
+async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
+    """Open case for `ip`: the existing open one (unchanged), or a new one
+    assigned to its creator."""
     if USE_DB and db is not None:
         existing = await db_find_open_incident_by_ip(db, ip)
         if existing:
@@ -52,7 +66,7 @@ async def build_incident_for_ip(ip: str, db) -> dict:
         "source_ip": ip,
         "source_region": regions[0] if regions else "Unknown",
         "event_count": len(events),
-        "assigned_to": None,
+        "assigned_to": creator.username,
         "created_at": now,
         "updated_at": now,
         "mitre_tags": list({t for e in events for t in MITRE_MAP.get(e["attack_type"], [])}),
@@ -76,20 +90,22 @@ async def get_incidents(db: Optional[AsyncSession] = Depends(get_db), _=Depends(
 @router.patch("/api/incidents/{incident_id}")
 async def patch_incident(
     incident_id: str, body: dict,
-    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+    db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
+    inc = await _load_incident(incident_id, db)
+    patch = check_incident_patch(user, inc, body)
     if USE_DB and db is not None:
-        result = await db_patch_incident(db, incident_id, body)
+        try:
+            result = await db_patch_incident(
+                db, incident_id, patch, expected_assignee=inc["assigned_to"]
+            )
+        except StaleIncident:
+            raise HTTPException(status_code=409, detail="Incident was reassigned meanwhile, reload and retry")
         if result is None:
             raise HTTPException(status_code=404, detail="Incident not found")
         return result
-    inc = _find_incident(incident_id)
-    if inc is None:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    if "status" in body:
-        inc["status"] = body["status"]
-    if "assigned_to" in body:
-        inc["assigned_to"] = body["assigned_to"]
+    # In memory there is no await between the check and this write: atomic.
+    inc.update(patch)
     inc["updated_at"] = datetime.now(timezone.utc).isoformat()
     return inc
 
@@ -111,25 +127,27 @@ async def get_ip_case(
 @router.post("/api/incidents/from-ip")
 async def create_incident_from_ip(
     body: dict,
-    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+    db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
-    return await build_incident_for_ip(body.get("ip", "unknown"), db)
+    ip = body.get("ip")
+    if not isinstance(ip, str):  # ipaddress would also accept an int
+        raise HTTPException(status_code=422, detail="Invalid IP address format")
+    return await build_incident_for_ip(validate_ip(ip), db, user)
 
 
 @router.patch("/api/incidents/{incident_id}/tasks")
 async def update_tasks(
     incident_id: str, body: dict,
-    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+    db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
     completed = body.get("completed_tasks", [])
+    inc = await _load_incident(incident_id, db)
+    check_work_on_incident(user, inc)
     if USE_DB and db is not None:
         result = await db_update_tasks(db, incident_id, completed)
         if result is None:
             raise HTTPException(status_code=404, detail="Incident not found")
         return {"completed_tasks": result}
-    inc = _find_incident(incident_id)
-    if inc is None:
-        raise HTTPException(status_code=404, detail="Incident not found")
     inc["completed_tasks"] = completed
     inc["updated_at"] = datetime.now(timezone.utc).isoformat()
     return {"completed_tasks": inc["completed_tasks"]}
@@ -144,13 +162,10 @@ async def add_note(
     author = user.username  # from the verified session, never from the request body
     if not text:
         raise HTTPException(status_code=400, detail="Note text is required")
+    inc = await _load_incident(incident_id, db)
+    check_work_on_incident(user, inc)
     if USE_DB and db is not None:
-        if await db_get_incident(db, incident_id) is None:
-            raise HTTPException(status_code=404, detail="Incident not found")
         return await db_add_note(db, incident_id, text=text, author=author)
-    inc = _find_incident(incident_id)
-    if inc is None:
-        raise HTTPException(status_code=404, detail="Incident not found")
     note = {"author": author, "text": text, "at": datetime.now(timezone.utc).isoformat()}
     inc["notes"].append(note)
     inc["updated_at"] = note["at"]

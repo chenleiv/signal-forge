@@ -10,7 +10,7 @@ import {
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import { Incident, IncidentNote, IncidentStatus, SEVERITY_COLORS } from '../../../shared/models/threat.models';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
@@ -53,11 +53,13 @@ export class IncidentDetailComponent {
 
   readonly tasks      = computed(() => RESPONSE_TASKS[this.incident()?.attack_type ?? 'SQLi'] ?? []);
   readonly statusFlow = STATUS_FLOW;
-  readonly analysts   = ['analyst1', 'analyst2', 'analyst3', 'analyst4', 'analyst5'];
 
   // ── private injections ────────────────────────────────────────
   private readonly store      = inject(ThreatStoreService);
   private readonly router     = inject(Router);
+
+  /** Assignable users; the server validates assigned_to against the same list. */
+  readonly users = toSignal(this.store.getUsers(), { initialValue: [] });
   private readonly destroyRef = inject(DestroyRef);
 
   // ── constructor ───────────────────────────────────────────────

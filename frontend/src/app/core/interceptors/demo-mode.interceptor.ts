@@ -12,7 +12,8 @@ const SIMULATED_LATENCY_MS = 150;
  * Demo mode, client side:
  *  - writes are answered locally by DemoSimulatorService and never sent;
  *  - GET responses get the local overlay applied, so the UI stays consistent;
- *  - a server 403 "Read-only demo" (anything not simulated) becomes a notice.
+ *  - a server 403 "Read-only demo" (anything not simulated) becomes a notice;
+ *  - any other server 403 (permission denied) shows the server's reason.
  * UX only: the server enforces read-only mode whether or not this runs.
  */
 export const demoModeInterceptor: HttpInterceptorFn = (req, next) => {
@@ -36,8 +37,11 @@ export const demoModeInterceptor: HttpInterceptorFn = (req, next) => {
         : event,
     ),
     catchError((err: HttpErrorResponse) => {
-      if (err.status === 403 && err.error?.detail === 'Read-only demo') {
+      const detail: unknown = err.error?.detail;
+      if (err.status === 403 && detail === 'Read-only demo') {
         demo.showBlocked();
+      } else if (err.status === 403 && typeof detail === 'string') {
+        demo.showDenied(detail);  // e.g. "Only the assignee or an admin can …"
       }
       return throwError(() => err);
     }),

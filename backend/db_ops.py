@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -91,25 +91,32 @@ async def db_create_incident(session: AsyncSession, data: dict) -> dict:
     return _incident_to_dict(inc)
 
 
+class StaleIncident(Exception):
+    """The incident's assignee changed between the permission check and the write."""
+
+
 async def db_patch_incident(
-    session: AsyncSession, incident_id: str, patch: dict
+    session: AsyncSession, incident_id: str, patch: dict, *, expected_assignee: str | None
 ) -> dict | None:
-    result = await session.execute(
-        select(Incident)
-        .options(selectinload(Incident.notes), selectinload(Incident.tasks))
-        .where(Incident.id == incident_id)
+    """Apply `patch` only if the incident is still assigned to `expected_assignee`
+    (the value the permission check saw): a single conditional UPDATE, so two
+    analysts cannot both take the same incident. Raises StaleIncident if it moved."""
+    values = {k: patch[k] for k in ("status", "assigned_to") if k in patch}
+    values["updated_at"] = datetime.now(timezone.utc)
+    same_assignee = (
+        Incident.assigned_to.is_(None) if expected_assignee is None
+        else Incident.assigned_to == expected_assignee
     )
-    inc = result.scalar_one_or_none()
-    if inc is None:
-        return None
-    if "status" in patch:
-        inc.status = patch["status"]
-    if "assigned_to" in patch:
-        inc.assigned_to = patch["assigned_to"]
-    inc.updated_at = datetime.now(timezone.utc)
+    result = await session.execute(
+        update(Incident).where(Incident.id == incident_id, same_assignee).values(**values)
+    )
+    # ORM-enabled UPDATE: cached Incident objects are synchronized too.
     await session.commit()
-    await session.refresh(inc, ["notes", "tasks"])
-    return _incident_to_dict(inc)
+    if result.rowcount == 0:
+        if await db_get_incident(session, incident_id) is None:
+            return None
+        raise StaleIncident(incident_id)
+    return await db_get_incident(session, incident_id)
 
 
 async def db_add_note(

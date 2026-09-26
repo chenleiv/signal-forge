@@ -72,17 +72,24 @@ describe('demoModeInterceptor', () => {
   });
 
   describe('403 handling', () => {
-    it('shows the demo notice only for the read-only-demo 403', () => {
+    it('shows the server reason, not the demo message, for a permission 403', () => {
       let errorStatus = 0;
       http.post('/api/other', {}).subscribe({ error: (e) => (errorStatus = e.status) });
 
       server.expectOne('/api/other').flush(
-        { detail: 'Forbidden for your role' },
+        { detail: 'Only the assignee or an admin can change this incident' },
         { status: 403, statusText: 'Forbidden' },
       );
 
-      expect(demo.notice()).toBeNull();   // unrelated 403: no misleading demo message
+      expect(demo.notice()).toBe('Only the assignee or an admin can change this incident');
+      expect(demo.enabled()).toBe(false);  // a permission 403 does not mean demo mode
       expect(errorStatus).toBe(403);       // error still reaches the component
+    });
+
+    it('shows nothing for a 403 without a text reason', () => {
+      http.post('/api/other', {}).subscribe({ error: () => {} });
+      server.expectOne('/api/other').flush({ detail: { html: '<b>x</b>' } }, { status: 403, statusText: 'Forbidden' });
+      expect(demo.notice()).toBeNull();
     });
   });
 });
