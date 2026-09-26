@@ -131,3 +131,34 @@ def test_real_accounts_keep_the_account_lockout_in_demo_mode(demo_mode, monkeypa
     for i in range(10):
         assert _login(client, "carol", f"guess-{i}", xff=f"192.0.2.{i}").status_code == 401
     assert _login(client, "carol", "carol-real-password", xff="192.0.2.200").status_code == 429
+
+
+# ── keyed limits never share counters ─────────────────────────
+
+def test_login_and_case_limits_stay_independent_at_the_same_rate(monkeypatch):
+    """Even with identical rates, each limit counts only its own hits."""
+    from limits import parse_many
+    same = parse_many("3/minute")
+    monkeypatch.setattr(rate_limit.LOGIN_FAILURES_PER_USER, "items", same)
+    monkeypatch.setattr(rate_limit.CASES_PER_USER, "items", same)
+
+    for _ in range(3):
+        rate_limit.LOGIN_FAILURES_PER_USER.hit("alice")
+    assert rate_limit.LOGIN_FAILURES_PER_USER.exceeded("alice")
+    assert not rate_limit.CASES_PER_USER.exceeded("alice")
+
+    for _ in range(3):
+        rate_limit.CASES_PER_USER.hit("bob")
+    assert rate_limit.CASES_PER_USER.exceeded("bob")
+    assert not rate_limit.LOGIN_FAILURES_PER_USER.exceeded("bob")
+
+
+def test_limits_use_distinct_explicit_namespaces():
+    assert rate_limit.LOGIN_FAILURES_PER_USER.namespace == "login-user"
+    assert rate_limit.CASES_PER_USER.namespace == "case-user"
+
+
+@pytest.mark.parametrize("namespace", ["login-user", "case-user", ""])
+def test_reusing_or_omitting_a_namespace_is_refused(namespace):
+    with pytest.raises(ValueError):
+        rate_limit.KeyedLimit(namespace, "1/minute")

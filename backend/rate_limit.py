@@ -48,12 +48,20 @@ limiter = Limiter(key_func=client_ip)
 class KeyedLimit:
     """A rate limit on an application key (username, ...) rather than on the
     client IP. Callers decide what counts: check `exceeded` before the action,
-    `hit` when it should count. In-memory: per process."""
+    `hit` when it should count. In-memory: per process.
+
+    Every instance owns a unique namespace, and the namespace is part of every
+    storage key, so two limits never share a counter, even with equal rates.
+    Reusing a namespace fails at import time."""
 
     _storage = MemoryStorage()
     _limiter = FixedWindowRateLimiter(_storage)
+    _namespaces: set[str] = set()
 
     def __init__(self, namespace: str, limits: str):
+        if not namespace or namespace in KeyedLimit._namespaces:
+            raise ValueError(f"rate limit namespace {namespace!r} is empty or already in use")
+        KeyedLimit._namespaces.add(namespace)
         self.namespace = namespace
         self.items = parse_many(limits)
 
