@@ -53,6 +53,7 @@ alerts_store: deque = deque(maxlen=100)
 _alert_counter: int = 0
 
 _blocked_ips: set[str] = set()
+MAX_BLOCKED_IPS = 1000
 _ip_coords: dict[str, tuple[float, float]] = {}
 
 _behavioral_flagged: dict[str, dict] = {}
@@ -64,6 +65,17 @@ _behavioral_config: dict = {
 
 _rules: list[dict] = []
 _saved_hunts: list[dict] = []
+
+
+def block_ip(ip: str) -> bool:
+    """Add a (validated) IP to the blocklist. False when the list is full:
+    new entries are rejected rather than growing the set without bound."""
+    if ip in _blocked_ips:
+        return True
+    if len(_blocked_ips) >= MAX_BLOCKED_IPS:
+        return False
+    _blocked_ips.add(ip)
+    return True
 
 
 # ── Auth helpers ──────────────────────────────────────────────
@@ -287,7 +299,7 @@ def _execute_actions(rule: dict, event: dict) -> None:
             message=f"Rule '{rule['name']}' matched on {event.get('ip', 'unknown')}",
         )
     if "block" in rule["actions"]:
-        _blocked_ips.add(event["ip"])
+        block_ip(event["ip"])  # silently skipped when the blocklist is full
 
 
 def _evaluate_rules(event: dict) -> None:

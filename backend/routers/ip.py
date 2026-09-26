@@ -6,13 +6,15 @@ import re
 from typing import Optional
 
 import httpx
-from fastapi import APIRouter, Depends
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
 
 from constants import GEO_DATA, MITRE_MAP
-from store import ip_store, _blocked_ips, _ip_coords, _score_to_level, validate_ip, verify_token
+from rate_limit import limiter
+from store import (
+    ip_store, _blocked_ips, _ip_coords, _score_to_level, block_ip as _block_ip,
+    validate_ip, verify_token, MAX_BLOCKED_IPS,
+)
 from simulation import fetch_ipinfo, IPINFO_TOKEN
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
@@ -24,7 +26,6 @@ _abuse_cache: dict[str, dict] = {}
 _geo_cache: dict[str, dict] = {}
 _ai_summary_cache: dict[str, str] = {}
 
-limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
 
@@ -194,7 +195,8 @@ async def get_block_status(request: Request, ip: str = Depends(validate_ip), _=D
 @router.post("/api/ip/{ip}/block")
 @limiter.limit("20/minute")
 async def block_ip(request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)):
-    _blocked_ips.add(ip)
+    if not _block_ip(ip):
+        raise HTTPException(status_code=409, detail=f"Blocklist is full ({MAX_BLOCKED_IPS} entries)")
     return {"blocked": True, "ip": ip}
 
 
@@ -222,16 +224,22 @@ async def run_command(request: Request, body: dict, _=Depends(verify_token)):
     if cmd == "status":
         total = sum(len(v) for v in ip_store.values())
         return {"output": f"Tracked IPs: {len(ip_store)} | Blocked: {len(_blocked_ips)} | Total Events: {total}"}
+    # Targets get the same SSRF/format check as /api/ip/{ip}; errors are
+    # console output lines, like the other console errors.
+    if cmd.startswith(ALLOWED_PREFIXES):
+        prefix = next(p for p in ALLOWED_PREFIXES if cmd.startswith(p))
+        try:
+            target = validate_ip(cmd[len(prefix):].strip())
+        except HTTPException as e:
+            return {"output": f"Error: {e.detail}"}
     if cmd.startswith("block ip "):
-        target = cmd.split("block ip ")[1].strip()
-        _blocked_ips.add(target)
+        if not _block_ip(target):
+            return {"output": f"Error: blocklist is full ({MAX_BLOCKED_IPS} entries)"}
         return {"output": f"[BLOCKED] {target} added to blocklist"}
     if cmd.startswith("unblock ip "):
-        target = cmd.split("unblock ip ")[1].strip()
         _blocked_ips.discard(target)
         return {"output": f"[OK] {target} removed from blocklist"}
     if cmd.startswith("scan "):
-        target = cmd.split("scan ")[1].strip()
         events = ip_store.get(target, deque())
         blocked = "BLOCKED" if target in _blocked_ips else "active"
         score = max((e["score"] for e in events), default=0)

@@ -13,19 +13,12 @@ from jose import jwt
 import main
 import store
 from store import SECRET_KEY
+from tests.conftest import session_client
 
 PUBLIC_IP = "8.8.8.8"
 
 
-def _client(username: str, role: str) -> TestClient:
-    token = jwt.encode(
-        {"sub": username, "role": role, "typ": "session",
-         "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
-        SECRET_KEY, algorithm="HS256",
-    )
-    client = TestClient(main.app)
-    client.cookies.set("sf_session", token)
-    return client
+_client = session_client
 
 
 @pytest.fixture(autouse=True)

@@ -45,31 +45,47 @@ def client_ip(request: Request) -> str:
 limiter = Limiter(key_func=client_ip)
 
 
+class KeyedLimit:
+    """A rate limit on an application key (username, ...) rather than on the
+    client IP. Callers decide what counts: check `exceeded` before the action,
+    `hit` when it should count. In-memory: per process."""
+
+    _storage = MemoryStorage()
+    _limiter = FixedWindowRateLimiter(_storage)
+
+    def __init__(self, namespace: str, limits: str):
+        self.namespace = namespace
+        self.items = parse_many(limits)
+
+    def exceeded(self, key: str) -> bool:
+        return not all(self._limiter.test(i, self.namespace, key[:64]) for i in self.items)
+
+    def hit(self, key: str) -> None:
+        for item in self.items:
+            self._limiter.hit(item, self.namespace, key[:64])
+
+
 # ── Per-account login limit ───────────────────────────────────
 # Independent of IP, so a distributed brute force against one account is
 # capped too. Counts FAILED attempts only (unknown usernames included, so the
 # limit does not reveal which accounts exist). Trade-off: anyone can lock an
-# account out for the window by failing on purpose. In-memory: per process.
-LOGIN_FAILURES_PER_USER = parse_many("10/minute;100/hour")
-_user_limiter = FixedWindowRateLimiter(MemoryStorage())
+# account out for the window by failing on purpose.
+LOGIN_FAILURES_PER_USER = KeyedLimit("login-user", "10/minute;100/hour")
 
-
-def _user_key(username: str) -> str:
-    return username[:64]
+# ── Per-user case creation limit ──────────────────────────────
+# Counts NEW cases only (reopening an existing open case is free). Keeps one
+# user from flooding the incident list; in memory only 50 incidents are kept.
+CASES_PER_USER = KeyedLimit("case-user", "5/minute;30/hour")
 
 
 def login_locked(username: str) -> bool:
-    return not all(
-        _user_limiter.test(item, "login-user", _user_key(username))
-        for item in LOGIN_FAILURES_PER_USER
-    )
+    return LOGIN_FAILURES_PER_USER.exceeded(username)
 
 
 def record_login_failure(username: str) -> None:
-    for item in LOGIN_FAILURES_PER_USER:
-        _user_limiter.hit(item, "login-user", _user_key(username))
+    LOGIN_FAILURES_PER_USER.hit(username)
 
 
 def reset_limits() -> None:
     limiter.reset()
-    _user_limiter.storage.reset()
+    KeyedLimit._storage.reset()

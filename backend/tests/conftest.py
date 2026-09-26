@@ -33,3 +33,20 @@ def _test_users():
 def _reset_rate_limits():
     from rate_limit import reset_limits
     reset_limits()
+
+
+def session_client(username: str, role: str):
+    """A TestClient carrying a valid session for `username` (no login round trip)."""
+    from datetime import datetime, timedelta, timezone
+    from fastapi.testclient import TestClient
+    from jose import jwt
+    import main
+    from store import SECRET_KEY
+    token = jwt.encode(
+        {"sub": username, "role": role, "typ": "session",
+         "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
+        SECRET_KEY, algorithm="HS256",
+    )
+    client = TestClient(main.app)
+    client.cookies.set("sf_session", token)
+    return client
