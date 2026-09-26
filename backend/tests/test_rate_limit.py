@@ -97,3 +97,37 @@ def test_unknown_usernames_are_limited_like_real_ones():
     client = TestClient(main.app)
     codes = [_login(client, "nobody", "x", xff=f"192.0.2.{i}").status_code for i in range(11)]
     assert codes == [401] * 10 + [429]
+
+
+# ── demo mode: public demo accounts are exempt from the account lockout ──
+
+@pytest.fixture
+def demo_mode(monkeypatch):
+    import store
+    monkeypatch.setattr(store, "DEMO_MODE", True)
+
+
+def test_demo_accounts_cannot_be_locked_out_in_demo_mode(demo_mode):
+    """Their passwords are public: anyone could otherwise lock visitors out."""
+    client = TestClient(main.app)
+    for i in range(15):
+        assert _login(client, "alice", f"guess-{i}", xff=f"192.0.2.{i}").status_code == 401
+    assert _login(client, "alice", ANALYST_PASSWORD, xff="192.0.2.200").status_code == 200
+
+
+def test_demo_accounts_keep_the_ip_limit_in_demo_mode(demo_mode):
+    client = TestClient(main.app)
+    codes = [_login(client, "alice", "guess", xff=PROXY_SEEN).status_code for _ in range(6)]
+    assert codes == [401] * 5 + [429]
+
+
+def test_real_accounts_keep_the_account_lockout_in_demo_mode(demo_mode, monkeypatch):
+    import users
+    monkeypatch.setitem(users._users, "carol", {
+        "username": "carol", "display_name": "Carol", "role": "analyst",
+        "password_hash": users.hash_password("carol-real-password"),
+    })
+    client = TestClient(main.app)
+    for i in range(10):
+        assert _login(client, "carol", f"guess-{i}", xff=f"192.0.2.{i}").status_code == 401
+    assert _login(client, "carol", "carol-real-password", xff="192.0.2.200").status_code == 429

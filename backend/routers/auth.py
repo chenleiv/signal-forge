@@ -7,8 +7,9 @@ from jose import jwt
 from starlette.concurrency import run_in_threadpool
 
 from rate_limit import limiter, login_locked, record_login_failure
+import store as _store
 from store import SECRET_KEY, verify_token
-from users import CurrentUser, authenticate, get_user, public_user
+from users import DEMO_USERNAMES, CurrentUser, authenticate, get_user, public_user
 
 router = APIRouter()
 
@@ -49,14 +50,19 @@ async def login(request: Request, body: dict, response: Response):
     if not isinstance(username, str) or not isinstance(password, str):
         username, password = "", ""
     # Per account, across all IPs. Checked before the password, so a correct
-    # guess during the lockout does not get in either.
-    if login_locked(username):
+    # guess during the lockout does not get in either. The public demo
+    # accounts are exempt in demo mode: their passwords are on the login page,
+    # so a lockout protects nothing and would let anyone lock visitors out.
+    # The per-IP limit above still applies to them.
+    account_limited = not (_store.DEMO_MODE and username in DEMO_USERNAMES)
+    if account_limited and login_locked(username):
         raise HTTPException(status_code=429, detail="Too many login attempts, try again later")
     # bcrypt is CPU-bound: keep it off the event loop. Unknown user and wrong
     # password take the same path and return the same 401 (no enumeration).
     user = await run_in_threadpool(authenticate, username, password)
     if user is None:
-        record_login_failure(username)
+        if account_limited:
+            record_login_failure(username)
         raise HTTPException(status_code=401, detail="Invalid credentials")
     _set_session_cookie(response, user)
     return {"ok": True}

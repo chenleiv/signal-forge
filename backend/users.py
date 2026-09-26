@@ -27,6 +27,7 @@ DEMO_USERS: list[tuple[str, str, Role, str]] = [
     ("bob",   "Bob Martinez", "analyst", "bob-demo"),
 ]
 _DEMO_PASSWORDS = {u: pw for u, _, _, pw in DEMO_USERS}
+DEMO_USERNAMES = frozenset(_DEMO_PASSWORDS)
 
 
 @dataclass(frozen=True)
