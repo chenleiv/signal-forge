@@ -20,7 +20,7 @@ Senior Angular Engineer reviewing production frontend changes.
 Load:
 
 - .claude/memory/context.md
-- .claude/skills/angular19/SKILL.md
+- .claude/skills/angular21/SKILL.md
 
 
 ---
