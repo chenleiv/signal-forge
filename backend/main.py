@@ -17,9 +17,8 @@ from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from jose import jwt
-from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
 from sqlalchemy import text as _sa_text
 from starlette.requests import Request
 
@@ -30,11 +29,16 @@ from store import (
     _rules, _behavioral_config, _ip_coords,
     ip_store, minute_buckets, _current_minute, _current_bucket_count,
     _behavioral_flagged, _score_to_level, _create_alert, _record_event,
-    SECRET_KEY, verify_token,
+    SECRET_KEY, DEMO_MODE, ADMIN_PASSWORD, verify_token,
 )
 import store as _store
+from rate_limit import limiter
+from users import seed_users, sync_users_with_db
 
-from routers import auth, ip, incidents, alerts, hunting, rules, behavioral
+from routers import auth, ip, incidents, alerts, hunting, rules, behavioral, users
+
+# In-memory users exist even without a DB (and without lifespan, as in tests).
+seed_users(DEMO_MODE, ADMIN_PASSWORD)
 
 USE_DB: bool = db_engine is not None
 _store.USE_DB = USE_DB
@@ -90,6 +94,9 @@ async def lifespan(app: FastAPI):
                 if _max > 0:
                     _store._incident_counter = _max - 1000
                     print(f"[DB] Seeded incident counter to {_store._incident_counter}")
+
+            async with AsyncSessionLocal() as session:
+                await sync_users_with_db(session, DEMO_MODE, ADMIN_PASSWORD)
 
             async with AsyncSessionLocal() as session:
                 _store._rules.clear()
@@ -184,14 +191,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SignalForge API", lifespan=lifespan)
 
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── Read-only demo mode ───────────────────────────────────────
 # Public demo: block every state-changing request server-side.
-# Fail closed: demo mode is ON unless DEMO_MODE is explicitly "false".
-DEMO_MODE = os.environ.get("DEMO_MODE", "true").strip().lower() != "false"
+# DEMO_MODE is parsed (fail closed) in store.py.
 
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 ALLOWED_WRITES = {
@@ -228,6 +233,7 @@ app.include_router(alerts.router)
 app.include_router(hunting.router)
 app.include_router(rules.router)
 app.include_router(behavioral.router)
+app.include_router(users.router)
 
 
 @app.websocket("/ws/threats")

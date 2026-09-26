@@ -2,10 +2,13 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone, timedelta
 
-from fastapi import APIRouter, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from jose import jwt
+from starlette.concurrency import run_in_threadpool
 
-from store import SECRET_KEY
+from rate_limit import limiter, login_locked, record_login_failure
+from store import SECRET_KEY, verify_token
+from users import CurrentUser, authenticate, get_user, public_user
 
 router = APIRouter()
 
@@ -17,22 +20,11 @@ _DEV = os.environ.get("ENV") == "development"
 _COOKIE_SECURE = not _DEV
 
 
-def _decode_session(request: Request) -> None:
-    token = request.cookies.get(_COOKIE)
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        if payload.get("typ") != "session":
-            raise ValueError("wrong token type")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-
-def _set_session_cookie(response: Response) -> None:
+def _set_session_cookie(response: Response, user: CurrentUser) -> None:
     token = jwt.encode(
         {
-            "sub": "analyst",
+            "sub": user.username,
+            "role": user.role,
             "typ": "session",
             "exp": datetime.now(timezone.utc) + timedelta(hours=8),
         },
@@ -50,11 +42,24 @@ def _set_session_cookie(response: Response) -> None:
 
 
 @router.post("/auth/login")
-async def login(body: dict, response: Response):
-    if body.get("username") == "analyst" and body.get("password") == "signalforge":
-        _set_session_cookie(response)
-        return {"ok": True}
-    raise HTTPException(status_code=401, detail="Invalid credentials")
+@limiter.limit("5/minute")  # per client IP (see rate_limit.client_ip)
+async def login(request: Request, body: dict, response: Response):
+    username = body.get("username")
+    password = body.get("password")
+    if not isinstance(username, str) or not isinstance(password, str):
+        username, password = "", ""
+    # Per account, across all IPs. Checked before the password, so a correct
+    # guess during the lockout does not get in either.
+    if login_locked(username):
+        raise HTTPException(status_code=429, detail="Too many login attempts, try again later")
+    # bcrypt is CPU-bound: keep it off the event loop. Unknown user and wrong
+    # password take the same path and return the same 401 (no enumeration).
+    user = await run_in_threadpool(authenticate, username, password)
+    if user is None:
+        record_login_failure(username)
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    _set_session_cookie(response, user)
+    return {"ok": True}
 
 
 @router.post("/auth/logout")
@@ -66,17 +71,18 @@ async def logout(response: Response):
 
 
 @router.get("/auth/me")
-async def me(request: Request):
-    _decode_session(request)
-    return {"user": "analyst"}
+async def me(user: CurrentUser = Depends(verify_token)):
+    record = get_user(user.username)
+    if record is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    return public_user(record)
 
 
 @router.get("/auth/ws-ticket")
-async def ws_ticket(request: Request):
-    _decode_session(request)
+async def ws_ticket(user: CurrentUser = Depends(verify_token)):
     ticket = jwt.encode(
         {
-            "sub": "analyst",
+            "sub": user.username,
             "typ": "ws",
             "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
         },

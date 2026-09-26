@@ -49,7 +49,6 @@ INCIDENT_TITLES = {
     "Escalation": "Threat score escalation — attacker intensifying",
 }
 
-ANALYSTS = ["Alice Chen", "Bob Martinez", "Sarah Kim", "James Liu", None]
 
 _SEVERITY_BANDS = [
     ("low",       1,  39, 0.15),

@@ -7,7 +7,7 @@ from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models import Incident, Note, IncidentTask, Rule, BehavioralSettings
+from models import Incident, Note, IncidentTask, Rule, BehavioralSettings, User
 
 
 def _incident_to_dict(inc: Incident) -> dict:
@@ -296,3 +296,41 @@ async def db_update_behavioral_settings(session: AsyncSession, patch: dict) -> d
     await session.commit()
     await session.refresh(bs)
     return _behavioral_settings_to_dict(bs)
+
+
+# ── Users ─────────────────────────────────────────────────────
+# Internal only: these dicts carry password_hash. Routes expose users
+# through users.public_user().
+
+def _user_to_dict(u: User) -> dict:
+    return {
+        "username": u.username,
+        "display_name": u.display_name,
+        "role": u.role,
+        "password_hash": u.password_hash,
+    }
+
+
+async def db_get_users(session: AsyncSession) -> list[dict]:
+    result = await session.execute(select(User))
+    return [_user_to_dict(u) for u in result.scalars().all()]
+
+
+async def db_create_user(session: AsyncSession, data: dict) -> dict:
+    user = User(
+        username=data["username"],
+        display_name=data["display_name"],
+        role=data["role"],
+        password_hash=data["password_hash"],
+        created_at=datetime.now(timezone.utc),
+    )
+    session.add(user)
+    await session.commit()
+    return _user_to_dict(user)
+
+
+async def db_set_password_hash(session: AsyncSession, username: str, password_hash: str) -> None:
+    user = await session.get(User, username)
+    if user is not None:
+        user.password_hash = password_hash
+        await session.commit()

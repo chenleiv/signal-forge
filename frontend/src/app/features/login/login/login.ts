@@ -55,8 +55,8 @@ export class Login {
   }
 
   demoLogin() {
-    this.username.set('analyst');
-    this.password.set('signalforge');
+    this.username.set('alice');
+    this.password.set('alice-demo');
     this.submit();
   }
 }

@@ -18,6 +18,7 @@ from store import (
     _score_to_level, _find_incident, validate_ip, verify_token, USE_DB,
 )
 import store as _store
+from users import CurrentUser
 
 router = APIRouter()
 
@@ -137,10 +138,10 @@ async def update_tasks(
 @router.post("/api/incidents/{incident_id}/notes")
 async def add_note(
     incident_id: str, body: dict,
-    db: Optional[AsyncSession] = Depends(get_db), user: str = Depends(verify_token)
+    db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
     text   = body.get("text", "").strip()
-    author = user  # from the verified session, never from the request body
+    author = user.username  # from the verified session, never from the request body
     if not text:
         raise HTTPException(status_code=400, detail="Note text is required")
     if USE_DB and db is not None:

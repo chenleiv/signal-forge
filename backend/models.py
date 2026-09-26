@@ -69,3 +69,13 @@ class BehavioralSettings(Base):
     cooldown_min:          Mapped[int]      = mapped_column(Integer, nullable=False, default=30)
     created_at:            Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     updated_at:            Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    username:      Mapped[str]      = mapped_column(String(50), primary_key=True)
+    display_name:  Mapped[str]      = mapped_column(String(100), nullable=False)
+    password_hash: Mapped[str]      = mapped_column(String(100), nullable=False)
+    role:          Mapped[str]      = mapped_column(String(10), nullable=False)
+    created_at:    Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)

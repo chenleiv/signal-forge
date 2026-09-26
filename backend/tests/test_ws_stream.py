@@ -13,6 +13,8 @@ os.environ["ENV"] = "development"
 
 from fastapi.testclient import TestClient  # noqa: E402
 
+from tests.conftest import ANALYST_PASSWORD  # noqa: E402
+
 import main  # noqa: E402
 import simulation  # noqa: E402
 import store  # noqa: E402
@@ -25,7 +27,7 @@ async def _fake_refresh() -> None:
 
 
 def _ticket(client: TestClient) -> str:
-    client.post("/auth/login", json={"username": "analyst", "password": "signalforge"})
+    client.post("/auth/login", json={"username": "alice", "password": ANALYST_PASSWORD})
     return client.get("/auth/ws-ticket").json()["ticket"]
 
 
