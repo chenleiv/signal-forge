@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash /Users/chenleiv/signal-forge/.claude/hooks/build-check.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/build-check.sh\"",
             "timeout": 120,
             "statusMessage": "Validating frontend build..."
           }

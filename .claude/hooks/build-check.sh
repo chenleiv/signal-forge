@@ -1,5 +1,6 @@
 #!/bin/bash
-cd /Users/chenleiv/signal-forge
+# Project root: set by Claude Code for hooks; fall back to this script's location.
+cd "${CLAUDE_PROJECT_DIR:-$(dirname "$0")/../..}" || exit 0
 
 CHANGED=$(git status --porcelain)
 
@@ -27,7 +28,9 @@ fi
 
 # Backend validation — runs on Python changes
 if echo "$CHANGED" | grep -qE '\.py$'; then
-  cd backend && python3 -m pytest --tb=short -q > /tmp/sf-pytest.log 2>&1
+  cd backend
+  PY=venv/bin/python; [ -x "$PY" ] || PY=python3   # prefer the project venv
+  "$PY" -m pytest --tb=short -q > /tmp/sf-pytest.log 2>&1
   PYTEST_EXIT=$?
   cd ..
 
