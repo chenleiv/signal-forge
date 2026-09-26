@@ -398,3 +398,25 @@ $green: rgba(255,255,255,.65);
 .sk-rule-item { gap: 10px; align-items: center; cursor: default; }
 .sk-rule-item:hover { background: transparent; }
 .sk-rule-item span { display: inline-block; }
+
+// Analysts: the editor is read-only (a disabled fieldset disables every input).
+.editor-fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  display: contents;
+}
+
+.readonly-banner {
+  font-size: 12px;
+  color: $muted;
+  border: 1px dashed $border;
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+
+.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

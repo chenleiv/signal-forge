@@ -13,7 +13,8 @@ const SIMULATED_LATENCY_MS = 150;
  *  - writes are answered locally by DemoSimulatorService and never sent;
  *  - GET responses get the local overlay applied, so the UI stays consistent;
  *  - a server 403 "Read-only demo" (anything not simulated) becomes a notice;
- *  - any other server 403 (permission denied) shows the server's reason.
+ *  - any other server 403 (permission denied) shows the server's reason;
+ *  - writes the current user may not make are refused locally, the same way.
  * UX only: the server enforces read-only mode whether or not this runs.
  */
 export const demoModeInterceptor: HttpInterceptorFn = (req, next) => {
@@ -22,6 +23,15 @@ export const demoModeInterceptor: HttpInterceptorFn = (req, next) => {
   const path = new URL(req.url, window.location.origin).pathname;
 
   if (demo.enabled() && !SAFE_METHODS.has(req.method) && !PASS_THROUGH_WRITES.has(path)) {
+    // Same permission matrix as the server: a denied action fails like the
+    // real API would (403 + reason), simulated or not.
+    const decision = sim.authorize(req, path);
+    if (!decision.allowed) {
+      demo.showDenied(decision.reason);
+      return throwError(() => new HttpErrorResponse({
+        status: 403, statusText: 'Forbidden', url: req.url, error: { detail: decision.reason },
+      }));
+    }
     const result = sim.simulate(req, path);
     if (result) {
       demo.showSimulated();

@@ -81,7 +81,9 @@ async def me(user: CurrentUser = Depends(verify_token)):
     record = get_user(user.username)
     if record is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    return public_user(record)
+    # The role the server enforces is the token's (until next login), so the
+    # UI must show that one, not the stored record's.
+    return {**public_user(record), "role": user.role}
 
 
 @router.get("/auth/ws-ticket")

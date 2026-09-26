@@ -1,7 +1,15 @@
 import { Component, signal, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../../core/services/auth';
+import { DemoModeService } from '../../../core/services/demo-mode.service';
+
+/** Public demo accounts (seeded only in demo mode; shown on this page). */
+export const DEMO_ACCOUNTS = [
+  { label: 'Try as Admin',   username: 'admin', password: 'admin-demo' },
+  { label: 'Try as Analyst', username: 'alice', password: 'alice-demo' },
+] as const;
 
 @Component({
   selector: 'app-login',
@@ -22,10 +30,13 @@ export class Login {
   // ── private injections ────────────────────────────────────────
   private readonly auth   = inject(AuthService);
   private readonly router = inject(Router);
+  readonly demo           = inject(DemoModeService);
+  readonly demoAccounts   = DEMO_ACCOUNTS;
   private slowTimer: ReturnType<typeof setTimeout> | null = null;
   private startupTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
+    this.demo.load();  // demo buttons only make sense when the server is in demo mode
     // Show "Server is waking up" if the server is slow to respond on cold start
     this.startupTimer = setTimeout(() => this.slowConnection.set(true), 3000);
     this.auth.ping().subscribe(() => {
@@ -50,13 +61,17 @@ export class Login {
 
     this.auth.login(this.username(), this.password()).subscribe({
       next:  () => { clearTimer(); this.router.navigate(['/dashboard']); },
-      error: () => { clearTimer(); this.error.set('Invalid credentials'); this.loading.set(false); },
+      error: (err: HttpErrorResponse) => {
+        clearTimer();
+        this.error.set(err.status === 429 ? 'Too many attempts, try again in a minute' : 'Invalid credentials');
+        this.loading.set(false);
+      },
     });
   }
 
-  demoLogin() {
-    this.username.set('alice');
-    this.password.set('alice-demo');
+  demoLogin(account: (typeof DEMO_ACCOUNTS)[number]) {
+    this.username.set(account.username);
+    this.password.set(account.password);
     this.submit();
   }
 }

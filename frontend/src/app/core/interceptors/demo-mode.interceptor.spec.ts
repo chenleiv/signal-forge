@@ -4,23 +4,32 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { firstValueFrom } from 'rxjs';
 
 import { demoModeInterceptor } from './demo-mode.interceptor';
+import { signal } from '@angular/core';
 import { DemoModeService } from '../services/demo-mode.service';
+import { AuthService } from '../services/auth';
+import { CurrentUser } from '../auth/permissions';
+
+const ADMIN: CurrentUser = { username: 'admin', display_name: 'Sarah Kim', role: 'admin' };
+const ALICE: CurrentUser = { username: 'alice', display_name: 'Alice Chen', role: 'analyst' };
 
 describe('demoModeInterceptor', () => {
   let http: HttpClient;
   let server: HttpTestingController;
   let demo: DemoModeService;
+  const user = signal<CurrentUser | null>(ADMIN);
 
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([demoModeInterceptor])),
         provideHttpClientTesting(),
+        { provide: AuthService, useValue: { currentUser: user } },
       ],
     });
     http   = TestBed.inject(HttpClient);
     server = TestBed.inject(HttpTestingController);
     demo   = TestBed.inject(DemoModeService);
+    user.set(ADMIN);
   });
 
   // Fails the test if any request reached the "server" that we didn't expect.
@@ -55,6 +64,18 @@ describe('demoModeInterceptor', () => {
         { status: 403, statusText: 'Forbidden' },
       );
       expect(demo.notice()).toContain('not available');
+    });
+
+    it('refuses a write the user may not make, locally, like the server would', () => {
+      user.set(ALICE);
+      let status = 0;
+      let detail = '';
+      http.delete('/api/rules/r1').subscribe({ error: e => { status = e.status; detail = e.error.detail; } });
+
+      server.expectNone('/api/rules/r1');  // never sent
+      expect(status).toBe(403);
+      expect(detail).toBe('Admin role required');
+      expect(demo.notice()).toBe('Admin role required');
     });
   });
 

@@ -78,9 +78,15 @@
 
     </form>
 
-    <button class="demo-btn" type="button" (click)="demoLogin()">
-      ▶ Try Demo  <span class="demo-hint">alice / alice-demo</span>
-    </button>
+    @if (demo.enabled()) {
+      <div class="demo-accounts">
+        @for (acc of demoAccounts; track acc.username) {
+          <button class="demo-btn" type="button" (click)="demoLogin(acc)" [disabled]="loading()">
+            ▶ {{ acc.label }}  <span class="demo-hint">{{ acc.username }} / {{ acc.password }}</span>
+          </button>
+        }
+      </div>
+    }
 
   </div>
 

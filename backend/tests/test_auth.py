@@ -107,3 +107,11 @@ def test_session_with_unknown_role_is_rejected(client):
     forged = jwt.encode({"sub": "alice", "role": "superuser", "typ": "session", "exp": int(time.time()) + 300}, SECRET_KEY, algorithm="HS256")
     client.cookies.set(COOKIE, forged)
     assert client.get("/api/stats").status_code == 401
+
+
+def test_me_reports_the_role_the_server_enforces(client):
+    """After a role change the token keeps the old role until next login;
+    /auth/me must report that one, since it is what authorization uses."""
+    from tests.conftest import session_client
+    stale = session_client("alice", "admin")  # token issued before a demotion
+    assert stale.get("/auth/me").json()["role"] == "admin"

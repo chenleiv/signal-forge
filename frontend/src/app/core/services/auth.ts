@@ -2,34 +2,36 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { Observable, of } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
+import { map, catchError, tap, switchMap } from 'rxjs/operators';
+import { CurrentUser } from '../auth/permissions';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private http   = inject(HttpClient);
   private router = inject(Router);
 
-  private readonly _authenticated = signal(false);
-  readonly isAuthenticated = computed(() => this._authenticated());
+  /** The logged-in user, as the server sees it (role = the one it enforces). */
+  private readonly _user = signal<CurrentUser | null>(null);
+  readonly currentUser     = this._user.asReadonly();
+  readonly isAuthenticated = computed(() => this._user() !== null);
 
-  login(username: string, password: string) {
+  login(username: string, password: string): Observable<CurrentUser> {
     return this.http.post<{ ok: boolean }>('/auth/login', { username, password }).pipe(
-      tap(() => this._authenticated.set(true)),
+      switchMap(() => this.loadCurrentUser()),
     );
   }
 
   logout() {
     this.http.post('/auth/logout', {}).subscribe();
-    this._authenticated.set(false);
+    this._user.set(null);
     this.router.navigate(['/login']);
   }
 
   checkAuth(): Observable<boolean> {
-    return this.http.get('/auth/me').pipe(
-      tap(() => this._authenticated.set(true)),
+    return this.loadCurrentUser().pipe(
       map(() => true),
       catchError(() => {
-        this._authenticated.set(false);
+        this._user.set(null);
         return of(false);
       }),
     );
@@ -45,6 +47,12 @@ export class AuthService {
     return this.http.get('/health').pipe(
       map(() => void 0),
       catchError(() => of(void 0)),
+    );
+  }
+
+  private loadCurrentUser(): Observable<CurrentUser> {
+    return this.http.get<CurrentUser>('/auth/me').pipe(
+      tap(user => this._user.set(user)),
     );
   }
 }

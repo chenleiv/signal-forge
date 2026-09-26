@@ -4,7 +4,7 @@ import { filter, map } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ThreatsService } from '../../core/services/threats.service';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
-import { SettingsService } from '../../core/services/settings.service';
+import { AuthService } from '../../core/services/auth';
 import { ThemeService } from '../../core/services/theme';
 import { CommandConsole } from '../../features/command-console/command-console';
 import { DemoModeService } from '../../core/services/demo-mode.service';
@@ -32,10 +32,13 @@ export class AppLayout {
   readonly ws              = inject(ThreatsService);
   private store            = inject(ThreatStoreService);
   readonly alertBadge      = computed(() => this.store.newAlertCount());
-  readonly settingsService = inject(SettingsService);
   // Injected to eagerly trigger the effect() that sets data-theme on <body>.
   readonly themeService    = inject(ThemeService);
   readonly demo            = inject(DemoModeService);
+  readonly auth            = inject(AuthService);
+  readonly initials        = computed(() =>
+    (this.auth.currentUser()?.display_name ?? '')
+      .split(/\s+/).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase() || 'SF');
   private router           = inject(Router);
   private destroyRef       = inject(DestroyRef);
 
