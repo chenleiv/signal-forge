@@ -267,7 +267,7 @@ def test_deleting_twice_is_404(admin):
 def test_token_without_session_key_is_rejected():
     """Tokens issued before migration 005 carry no key: log in again."""
     import time
-    from jose import jwt
+    import jwt
     token = jwt.encode({"sub": "alice", "role": "analyst", "typ": "session", "exp": int(time.time()) + 300},
                        store.SECRET_KEY, algorithm="HS256")
     client = TestClient(main.app)

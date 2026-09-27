@@ -6,6 +6,7 @@ frontend/.angular/
 # Backend
 backend/venv/
 backend/__pycache__/
+__pycache__/
 backend/*.pyc
 backend/.env
 # Local SQLite DB: holds user password hashes, never commit it

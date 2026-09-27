@@ -3,7 +3,7 @@ import time
 
 import pytest
 from fastapi.testclient import TestClient
-from jose import jwt
+import jwt
 
 import main
 from tests.conftest import ANALYST_PASSWORD

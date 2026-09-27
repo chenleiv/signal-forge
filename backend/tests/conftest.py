@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-os.environ.setdefault("JWT_SECRET", "test-secret-key-for-pytest")
+os.environ.setdefault("JWT_SECRET", "test-secret-key-for-pytest-at-least-32-bytes")
 
 # Isolate tests from the developer's .env (load_dotenv never overrides
 # variables that are already set): no real DB, no external API calls,
@@ -40,7 +40,7 @@ def session_client(username: str, role: str):
     """A TestClient carrying a valid session for `username` (no login round trip)."""
     from datetime import datetime, timedelta, timezone
     from fastapi.testclient import TestClient
-    from jose import jwt
+    import jwt
     import main
     from store import SECRET_KEY
     import users

@@ -3,7 +3,7 @@ import os
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
-from jose import jwt
+import jwt
 from starlette.concurrency import run_in_threadpool
 
 from rate_limit import limiter, login_locked, record_login_failure

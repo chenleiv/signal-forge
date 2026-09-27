@@ -22,7 +22,7 @@ const server = spawn(python, ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1'
     ...process.env,
     DEMO_MODE: 'true',            // public demo accounts + Try-as buttons
     DATABASE_URL: '',             // in memory; never the developer's database
-    JWT_SECRET: 'e2e-only-secret',
+    JWT_SECRET: 'e2e-only-secret-never-used-in-production',
     ENV: 'development',           // plain-HTTP cookies on 127.0.0.1
     ABUSEIPDB_API_KEY: '', IPINFO_TOKEN: '', GROQ_API_KEY: '',
   },

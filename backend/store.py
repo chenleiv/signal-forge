@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, HTTPException, Request
-from jose import jwt
+import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import (
@@ -23,6 +23,10 @@ from users import ROLES, CurrentUser, analyst_usernames, is_session_current, pas
 SECRET_KEY = os.environ.get("JWT_SECRET")
 if not SECRET_KEY:
     raise RuntimeError("JWT_SECRET environment variable is required")
+# HS256 needs a key of at least 32 bytes (RFC 7518 3.2); a short key can be
+# brute-forced, and whoever has it can mint an admin session.
+if len(SECRET_KEY.encode()) < 32:
+    raise RuntimeError("JWT_SECRET must be at least 32 bytes (generate one: python -c \"import secrets; print(secrets.token_urlsafe(48))\")")
 
 # Public demo: block every state-changing request server-side (see main.py).
 # Fail closed: demo mode is ON unless DEMO_MODE is explicitly "false".
