@@ -1,6 +1,6 @@
-<div class="layout">
+<div class="layout" [class.nav-open]="navOpen()">
 
-  <aside class="sidebar">
+  <aside class="sidebar" id="app-sidebar">
 
     <div class="logo">
       <div class="logo-icon">
@@ -118,10 +118,22 @@
 
   </aside>
 
+  <!-- Narrow screens: tap outside the open menu to close it. -->
+  @if (navOpen()) {
+    <div class="nav-backdrop" (click)="closeNav()" aria-hidden="true"></div>
+  }
+
   <div class="main">
 
     <header class="topbar">
       <div class="topbar-left">
+        <button type="button" class="nav-toggle" (click)="toggleNav()"
+                aria-controls="app-sidebar" [attr.aria-expanded]="navOpen()"
+                [attr.aria-label]="navOpen() ? 'Close menu' : 'Open menu'">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" aria-hidden="true">
+            <path d="M2.5 4h11M2.5 8h11M2.5 12h11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
         <span class="topbar-section">Dashboards &amp; Reports</span>
         <span class="topbar-sep">/</span>
         <span class="topbar-page">{{ pageTitle() }}</span>
@@ -149,8 +161,11 @@
     @if (demo.enabled()) {
       <div class="demo-banner" role="status">
         <span class="demo-badge">DEMO</span>
-        Live demo &mdash; explore freely. Actions are simulated in your browser
-        and reset on refresh; nothing is written to the server.
+        <span class="demo-text-long">
+          Live demo &mdash; explore freely. Actions are simulated in your browser
+          and reset on refresh; nothing is written to the server.
+        </span>
+        <span class="demo-text-short">Live demo &mdash; actions are simulated, nothing is saved.</span>
       </div>
     }
 

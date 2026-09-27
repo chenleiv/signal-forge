@@ -343,3 +343,18 @@ $muted:  var(--c-text-2);
   border-radius: 2px;
   transition: all 0.15s;
 }
+
+// ── Narrow screens (same breakpoint as the app layout) ───────
+// The detail drawer opens over the list, full screen, instead of beside it.
+@media (max-width: 768px) {
+  .drawer-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    max-width: 100%;
+  }
+
+  .resize-handle {
+    display: none;
+  }
+}

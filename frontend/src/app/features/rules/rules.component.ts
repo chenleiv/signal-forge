@@ -170,6 +170,12 @@ export class RulesComponent {
       });
   }
 
+  /** Leave the editor (narrow screens: back to the rule list). Not a write. */
+  closeEditor() {
+    this.selected.set(null);
+    this.isNew.set(false);
+  }
+
   cancel() {
     const rule = this.selected();
     if (rule) this.selectRule(rule);

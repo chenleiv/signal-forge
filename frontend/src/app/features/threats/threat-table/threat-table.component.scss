@@ -136,6 +136,7 @@ $sev-low:      #60a5fa;
 .table-scroll {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;  // narrow screens: the table scrolls, not the page
   scrollbar-width: thin;
   scrollbar-color: $border transparent;
 }

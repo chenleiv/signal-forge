@@ -1,7 +1,7 @@
 import { Component, signal, inject, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ThreatsService } from '../../core/services/threats.service';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { AuthService } from '../../core/services/auth';
@@ -29,6 +29,7 @@ const PAGE_TITLES: Record<string, string> = {
   templateUrl: './app-layout.html',
   styleUrl: './app-layout.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '(document:keydown.escape)': 'closeNav()' },
 })
 export class AppLayout {
   readonly ws              = inject(ThreatsService);
@@ -38,10 +39,6 @@ export class AppLayout {
   readonly themeService    = inject(ThemeService);
   readonly demo            = inject(DemoModeService);
   readonly auth            = inject(AuthService);
-
-  logout(): void {
-    this.auth.logout();
-  }
   readonly canOpenUsers    = computed(() => canOpenUserAdmin(this.auth.currentUser()).allowed);
   readonly initials        = computed(() =>
     (this.auth.currentUser()?.display_name ?? '')
@@ -60,6 +57,9 @@ export class AppLayout {
 
   time = signal('');
 
+  /** Narrow screens: the sidebar is an off-canvas menu (CSS decides when). */
+  readonly navOpen = signal(false);
+
   constructor() {
     this.tick();
     const timer = setInterval(() => this.tick(), 1000);
@@ -69,6 +69,22 @@ export class AppLayout {
     });
     this.ws.connect();
     this.demo.load();
+    // Any navigation closes the mobile menu.
+    this.router.events
+      .pipe(filter(e => e instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.navOpen.set(false));
+  }
+
+  toggleNav(): void {
+    this.navOpen.update(open => !open);
+  }
+
+  closeNav(): void {
+    this.navOpen.set(false);
+  }
+
+  logout(): void {
+    this.auth.logout();
   }
 
   private tick() {

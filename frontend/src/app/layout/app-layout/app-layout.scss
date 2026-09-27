@@ -454,3 +454,98 @@ $green: rgba(255,255,255,.65);
   line-height: 1;
   cursor: pointer;
 }
+
+
+// ── Narrow screens (phones, small tablets) ───────────────────
+// The sidebar becomes an off-canvas menu opened from the topbar, so the
+// page gets the full width. Desktop layout is unchanged.
+
+.nav-toggle,
+.nav-backdrop,
+.demo-text-short {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    width: min(260px, 85vw);
+    transform: translateX(-100%);
+    // Hidden = also out of the tab order and the accessibility tree.
+    visibility: hidden;
+    transition: transform 0.2s ease, visibility 0s linear 0.2s;
+  }
+
+  .layout.nav-open .sidebar {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.2s ease, visibility 0s;
+  }
+
+  .nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  // Touch targets: at least 44x44 px.
+  .nav-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    margin-left: -12px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: $text;
+    cursor: pointer;
+  }
+
+  .topbar {
+    padding: 0 12px;
+  }
+
+  .topbar-right {
+    gap: 8px;
+  }
+
+  // Keep only what matters on a small screen: menu, page title, live status.
+  .topbar-section,
+  .topbar-sep,
+  .topbar-time,
+  .topbar-wakeup {
+    display: none;
+  }
+
+  .demo-banner {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .demo-text-long {
+    display: none;
+  }
+
+  .demo-text-short {
+    display: inline;
+  }
+
+  .logout-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .demo-toast {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+  }
+}

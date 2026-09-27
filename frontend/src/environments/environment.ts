@@ -1,4 +1,6 @@
 export const environment = {
-  wsUrl: 'wss://signalforge-api-ah1q.onrender.com/ws/threats',
+  // Empty: the backend serves the app, so the stream is on the same host
+  // (see SettingsService.defaultWsUrl).
+  wsUrl: '',
   apiUrl: '',
 };

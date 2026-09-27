@@ -1,4 +1,4 @@
-<div class="rules-page">
+<div class="rules-page" [class.editing]="selected() || isNew()">
 
   <div class="rules-sidebar">
     <div class="sidebar-header">
@@ -61,6 +61,8 @@
       </div>
     } @else {
       <div class="editor-body">
+        <!-- Narrow screens show one pane at a time: this returns to the list. -->
+        <button type="button" class="editor-back" (click)="closeEditor()">← All rules</button>
         @if (!manage().allowed) {
           <div class="readonly-banner" role="note">Only admins can change detection rules.</div>
         }

@@ -343,3 +343,11 @@ $accent:    var(--c-accent);
 
   &:hover { border-color: $accent; color: $accent; }
 }
+
+// Narrow screens (same breakpoint as the app layout): the results table
+// scrolls sideways inside its own box.
+@media (max-width: 768px) {
+  .results-table-wrap {
+    overflow-x: auto;
+  }
+}
