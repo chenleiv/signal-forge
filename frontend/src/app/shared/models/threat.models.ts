@@ -143,13 +143,27 @@ export interface IncidentNote {
   at: string;
 }
 
-export type UserRole = 'admin' | 'analyst';
+export type UserRole = 'admin' | 'manager' | 'analyst';
 
 /** A user as listed by GET /api/users (never includes credentials). */
 export interface UserSummary {
   username: string;
   display_name: string;
   role: UserRole;
+}
+
+/** GET /api/users/directory: every name ever used, including deleted users. */
+export interface UserDirectoryEntry {
+  username: string;
+  display_name: string;
+  deleted: boolean;
+}
+
+export interface NewUser {
+  username: string;
+  display_name: string;
+  role: UserRole;
+  password: string;
 }
 
 export interface Incident {

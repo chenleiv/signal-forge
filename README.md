@@ -16,7 +16,7 @@ A real-time Security Operations Center (SOC) dashboard built with Angular 21 and
 - **Detection Rules** — condition-based rules that raise alerts, open incidents, or block IPs
 - **Threat Hunting** — query recent events and save hunts
 - **Command Console** — terminal panel (toggle with `` ` ``) with commands: `help`, `status`, `block ip`, `unblock ip`, `scan`
-- **Users and roles** — `admin` and `analyst` roles; see [Security](#security) for the permission matrix
+- **Users and roles** — `admin`, `manager` and `analyst` roles, user management screen; see [Security](#security) for the permission matrix
 - **Authentication** — session in an HttpOnly cookie (8 hours), bcrypt-hashed passwords, rate-limited login
 - **Demo mode** — read-only public demo with in-browser simulation of analyst actions
 - **Settings** — WebSocket URL, reconnect delay, buffer size, alert thresholds, theme
@@ -46,7 +46,8 @@ signalforge/
 ├── backend/
 │   ├── main.py              # App setup, lifespan, demo-mode middleware, WebSocket stream
 │   ├── store.py             # In-memory state, session verification, config checks
-│   ├── users.py             # Users, bcrypt, seeding
+│   ├── users.py             # Users, bcrypt, seeding, session checks
+│   ├── user_admin.py        # Admin user management (create, role, password, soft delete)
 │   ├── authz.py             # Authorization rules (single source for the server)
 │   ├── rate_limit.py        # Per-IP and per-key rate limits
 │   ├── routers/             # auth, users, incidents, alerts, rules, behavioral, hunting, ip
@@ -72,6 +73,7 @@ signalforge/
             ├── alerts/          # Live alert feed with filters
             ├── incidents/       # Incident management — split view (table + detail panel)
             ├── rules/           # Detection rules editor
+            ├── admin-users/     # Admin user management
             ├── threat-hunting/  # Event queries and saved hunts
             ├── command-console/ # Terminal overlay
             ├── login/           # Login page (demo account buttons in demo mode)
@@ -128,7 +130,7 @@ In demo mode (the default) these public accounts exist, and the login page has
 |----------|----------|------|
 | `admin` | `admin-demo` | admin |
 | `alice` | `alice-demo` | analyst |
-| `bob` | `bob-demo` | analyst |
+| `bob` | `bob-demo` | manager |
 
 They are **never created when `DEMO_MODE=false`**. Outside demo mode the only seeded account is `admin`,
 with the password from `ADMIN_PASSWORD`.
@@ -154,7 +156,11 @@ All endpoints require a session except those marked *public*. Role requirements 
 | GET | `/auth/ws-ticket` | Short-lived (5 min) ticket for the WebSocket | any user |
 | WS | `/ws/threats?ticket=…` | Live threat event stream | valid ticket |
 | GET | `/api/config` | `{demo_mode}` | public |
-| GET | `/api/users` | Users (no password hashes) | any user |
+| GET | `/api/users` | Active users (no password hashes) | any user |
+| GET | `/api/users/directory` | Every name ever used, incl. deleted users (for history) | any user |
+| POST | `/api/users` | Create a user | admin |
+| PATCH | `/api/users/{username}` | Change role and/or reset password (signs the user out) | admin |
+| DELETE | `/api/users/{username}` | Delete a user (soft delete; not yourself, not the last admin) | admin |
 | GET | `/api/stats` | Aggregated chart data | any user |
 | GET | `/api/incidents` | Incident list | any user |
 | PATCH | `/api/incidents/{id}` | Change status / assignee | see matrix |
@@ -205,11 +211,13 @@ The server is the security boundary. Everything the frontend does with permissio
 ### Sessions and tokens
 
 - **Session:** a JWT in the `sf_session` cookie — `HttpOnly`, `SameSite=Lax`, `Secure` unless `ENV=development`, 8 hours.
-  Claims: `sub` (username), `role`, `typ: "session"`, `exp`. Never stored in `localStorage`.
+  Claims: `sub` (username), `role`, `sk` (the user's session key), `typ: "session"`, `exp`. Never stored in `localStorage`.
 - **WebSocket ticket:** a separate 5-minute JWT with `typ: "ws"`, fetched from `/auth/ws-ticket`.
 - Every decode site accepts only `HS256` and only its own `typ`, so a ticket cannot be used as a session and vice versa.
   `alg: none`, forged signatures, expired tokens, and tampered claims (e.g. `role` changed to `admin`) are rejected.
-- A role change takes effect at the next login (the role is read from the signed token).
+- Every request also checks the token against the **current** user record: the user must still exist, have
+  the role in the token, and still have the session key in the token. So deleting a user, changing their role or
+  resetting their password takes effect **immediately**, on every open session.
 - The server refuses to start without `JWT_SECRET`, and with `DEMO_MODE=false` without an `ADMIN_PASSWORD` of 12-72 bytes.
 
 ### Passwords and login
@@ -220,17 +228,19 @@ The server is the security boundary. Everything the frontend does with permissio
 
 ### Roles and permissions
 
-| Action | analyst | admin |
-|---|---|---|
-| Read all data | ✓ | ✓ |
-| Change incident status, add notes, update tasks | own incidents only | ✓ |
-| Take an unassigned incident for themselves | ✓ | ✓ |
-| Assign / reassign / unassign any incident | ✗ | ✓ |
-| Open a case from an IP or an alert (assigned to the creator) | ✓ | ✓ |
-| Acknowledge / dismiss alerts | ✓ | ✓ |
-| Block / unblock IPs, command console, saved hunts | ✓ | ✓ |
-| Detection rules (create / edit / toggle / delete) | ✗ | ✓ |
-| Behavioral detection settings | ✗ | ✓ |
+| Action | analyst | manager | admin |
+|---|---|---|---|
+| Read all data | ✓ | ✓ | ✓ |
+| Change incident status, add notes, update tasks | own incidents only | ✓ | ✓ |
+| Take an unassigned incident for themselves | ✓ | ✓ | ✓ |
+| Assign / reassign / unassign any incident | ✗ | ✓ | ✓ |
+| Open a case from an IP or an alert (assigned to the creator) | ✓ | ✓ | ✓ |
+| Acknowledge / dismiss alerts | ✓ | ✓ | ✓ |
+| Block / unblock IPs, command console, saved hunts | ✓ | ✓ | ✓ |
+| Detection rules (create / edit / toggle / delete) | ✗ | ✗ | ✓ |
+| Behavioral detection settings | ✗ | ✗ | ✓ |
+| Reset a user's password | ✗ | analysts only | ✓ |
+| Create users, change roles (analyst ↔ manager), delete users (never the admin) | ✗ | ✗ | ✓ |
 
 "Own" means `incident.assigned_to` is the caller. `assigned_to` must be an existing user (`422` otherwise).
 Denied actions return `403` with a clear message. Every field of a request is checked against the incident's
@@ -240,6 +250,20 @@ All rules live in `backend/authz.py`. The frontend mirrors them in `frontend/src
 [`testing/permission-matrix.json`](testing/permission-matrix.json) is the source of truth for both: the backend
 test suite sends every case to the real API, and the frontend suite runs the same cases through the client-side
 check, so the two cannot silently diverge.
+
+### User management
+
+- Admins create users, change roles, reset passwords and delete users (`/admin/users` in the UI).
+- Managers open the same screen but can only reset **analysts'** passwords; a reset request must contain the
+  password and nothing else (`403` otherwise).
+- New and reset passwords follow the same rule as `ADMIN_PASSWORD` (12-72 bytes). Only `role` and `password` can be
+  changed; anything else in the request is rejected (`422`).
+- **There is exactly one admin.** The admin account cannot be deleted, and the admin role can never be granted to
+  another user or removed from the admin, not even by the admin (`403`). New users are created as analysts or
+  managers. At startup the server refuses to run if the database holds more than one active admin.
+- **Deleting is a soft delete.** The user can no longer log in or be assigned, disappears from the user list and
+  the assignee options, and their open incidents become unassigned. History (closed incidents, notes) keeps their
+  name, and the username can never be reused, so old records never point at a different person.
 
 ### Demo mode
 

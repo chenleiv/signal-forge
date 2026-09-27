@@ -1,5 +1,5 @@
 """The shared RBAC permission matrix (testing/permission-matrix.json), run
-against the real API for both roles: allow -> 2xx, deny -> 403.
+against the real API for every role: allow -> 2xx, deny -> 403.
 
 The frontend runs the same file through its client-side permission check
 (permissions.matrix.spec.ts), so the two can never silently diverge.
@@ -11,7 +11,10 @@ from datetime import datetime, timezone
 
 import pytest
 
+import copy
+
 import store
+import users
 from tests.conftest import session_client
 
 MATRIX = json.loads(
@@ -19,10 +22,12 @@ MATRIX = json.loads(
 )
 PUBLIC_IP = "8.8.8.8"
 
-# Who "self", "other" and "third" are for each role.
+# Who "self", "other" and "third" are for each role. A manager's "other" is
+# an analyst, so "reset user password" exercises the one reset they may do.
 PEOPLE = {
-    "analyst": {"self": "alice", "other": "bob", "third": "admin"},
-    "admin":   {"self": "admin", "other": "bob", "third": "alice"},
+    "analyst": {"self": "alice", "other": "bob",   "third": "admin"},
+    "manager": {"self": "mira",  "other": "alice", "third": "bob"},
+    "admin":   {"self": "admin", "other": "bob",   "third": "alice"},
 }
 
 
@@ -35,7 +40,9 @@ def _case_id(case: dict) -> str:
 def _restore_state():
     snapshot = (list(store.incidents_store), list(store.alerts_store), [dict(r) for r in store._rules],
                 list(store._saved_hunts), set(store._blocked_ips), dict(store._behavioral_config))
+    saved_users = copy.deepcopy(users._users)
     yield
+    users._users.clear(); users._users.update(saved_users)
     incidents, alerts, rules, hunts, blocked, behavioral = snapshot
     store.incidents_store.clear(); store.incidents_store.extend(incidents)
     store.alerts_store.clear(); store.alerts_store.extend(alerts)
@@ -75,11 +82,11 @@ def _fill(value, names: dict):
     return value
 
 
-def test_matrix_covers_both_roles_for_every_action():
+def test_matrix_covers_every_role_for_every_action():
     actions = {}
     for case in MATRIX["cases"]:
         actions.setdefault((case["action"], case["owner"]), set()).add(case["role"])
-    assert all(roles == {"analyst", "admin"} for roles in actions.values())
+    assert all(roles == {"analyst", "manager", "admin"} for roles in actions.values())
     assert len(MATRIX["cases"]) >= 70
 
 

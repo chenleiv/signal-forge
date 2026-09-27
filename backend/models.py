@@ -79,3 +79,9 @@ class User(Base):
     password_hash: Mapped[str]      = mapped_column(String(100), nullable=False)
     role:          Mapped[str]      = mapped_column(String(10), nullable=False)
     created_at:    Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+    # Random per account; part of every session token. Rotating it signs out
+    # all of the user's sessions (password reset, role change).
+    session_key:   Mapped[Optional[str]]      = mapped_column(String(64), nullable=True)
+    # Soft delete: the row stays so history keeps the name and the username
+    # can never be reused; the user cannot log in or be assigned.
+    deleted_at:    Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True), nullable=True)

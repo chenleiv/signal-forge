@@ -84,6 +84,16 @@
           </svg>
           Settings
         </a>
+        @if (canOpenUsers()) {
+          <a class="item" routerLink="/admin/users" routerLinkActive="active">
+            <svg class="item-icon" viewBox="0 0 16 16" fill="none">
+              <circle cx="6" cy="5" r="2.5" stroke="currentColor" stroke-width="1.2" />
+              <path d="M1.5 13c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+              <path d="M11 4.5h3.5M12.75 2.75v3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+            </svg>
+            Users
+          </a>
+        }
       </nav>
     </div>
 

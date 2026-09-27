@@ -37,11 +37,18 @@ from users import seed_users, sync_users_with_db
 
 from routers import auth, ip, incidents, alerts, hunting, rules, behavioral, users
 
-# In-memory users exist even without a DB (and without lifespan, as in tests).
-seed_users(DEMO_MODE, ADMIN_PASSWORD)
 
 USE_DB: bool = db_engine is not None
 _store.USE_DB = USE_DB
+
+# Without a database nothing persists, so the admin must be created from
+# ADMIN_PASSWORD on every start. With one, startup fails later (in
+# sync_users_with_db) only if the table has no admin yet.
+if not DEMO_MODE and not USE_DB and not ADMIN_PASSWORD:
+    raise RuntimeError("ADMIN_PASSWORD (12-72 bytes) is required when DEMO_MODE=false and there is no database")
+
+# In-memory users exist even without a DB (and without lifespan, as in tests).
+seed_users(DEMO_MODE, ADMIN_PASSWORD)
 
 # ── Live event stream ─────────────────────────────────────────
 # ONE generator feeds all connected clients (fan-out). Previously each

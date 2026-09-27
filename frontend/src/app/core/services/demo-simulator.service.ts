@@ -5,6 +5,9 @@ import { AuthService } from './auth';
 import {
   Decision,
   canManageConfiguration,
+  canCreateUser,
+  canDeleteUser,
+  canUpdateUser,
   canPatchIncident,
   canWorkOnIncident,
 } from '../auth/permissions';
@@ -14,6 +17,7 @@ import {
   IncidentNote,
   ThreatAlert,
   ThreatLevel,
+  UserSummary,
 } from '../../shared/models/threat.models';
 
 /** Result of simulating a write: the fake response body, or null if not handled. */
@@ -51,6 +55,7 @@ export class DemoSimulatorService {
   // Last server copy of each item, so PATCH can return a full object.
   private seenAlerts    = new Map<string, ThreatAlert>();
   private seenIncidents = new Map<string, Incident>();
+  private seenUsers     = new Map<string, UserSummary>();
 
   // Local overlay.
   private blocked        = new Map<string, boolean>();
@@ -71,6 +76,12 @@ export class DemoSimulatorService {
 
     if (/^\/api\/(rules(\/[^/]+)?|behavioral\/settings)$/.test(path) && m !== 'GET') {
       return canManageConfiguration(user);
+    }
+    if (path === '/api/users' && m === 'POST') return canCreateUser(user, body);
+    if ((p = path.match(/^\/api\/users\/([^/]+)$/))) {
+      const target = this.seenUsers.get(decodeURIComponent(p[1]));
+      if (m === 'DELETE') return canDeleteUser(user, target);
+      if (m === 'PATCH') return canUpdateUser(user, target, body);
     }
     if ((p = path.match(/^\/api\/incidents\/([^/]+)\/(notes|tasks)$/))) {
       const inc = this.currentIncident(p[1]);
@@ -154,6 +165,11 @@ export class DemoSimulatorService {
       return (body as ThreatAlert[])
         .map(a => ({ ...a, ...this.alertPatches.get(a.id) }))
         .filter(a => a.status !== 'dismissed');
+    }
+
+    if (path === '/api/users' && Array.isArray(body)) {
+      (body as UserSummary[]).forEach(u => this.seenUsers.set(u.username, u));
+      return body;
     }
 
     if (path === '/api/incidents' && Array.isArray(body)) {

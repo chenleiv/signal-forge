@@ -69,6 +69,13 @@ export class IncidentDetailComponent {
 
   /** Assignable users; the server validates assigned_to against the same list. */
   readonly users = toSignal(this.store.getUsers(), { initialValue: [] });
+  /** Every name ever used (incl. deleted users), so history keeps showing names. */
+  private readonly directory = toSignal(this.store.getUserDirectory(), { initialValue: [] });
+  /** The current assignee is a deleted user: shown, but not selectable. */
+  readonly assigneeIsDeleted = computed(() => {
+    const a = this.incident()?.assigned_to;
+    return !!a && !!this.directory().find(u => u.username === a && u.deleted);
+  });
   private readonly destroyRef = inject(DestroyRef);
 
   // ── permissions (UX only; the server re-checks every write) ──
@@ -147,7 +154,9 @@ export class IncidentDetailComponent {
 
   displayName(username: string | null): string {
     if (!username) return 'Unassigned';
-    return this.users().find(u => u.username === username)?.display_name ?? username;
+    const entry = this.directory().find(u => u.username === username);
+    if (!entry) return username;
+    return entry.deleted ? `${entry.display_name} (deleted)` : entry.display_name;
   }
 
   // ── private methods ───────────────────────────────────────────

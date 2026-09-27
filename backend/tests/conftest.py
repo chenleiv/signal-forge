@@ -27,6 +27,7 @@ def _test_users():
     import main  # noqa: F401  (seeds admin)
     users.add_user("alice", "Alice Chen", "analyst", ANALYST_PASSWORD)
     users.add_user("bob", "Bob Martinez", "analyst", ANALYST_PASSWORD)
+    users.add_user("mira", "Mira Cohen", "manager", ANALYST_PASSWORD)
 
 
 @pytest.fixture(autouse=True)
@@ -42,8 +43,11 @@ def session_client(username: str, role: str):
     from jose import jwt
     import main
     from store import SECRET_KEY
+    import users
+    record = users.get_user(username)
     token = jwt.encode(
         {"sub": username, "role": role, "typ": "session",
+         "sk": record["session_key"] if record else None,
          "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
         SECRET_KEY, algorithm="HS256",
     )

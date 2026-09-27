@@ -71,6 +71,7 @@ def test_overlong_password_is_rejected_not_truncated(client, monkeypatch):
     monkeypatch.setitem(users._users, "carol", {
         "username": "carol", "display_name": "Carol", "role": "analyst",
         "password_hash": users.hash_password("p" * 72),
+        "session_key": users.new_session_key(), "deleted_at": None,
     })
     assert _login(client, "carol", "p" * 72).status_code == 200
     assert _login(client, "carol", "p" * 72 + "anything").status_code == 401
@@ -109,9 +110,10 @@ def test_session_with_unknown_role_is_rejected(client):
     assert client.get("/api/stats").status_code == 401
 
 
-def test_me_reports_the_role_the_server_enforces(client):
-    """After a role change the token keeps the old role until next login;
-    /auth/me must report that one, since it is what authorization uses."""
+def test_session_with_a_stale_role_is_rejected():
+    """A token issued before a role change stops working immediately
+    (Phase 6: the role in the token must match the user's current role)."""
     from tests.conftest import session_client
-    stale = session_client("alice", "admin")  # token issued before a demotion
-    assert stale.get("/auth/me").json()["role"] == "admin"
+    stale = session_client("alice", "admin")  # alice is an analyst now
+    assert stale.get("/auth/me").status_code == 401
+    assert stale.post("/api/rules", json={"name": "x"}).status_code == 401

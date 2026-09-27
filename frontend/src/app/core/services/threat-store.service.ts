@@ -17,6 +17,9 @@ import {
   ThreatAlert,
   AlertSummaryMetrics,
   UserSummary,
+  UserDirectoryEntry,
+  NewUser,
+  UserRole,
 } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
 
@@ -103,6 +106,24 @@ export class ThreatStoreService {
 
   getUsers() {
     return this.http.get<UserSummary[]>('/api/users');
+  }
+
+  /** Includes deleted users, so history can keep showing their names. */
+  getUserDirectory() {
+    return this.http.get<UserDirectoryEntry[]>('/api/users/directory');
+  }
+
+  createUser(user: NewUser) {
+    return this.http.post<UserSummary>('/api/users', user);
+  }
+
+  /** Admin: change role and/or reset password (signs the user out). */
+  updateUser(username: string, patch: { role?: UserRole; password?: string }) {
+    return this.http.patch<UserSummary>(`/api/users/${encodeURIComponent(username)}`, patch);
+  }
+
+  deleteUser(username: string) {
+    return this.http.delete<{ ok: boolean }>(`/api/users/${encodeURIComponent(username)}`);
   }
 
   patchIncident(id: string, patch: { status?: IncidentStatus; assigned_to?: string | null }) {
