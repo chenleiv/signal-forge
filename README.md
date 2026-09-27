@@ -145,7 +145,15 @@ A real admin password, once set, is never overwritten by `ADMIN_PASSWORD`.
 ```bash
 cd backend && python -m pytest          # all backend tests
 cd frontend && npm test -- --watch=false # all frontend tests (Vitest)
+cd frontend && npm run e2e               # layout checks in a real browser (Playwright)
 ```
+
+**Layout checks (`npm run e2e`).** Builds the frontend, serves it from the backend in demo mode (like on Render,
+no database), and checks every page on a phone (390 px) and a desktop (1440 px): nothing may be cut off by the
+screen edge (only wide tables scroll sideways, inside `.h-scroll`), the phone menu opens and closes, and logout
+is reachable. Tests only talk to the local server: every other request is blocked. First run:
+`npx playwright install chromium`. The backend virtualenv is expected at `backend/venv` (override with
+`BACKEND_PYTHON`).
 
 ---
 

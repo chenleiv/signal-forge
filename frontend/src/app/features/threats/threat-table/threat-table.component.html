@@ -26,57 +26,59 @@
     </div>
   </div>
 
-  @if (loading()) {
-    <table class="threat-table">
-      <thead>
-        <tr><th>#</th><th>IP Address</th><th>Avg Score</th><th>Events</th><th>Level</th><th></th></tr>
-      </thead>
-      <tbody>
-        @for (i of [1,2,3,4,5,6,7,8]; track i) {
-          <tr class="sk-row">
-            <td><span class="sk-line" style="width:16px"></span></td>
-            <td><span class="sk-line" [style.width.px]="110 + (i * 7 % 40)"></span></td>
-            <td><span class="sk-line" style="width:36px"></span></td>
-            <td><span class="sk-line" style="width:28px"></span></td>
-            <td><span class="sk-line" style="width:60px"></span></td>
-            <td><span class="sk-line" style="width:50px"></span></td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  } @else {
-    <table class="threat-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>IP Address</th>
-          <th>Avg Score</th>
-          <th>Events</th>
-          <th>Level</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (row of filteredRows(); track row.ip; let i = $index) {
-          <tr class="ip-row" (click)="selectIp(row.ip)" [class.row-selected]="row.ip === selectedIp()">
-            <td class="cell-idx">{{ i + 1 }}</td>
-            <td class="cell-ip">{{ row.ip }}</td>
-            <td class="cell-score" [ngClass]="scoreClass(row.score)">{{ row.score }}</td>
-            <td class="cell-count">{{ row.count }}</td>
-            <td class="cell-level">
-              <div class="sev-cell">
-                <span class="sev-dot" [ngClass]="'score-' + row.threat_level"></span>
-                <span class="sev-label">{{ row.threat_level | titlecase }}</span>
-              </div>
-            </td>
-            <td class="cell-action">Details →</td>
-          </tr>
-        } @empty {
+  <div class="table-scroll h-scroll">
+    @if (loading()) {
+      <table class="threat-table">
+        <thead>
+          <tr><th>#</th><th>IP Address</th><th>Avg Score</th><th>Events</th><th>Level</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (i of [1,2,3,4,5,6,7,8]; track i) {
+            <tr class="sk-row">
+              <td><span class="sk-line" style="width:16px"></span></td>
+              <td><span class="sk-line" [style.width.px]="110 + (i * 7 % 40)"></span></td>
+              <td><span class="sk-line" style="width:36px"></span></td>
+              <td><span class="sk-line" style="width:28px"></span></td>
+              <td><span class="sk-line" style="width:60px"></span></td>
+              <td><span class="sk-line" style="width:50px"></span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <table class="threat-table">
+        <thead>
           <tr>
-            <td colspan="6" class="empty-row">No threat data yet — stream must be active</td>
+            <th>#</th>
+            <th>IP Address</th>
+            <th>Avg Score</th>
+            <th>Events</th>
+            <th>Level</th>
+            <th></th>
           </tr>
-        }
-      </tbody>
-    </table>
-  }
+        </thead>
+        <tbody>
+          @for (row of filteredRows(); track row.ip; let i = $index) {
+            <tr class="ip-row" (click)="selectIp(row.ip)" [class.row-selected]="row.ip === selectedIp()">
+              <td class="cell-idx">{{ i + 1 }}</td>
+              <td class="cell-ip">{{ row.ip }}</td>
+              <td class="cell-score" [ngClass]="scoreClass(row.score)">{{ row.score }}</td>
+              <td class="cell-count">{{ row.count }}</td>
+              <td class="cell-level">
+                <div class="sev-cell">
+                  <span class="sev-dot" [ngClass]="'score-' + row.threat_level"></span>
+                  <span class="sev-label">{{ row.threat_level | titlecase }}</span>
+                </div>
+              </td>
+              <td class="cell-action">Details →</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="empty-row">No threat data yet — stream must be active</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </div>
 </div>

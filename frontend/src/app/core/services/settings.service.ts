@@ -10,8 +10,15 @@ export interface AppSettings {
   mediumThreshold: number;
 }
 
+/** The configured URL, or the same host the app is served from. */
+function defaultWsUrl(): string {
+  if (environment.wsUrl) return environment.wsUrl;
+  const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${scheme}://${location.host}/ws/threats`;
+}
+
 const DEFAULTS: AppSettings = {
-  wsUrl: environment.wsUrl,
+  wsUrl: defaultWsUrl(),
   reconnectDelay: 3,
   bufferSize: 100,
   criticalThreshold: 80,

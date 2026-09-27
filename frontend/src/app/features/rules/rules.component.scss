@@ -420,3 +420,44 @@ $green: rgba(255,255,255,.65);
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+// Back to the list: only shown on narrow screens (below).
+.editor-back {
+  display: none;
+  align-self: flex-start;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  color: $accent;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+// ── Narrow screens (same breakpoint as the app layout) ───────
+// One pane at a time: the list, or (after choosing a rule / "New") the
+// editor full width. Cancel returns to the list.
+@media (max-width: 768px) {
+  .rules-sidebar {
+    width: 100%;
+    border-right: 0;
+  }
+
+  .rules-editor {
+    display: none;
+  }
+
+  .rules-page.editing {
+    .rules-sidebar {
+      display: none;
+    }
+
+    .rules-editor {
+      display: flex;
+    }
+  }
+
+  .editor-back {
+    display: inline-flex;
+  }
+}
+

@@ -289,3 +289,19 @@ $accent: var(--c-accent);
     color: var(--c-text);
   }
 }
+
+// Narrow screens (same breakpoint as the app layout): one column.
+@media (max-width: 768px) {
+    .settings-page {
+        padding: 12px;
+    }
+
+    .sections,
+    .field-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 16px;
+    }
+}

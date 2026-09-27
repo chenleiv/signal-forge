@@ -81,4 +81,13 @@ describe('RulesComponent: analysts are read-only', () => {
     expect(store.updateRule).toHaveBeenCalledOnce();
     user.set({ username: 'alice', display_name: 'Alice Chen', role: 'analyst' });
   });
+
+  it('closeEditor returns to the list without writing anything', () => {
+    const c = create().componentInstance;
+    c.selectRule(RULE);
+    c.closeEditor();
+    expect(c.selected()).toBeNull();
+    expect(c.isNew()).toBe(false);
+    expect(store.updateRule).not.toHaveBeenCalled();
+  });
 });

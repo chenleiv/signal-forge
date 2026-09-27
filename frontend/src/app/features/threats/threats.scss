@@ -71,3 +71,16 @@
     transform: translateX(0);
   }
 }
+
+// ── Narrow screens (same breakpoint as the app layout) ───────
+// The detail drawer takes the whole width (its inline width is a desktop
+// preference); resizing is a mouse feature.
+@media (max-width: 768px) {
+  .drawer-overlay {
+    max-width: 100%;
+  }
+
+  .resize-handle {
+    display: none;
+  }
+}

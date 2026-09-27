@@ -18,3 +18,9 @@ backend/*.db-journal
 # Dependencies (anywhere)
 node_modules/
 backend/threat_ips_cache.json
+
+# Build and e2e artifacts
+backend/static/
+frontend/test-results/
+frontend/playwright-report/
+frontend/e2e/.auth/
