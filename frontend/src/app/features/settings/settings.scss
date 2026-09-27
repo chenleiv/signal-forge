@@ -189,6 +189,7 @@ $accent: var(--c-accent);
 // ── Actions ───────────────────────────────────────────────────
 .actions {
     display: flex;
+    flex-wrap: wrap;  // narrow screens: wrap instead of overflowing under the sidebar
     gap: 12px;
     justify-content: flex-end;
 }
