@@ -147,6 +147,35 @@ $green: rgba(255,255,255,.65);
   margin-top: auto;
   padding: 12px;
   border-top: 1px solid $border;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  .user-row {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.logout-btn {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid $border;
+  border-radius: 5px;
+  background: transparent;
+  color: $muted;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s;
+
+  &:hover,
+  &:focus-visible {
+    color: #f87171;
+    border-color: #7f1d1d;
+  }
 }
 
 .user-row {

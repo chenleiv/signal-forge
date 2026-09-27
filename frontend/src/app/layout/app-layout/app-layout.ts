@@ -38,6 +38,10 @@ export class AppLayout {
   readonly themeService    = inject(ThemeService);
   readonly demo            = inject(DemoModeService);
   readonly auth            = inject(AuthService);
+
+  logout(): void {
+    this.auth.logout();
+  }
   readonly canOpenUsers    = computed(() => canOpenUserAdmin(this.auth.currentUser()).allowed);
   readonly initials        = computed(() =>
     (this.auth.currentUser()?.display_name ?? '')
