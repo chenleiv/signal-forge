@@ -22,6 +22,7 @@ export const DENY_REASONS = {
   managerResetOnly: "Managers can only reset analysts' passwords",
   adminRoleFixed: 'There is exactly one admin: the admin role cannot be granted or removed',
   adminUndeletable: 'The admin account cannot be deleted',
+  ownPasswordInSettings: 'Change your own password in Settings (it asks for your current password)',
 } as const;
 
 /** Roles that work on and assign any incident (backend: INCIDENT_LEADS). */
@@ -120,14 +121,17 @@ export function canOpenUserAdmin(user: CurrentUser | null): Decision {
  * role/password of anyone; a manager may only reset an analyst's password,
  * with nothing else in the request. An unknown target is refused to managers.
  * Single admin: the admin role is never granted or removed, by anyone.
+ * Nobody resets their OWN password here (no current password is asked).
  */
 export function canUpdateUser(
   user: CurrentUser | null,
-  target: Pick<UserSummary, 'role'> | undefined,
+  target: Pick<UserSummary, 'role' | 'username'> | undefined,
   body: object,
 ): Decision {
   if (!user) return deny(DENY_REASONS.notAuthenticated);
   if (!isLead(user)) return deny(DENY_REASONS.admin);
+  // Your own password: only in Settings, which asks for the current one.
+  if (target?.username === user.username && 'password' in body) return deny(DENY_REASONS.ownPasswordInSettings);
   if (user.role === 'admin') {
     const newRole = (body as { role?: unknown }).role;
     const changesRole = newRole !== undefined && target !== undefined && newRole !== target.role;

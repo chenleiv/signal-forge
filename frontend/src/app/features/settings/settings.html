@@ -30,6 +30,51 @@
             </div>
         </section>
 
+        <!-- Change password -->
+        <section class="card">
+            <div class="card-header">
+                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
+                    <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2" />
+                    <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.2" />
+                </svg>
+                <h2 class="card-title">Change Password</h2>
+            </div>
+            @if (pwLocked()) {
+                <p class="card-note">Password changes are off in the public demo: the demo accounts are shared.</p>
+            }
+            <form class="field-grid" (submit)="$event.preventDefault(); changePassword()">
+                <div class="field full">
+                    <label for="current-password">Current password</label>
+                    <input id="current-password" type="password" autocomplete="current-password"
+                        [disabled]="pwLocked()" [value]="currentPw()"
+                        (input)="currentPw.set($any($event.target).value)" />
+                </div>
+                <div class="field">
+                    <label for="new-password">New password</label>
+                    <input id="new-password" type="password" autocomplete="new-password" placeholder="12-72 characters"
+                        [disabled]="pwLocked()" [value]="newPw()"
+                        (input)="newPw.set($any($event.target).value)" />
+                </div>
+                <div class="field">
+                    <label for="confirm-password">Repeat new password</label>
+                    <input id="confirm-password" type="password" autocomplete="new-password"
+                        [disabled]="pwLocked()" [value]="confirmPw()"
+                        (input)="confirmPw.set($any($event.target).value)" />
+                </div>
+                @if (pwProblem() ?? pwError(); as msg) {
+                    <p class="field full pw-msg pw-error" role="alert">{{ msg }}</p>
+                }
+                @if (pwNotice(); as msg) {
+                    <p class="field full pw-msg pw-ok" role="status">{{ msg }}</p>
+                }
+                <div class="field full">
+                    <button type="submit" class="btn-save" [disabled]="!canSubmitPw()">
+                        {{ pwBusy() ? 'Changing…' : 'Change password' }}
+                    </button>
+                </div>
+            </form>
+        </section>
+
         <!-- Appearance -->
         <section class="card">
             <div class="card-header">

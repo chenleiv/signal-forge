@@ -166,6 +166,7 @@ All endpoints require a session except those marked *public*. Role requirements 
 | POST | `/auth/login` | Log in, sets the session cookie (rate-limited) | public |
 | POST | `/auth/logout` | Clear the session cookie | public |
 | GET | `/auth/me` | Current user: username, display name, role | any user |
+| PATCH | `/auth/me` | Change your own password: exactly `{current_password, new_password}` | any user (not in demo) |
 | GET | `/auth/ws-ticket` | Short-lived (5 min) ticket for the WebSocket | any user |
 | WS | `/ws/threats?ticket=…` | Live threat event stream | valid ticket |
 | GET | `/api/config` | `{demo_mode}` | public |
@@ -272,6 +273,12 @@ check, so the two cannot silently diverge.
   password and nothing else (`403` otherwise).
 - New and reset passwords follow the same rule as `ADMIN_PASSWORD` (12-72 bytes). Only `role` and `password` can be
   changed; anything else in the request is rejected (`422`).
+- **Your own password** changes only in Settings (`PATCH /auth/me`), which asks for the current one: nobody, not
+  even the admin, resets their own password from the Users screen (`403`), so a stolen session cannot set it.
+  Only `current_password` and `new_password` are accepted (anything else is a `422`, never silently ignored). A
+  wrong current password counts toward a per-user limit (5/minute, 20/hour, then `429`). A change signs out every
+  other session of the user; the session that made it stays signed in. Blocked in demo mode: the demo accounts are
+  shared.
 - **There is exactly one admin.** The admin account cannot be deleted, and the admin role can never be granted to
   another user or removed from the admin, not even by the admin (`403`). New users are created as analysts or
   managers. At startup the server refuses to run if the database holds more than one active admin.

@@ -8,13 +8,15 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import HTTPException
+from starlette.concurrency import run_in_threadpool
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import store as _store
+from rate_limit import PASSWORD_CHANGE_FAILURES
 from db_ops import db_create_user, db_unassign_open_incidents, db_update_user
 from users import (
     ROLES, USERNAME_RE, CurrentUser, _users, get_user_record,
-    hash_password, new_session_key, password_problem, public_user,
+    hash_password, new_session_key, password_problem, public_user, verify_password,
 )
 
 _PATCH_FIELDS = {"role", "password"}
@@ -141,3 +143,36 @@ async def delete_user(db: Optional[AsyncSession], actor: CurrentUser, username: 
                 inc["assigned_to"] = None
                 inc["updated_at"] = now
 
+
+_OWN_PASSWORD_FIELDS = {"current_password", "new_password"}
+
+
+async def change_own_password(db: Optional[AsyncSession], username: str, body: dict) -> dict:
+    """Self-service password change (PATCH /auth/me).
+
+    - The body is exactly {current_password, new_password}: anything else
+      (role, username, ...) is a 422, never silently ignored.
+    - The current password is verified like at login; wrong attempts are
+      rate limited per user (a stolen session cannot brute-force it).
+    - A new session key signs out every other session of the user; the
+      caller re-issues the cookie for the session that made the change.
+    """
+    if set(body) != _OWN_PASSWORD_FIELDS:
+        raise HTTPException(status_code=422, detail="Send exactly current_password and new_password")
+    current, new = body["current_password"], body["new_password"]
+    if not isinstance(current, str) or not isinstance(new, str):
+        raise HTTPException(status_code=422, detail="Passwords must be strings")
+    user = _require_existing(username)
+
+    if PASSWORD_CHANGE_FAILURES.exceeded(username):
+        raise HTTPException(status_code=429, detail="Too many attempts, try again later")
+    if not await run_in_threadpool(verify_password, current, user["password_hash"]):
+        PASSWORD_CHANGE_FAILURES.hit(username)
+        raise HTTPException(status_code=403, detail="Current password is incorrect")
+
+    _check_password(new)
+    if new == current:
+        raise HTTPException(status_code=422, detail="The new password must be different from the current one")
+    fields = {"password_hash": await run_in_threadpool(hash_password, new), "session_key": new_session_key()}
+    await _apply(db, user, fields)
+    return public_user(user)

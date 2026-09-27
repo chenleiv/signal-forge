@@ -29,7 +29,8 @@ export class AdminUsersComponent {
   /** Create, change role, delete: admin only. */
   readonly allowed = computed(() => canManageUsers(this.auth.currentUser()).allowed);
   /** Reset this user's password? Admins: anyone. Managers: analysts only. */
-  readonly canReset = (u: Pick<UserSummary, 'role'> | undefined) =>
+  /** Never your own row: your own password changes in Settings. */
+  readonly canReset = (u: UserSummary | undefined) =>
     canUpdateUser(this.auth.currentUser(), u, { password: '' }).allowed;
   /** The admin's own row: role fixed, not deletable. */
   readonly canChangeRole = (u: UserSummary) => this.allowed() && u.role !== 'admin';

@@ -24,6 +24,7 @@ INCIDENT_LEADS = ("admin", "manager")
 MANAGER_RESET_ONLY = "Managers can only reset analysts' passwords"
 ADMIN_ROLE_FIXED = "There is exactly one admin: the admin role cannot be granted or removed"
 ADMIN_UNDELETABLE = "The admin account cannot be deleted"
+OWN_PASSWORD_IN_SETTINGS = "Change your own password in Settings (it asks for your current password)"
 
 _UNSET = object()
 
@@ -103,6 +104,10 @@ def check_user_update(actor: CurrentUser, target: Optional[dict], body: dict) ->
         raise HTTPException(status_code=403, detail="Admin role required")
     if target is None or target.get("deleted_at"):
         raise HTTPException(status_code=404, detail="User not found")
+    if target["username"] == actor.username and "password" in body:
+        # Your own password changes only through PATCH /auth/me, which asks
+        # for the current one: a stolen session must not be able to set it.
+        raise HTTPException(status_code=403, detail=OWN_PASSWORD_IN_SETTINGS)
     if actor.role == "manager" and not (set(body) == {"password"} and target["role"] == "analyst"):
         raise HTTPException(status_code=403, detail=MANAGER_RESET_ONLY)
     new_role = body.get("role", target["role"])

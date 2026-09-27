@@ -1,12 +1,16 @@
 from __future__ import annotations
 import os
 from datetime import datetime, timezone, timedelta
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 import jwt
+from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
+from database import get_db
 from rate_limit import limiter, login_locked, record_login_failure
+from user_admin import change_own_password
 import store as _store
 from store import SECRET_KEY, verify_token
 from users import DEMO_USERNAMES, CurrentUser, authenticate, get_user, public_user
@@ -84,6 +88,18 @@ async def me(user: CurrentUser = Depends(verify_token)):
     if record is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return public_user(record)  # verify_token guarantees the role matches the token
+
+
+@router.patch("/auth/me")
+async def patch_me(body: dict, response: Response,
+                   db: Optional[AsyncSession] = Depends(get_db),
+                   user: CurrentUser = Depends(verify_token)):
+    """Change your own password. Every other session is signed out; this one
+    gets a new cookie. Demo mode blocks it (middleware): the demo accounts'
+    passwords are public and must stay usable for everyone."""
+    updated = await change_own_password(db, user.username, body)
+    _set_session_cookie(response, user)  # signed with the new session key
+    return updated
 
 
 @router.get("/auth/ws-ticket")

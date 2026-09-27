@@ -8,7 +8,8 @@
     "{alert}": "an existing alert",
     "{rule}": "an existing rule",
     "{hunt}": "an existing saved hunt",
-    "{ip}": "a public IP"
+    "{ip}": "a public IP",
+    "{self_password}": "the caller's current password"
   },
   "cases": [
     {
@@ -1374,100 +1375,136 @@
       "body": {
         "password": "matrix-password-3"
       },
+      "expect": "deny"
+    },
+    {
+      "action": "grant the admin role",
+      "role": "analyst",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "admin"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "grant the admin role",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "admin"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "grant the admin role",
+      "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "admin"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "demote the admin",
+      "role": "analyst",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "role": "analyst"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "demote the admin",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "role": "analyst"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "demote the admin",
+      "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "role": "analyst"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "delete the admin",
+      "role": "analyst",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/admin",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete the admin",
+      "role": "manager",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/admin",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete the admin",
+      "role": "admin",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/admin",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "change own password",
+      "role": "analyst",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/auth/me",
+      "body": {
+        "current_password": "{self_password}",
+        "new_password": "a-brand-new-password-9"
+      },
       "expect": "allow"
     },
     {
-      "action": "grant the admin role",
-      "role": "analyst",
-      "owner": null,
-      "method": "PATCH",
-      "path": "/api/users/{other}",
-      "body": {
-        "role": "admin"
-      },
-      "expect": "deny"
-    },
-    {
-      "action": "grant the admin role",
+      "action": "change own password",
       "role": "manager",
       "owner": null,
       "method": "PATCH",
-      "path": "/api/users/{other}",
+      "path": "/auth/me",
       "body": {
-        "role": "admin"
+        "current_password": "{self_password}",
+        "new_password": "a-brand-new-password-9"
       },
-      "expect": "deny"
+      "expect": "allow"
     },
     {
-      "action": "grant the admin role",
+      "action": "change own password",
       "role": "admin",
       "owner": null,
       "method": "PATCH",
-      "path": "/api/users/{other}",
+      "path": "/auth/me",
       "body": {
-        "role": "admin"
+        "current_password": "{self_password}",
+        "new_password": "a-brand-new-password-9"
       },
-      "expect": "deny"
-    },
-    {
-      "action": "demote the admin",
-      "role": "analyst",
-      "owner": null,
-      "method": "PATCH",
-      "path": "/api/users/admin",
-      "body": {
-        "role": "analyst"
-      },
-      "expect": "deny"
-    },
-    {
-      "action": "demote the admin",
-      "role": "manager",
-      "owner": null,
-      "method": "PATCH",
-      "path": "/api/users/admin",
-      "body": {
-        "role": "analyst"
-      },
-      "expect": "deny"
-    },
-    {
-      "action": "demote the admin",
-      "role": "admin",
-      "owner": null,
-      "method": "PATCH",
-      "path": "/api/users/admin",
-      "body": {
-        "role": "analyst"
-      },
-      "expect": "deny"
-    },
-    {
-      "action": "delete the admin",
-      "role": "analyst",
-      "owner": null,
-      "method": "DELETE",
-      "path": "/api/users/admin",
-      "body": null,
-      "expect": "deny"
-    },
-    {
-      "action": "delete the admin",
-      "role": "manager",
-      "owner": null,
-      "method": "DELETE",
-      "path": "/api/users/admin",
-      "body": null,
-      "expect": "deny"
-    },
-    {
-      "action": "delete the admin",
-      "role": "admin",
-      "owner": null,
-      "method": "DELETE",
-      "path": "/api/users/admin",
-      "body": null,
-      "expect": "deny"
+      "expect": "allow"
     }
   ]
 }
