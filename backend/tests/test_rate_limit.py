@@ -126,6 +126,7 @@ def test_real_accounts_keep_the_account_lockout_in_demo_mode(demo_mode, monkeypa
     monkeypatch.setitem(users._users, "carol", {
         "username": "carol", "display_name": "Carol", "role": "analyst",
         "password_hash": users.hash_password("carol-real-password"),
+        "session_key": users.new_session_key(), "deleted_at": None,
     })
     client = TestClient(main.app)
     for i in range(10):

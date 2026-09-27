@@ -26,6 +26,8 @@ def _set_session_cookie(response: Response, user: CurrentUser) -> None:
         {
             "sub": user.username,
             "role": user.role,
+            # Revocation handle: must match the user's current key (store.verify_token).
+            "sk": get_user(user.username)["session_key"],
             "typ": "session",
             "exp": datetime.now(timezone.utc) + timedelta(hours=8),
         },
@@ -81,9 +83,7 @@ async def me(user: CurrentUser = Depends(verify_token)):
     record = get_user(user.username)
     if record is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
-    # The role the server enforces is the token's (until next login), so the
-    # UI must show that one, not the stored record's.
-    return {**public_user(record), "role": user.role}
+    return public_user(record)  # verify_token guarantees the role matches the token
 
 
 @router.get("/auth/ws-ticket")

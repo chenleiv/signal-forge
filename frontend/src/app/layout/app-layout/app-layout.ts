@@ -5,6 +5,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { ThreatsService } from '../../core/services/threats.service';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { AuthService } from '../../core/services/auth';
+import { canOpenUserAdmin } from '../../core/auth/permissions';
 import { ThemeService } from '../../core/services/theme';
 import { CommandConsole } from '../../features/command-console/command-console';
 import { DemoModeService } from '../../core/services/demo-mode.service';
@@ -17,6 +18,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/map':       'Threat Map',
   '/hunting':   'Threat Hunting',
   '/rules':     'Detection Rules',
+  '/admin/users': 'Users',
   '/settings':  'Settings',
 };
 
@@ -36,6 +38,7 @@ export class AppLayout {
   readonly themeService    = inject(ThemeService);
   readonly demo            = inject(DemoModeService);
   readonly auth            = inject(AuthService);
+  readonly canOpenUsers    = computed(() => canOpenUserAdmin(this.auth.currentUser()).allowed);
   readonly initials        = computed(() =>
     (this.auth.currentUser()?.display_name ?? '')
       .split(/\s+/).map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase() || 'SF');

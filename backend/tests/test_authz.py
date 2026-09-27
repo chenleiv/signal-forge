@@ -109,7 +109,7 @@ def test_denied_note_writes_nothing(alice, incident):
 
 def test_denial_message_is_clear_and_not_leaky(alice, incident):
     r = alice.patch(f"/api/incidents/{incident('bob')}", json={"status": "closed"})
-    assert r.json() == {"detail": "Only the assignee or an admin can change this incident"}
+    assert r.json() == {"detail": "Only the assignee, a manager or an admin can change this incident"}
 
 
 # ── Assignment ────────────────────────────────────────────────

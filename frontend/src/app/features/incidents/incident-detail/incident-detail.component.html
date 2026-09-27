@@ -56,6 +56,9 @@
       @if (reassign().allowed) {
         <select class="assignee-select" (change)="updateAssignee($any($event.target).value)">
           <option value="" [selected]="!incident()!.assigned_to">Unassigned</option>
+          @if (assigneeIsDeleted()) {
+            <option [value]="incident()!.assigned_to" selected disabled>{{ displayName(incident()!.assigned_to) }}</option>
+          }
           @for (u of users(); track u.username) {
             <option [value]="u.username" [selected]="incident()!.assigned_to === u.username">{{ u.display_name }}</option>
           }

@@ -1,8 +1,8 @@
 {
-  "description": "RBAC permission matrix: the single source of truth for BOTH test suites. backend/tests/test_permission_matrix.py sends each request to the real API (allow -> 2xx, deny -> 403); frontend permissions.matrix.spec.ts runs it through the client-side check used by the UI and the demo simulator. Keep in sync with the matrix in the RBAC plan.",
+  "description": "RBAC permission matrix: the single source of truth for BOTH test suites. backend/tests/test_permission_matrix.py sends each request to the real API (allow -> 2xx, deny -> 403); frontend permissions.matrix.spec.ts runs it through the client-side check used by the UI and the demo simulator. Keep in sync with the matrix in the RBAC plan. Single admin: nobody (not even the admin) can grant or remove the admin role or delete the admin.",
   "placeholders": {
     "{self}": "the caller's username",
-    "{other}": "another analyst",
+    "{other}": "another user: bob for an analyst or admin, alice (an analyst) for a manager",
     "{third}": "a third user",
     "{incident}": "an SQLi incident whose assignee is given by 'owner' (self / other / none)",
     "{alert}": "an existing alert",
@@ -34,6 +34,17 @@
       "expect": "allow"
     },
     {
+      "action": "change incident status",
+      "role": "manager",
+      "owner": "self",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "status": "investigating"
+      },
+      "expect": "allow"
+    },
+    {
       "action": "add note",
       "role": "analyst",
       "owner": "self",
@@ -47,6 +58,17 @@
     {
       "action": "add note",
       "role": "admin",
+      "owner": "self",
+      "method": "POST",
+      "path": "/api/incidents/{incident}/notes",
+      "body": {
+        "text": "matrix note"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "add note",
+      "role": "manager",
       "owner": "self",
       "method": "POST",
       "path": "/api/incidents/{incident}/notes",
@@ -71,6 +93,19 @@
     {
       "action": "update tasks",
       "role": "admin",
+      "owner": "self",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}/tasks",
+      "body": {
+        "completed_tasks": [
+          0
+        ]
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "update tasks",
+      "role": "manager",
       "owner": "self",
       "method": "PATCH",
       "path": "/api/incidents/{incident}/tasks",
@@ -104,6 +139,17 @@
       "expect": "allow"
     },
     {
+      "action": "change incident status",
+      "role": "manager",
+      "owner": "other",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "status": "investigating"
+      },
+      "expect": "allow"
+    },
+    {
       "action": "add note",
       "role": "analyst",
       "owner": "other",
@@ -117,6 +163,17 @@
     {
       "action": "add note",
       "role": "admin",
+      "owner": "other",
+      "method": "POST",
+      "path": "/api/incidents/{incident}/notes",
+      "body": {
+        "text": "matrix note"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "add note",
+      "role": "manager",
       "owner": "other",
       "method": "POST",
       "path": "/api/incidents/{incident}/notes",
@@ -141,6 +198,19 @@
     {
       "action": "update tasks",
       "role": "admin",
+      "owner": "other",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}/tasks",
+      "body": {
+        "completed_tasks": [
+          0
+        ]
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "update tasks",
+      "role": "manager",
       "owner": "other",
       "method": "PATCH",
       "path": "/api/incidents/{incident}/tasks",
@@ -174,6 +244,17 @@
       "expect": "allow"
     },
     {
+      "action": "change incident status",
+      "role": "manager",
+      "owner": "none",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "status": "investigating"
+      },
+      "expect": "allow"
+    },
+    {
       "action": "add note",
       "role": "analyst",
       "owner": "none",
@@ -187,6 +268,17 @@
     {
       "action": "add note",
       "role": "admin",
+      "owner": "none",
+      "method": "POST",
+      "path": "/api/incidents/{incident}/notes",
+      "body": {
+        "text": "matrix note"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "add note",
+      "role": "manager",
       "owner": "none",
       "method": "POST",
       "path": "/api/incidents/{incident}/notes",
@@ -211,6 +303,19 @@
     {
       "action": "update tasks",
       "role": "admin",
+      "owner": "none",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}/tasks",
+      "body": {
+        "completed_tasks": [
+          0
+        ]
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "update tasks",
+      "role": "manager",
       "owner": "none",
       "method": "PATCH",
       "path": "/api/incidents/{incident}/tasks",
@@ -244,6 +349,17 @@
       "expect": "allow"
     },
     {
+      "action": "take unassigned incident",
+      "role": "manager",
+      "owner": "none",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "assigned_to": "{self}"
+      },
+      "expect": "allow"
+    },
+    {
       "action": "take someone else's incident",
       "role": "analyst",
       "owner": "other",
@@ -257,6 +373,17 @@
     {
       "action": "take someone else's incident",
       "role": "admin",
+      "owner": "other",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "assigned_to": "{self}"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "take someone else's incident",
+      "role": "manager",
       "owner": "other",
       "method": "PATCH",
       "path": "/api/incidents/{incident}",
@@ -289,6 +416,17 @@
     },
     {
       "action": "assign to someone else",
+      "role": "manager",
+      "owner": "none",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "assigned_to": "{other}"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "assign to someone else",
       "role": "analyst",
       "owner": "self",
       "method": "PATCH",
@@ -301,6 +439,17 @@
     {
       "action": "assign to someone else",
       "role": "admin",
+      "owner": "self",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "assigned_to": "{other}"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "assign to someone else",
+      "role": "manager",
       "owner": "self",
       "method": "PATCH",
       "path": "/api/incidents/{incident}",
@@ -332,6 +481,17 @@
       "expect": "allow"
     },
     {
+      "action": "assign to someone else",
+      "role": "manager",
+      "owner": "other",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "assigned_to": "{third}"
+      },
+      "expect": "allow"
+    },
+    {
       "action": "unassign",
       "role": "analyst",
       "owner": "self",
@@ -355,6 +515,17 @@
     },
     {
       "action": "unassign",
+      "role": "manager",
+      "owner": "self",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "assigned_to": null
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "unassign",
       "role": "analyst",
       "owner": "other",
       "method": "PATCH",
@@ -367,6 +538,17 @@
     {
       "action": "unassign",
       "role": "admin",
+      "owner": "other",
+      "method": "PATCH",
+      "path": "/api/incidents/{incident}",
+      "body": {
+        "assigned_to": null
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "unassign",
+      "role": "manager",
       "owner": "other",
       "method": "PATCH",
       "path": "/api/incidents/{incident}",
@@ -389,6 +571,17 @@
     {
       "action": "create case from IP",
       "role": "admin",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/incidents/from-ip",
+      "body": {
+        "ip": "{ip}"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "create case from IP",
+      "role": "manager",
       "owner": null,
       "method": "POST",
       "path": "/api/incidents/from-ip",
@@ -409,6 +602,15 @@
     {
       "action": "create case from alert",
       "role": "admin",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/alerts/{alert}/case",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "create case from alert",
+      "role": "manager",
       "owner": null,
       "method": "POST",
       "path": "/api/alerts/{alert}/case",
@@ -429,6 +631,17 @@
     {
       "action": "acknowledge alert",
       "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/alerts/{alert}",
+      "body": {
+        "status": "acknowledged"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "acknowledge alert",
+      "role": "manager",
       "owner": null,
       "method": "PATCH",
       "path": "/api/alerts/{alert}",
@@ -451,6 +664,17 @@
     {
       "action": "dismiss alert",
       "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/alerts/{alert}",
+      "body": {
+        "status": "dismissed"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "dismiss alert",
+      "role": "manager",
       "owner": null,
       "method": "PATCH",
       "path": "/api/alerts/{alert}",
@@ -471,6 +695,15 @@
     {
       "action": "block IP",
       "role": "admin",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/ip/{ip}/block",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "block IP",
+      "role": "manager",
       "owner": null,
       "method": "POST",
       "path": "/api/ip/{ip}/block",
@@ -489,6 +722,15 @@
     {
       "action": "unblock IP",
       "role": "admin",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/ip/{ip}/block",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "unblock IP",
+      "role": "manager",
       "owner": null,
       "method": "DELETE",
       "path": "/api/ip/{ip}/block",
@@ -509,6 +751,17 @@
     {
       "action": "console command",
       "role": "admin",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/command",
+      "body": {
+        "command": "status"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "console command",
+      "role": "manager",
       "owner": null,
       "method": "POST",
       "path": "/api/command",
@@ -542,6 +795,18 @@
       "expect": "allow"
     },
     {
+      "action": "save hunt",
+      "role": "manager",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/hunts",
+      "body": {
+        "name": "h",
+        "query": {}
+      },
+      "expect": "allow"
+    },
+    {
       "action": "delete hunt",
       "role": "analyst",
       "owner": null,
@@ -553,6 +818,15 @@
     {
       "action": "delete hunt",
       "role": "admin",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/hunts/{hunt}",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "delete hunt",
+      "role": "manager",
       "owner": null,
       "method": "DELETE",
       "path": "/api/hunts/{hunt}",
@@ -582,6 +856,17 @@
       "expect": "allow"
     },
     {
+      "action": "create rule",
+      "role": "manager",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/rules",
+      "body": {
+        "name": "matrix rule"
+      },
+      "expect": "deny"
+    },
+    {
       "action": "edit rule",
       "role": "analyst",
       "owner": null,
@@ -602,6 +887,17 @@
         "name": "renamed"
       },
       "expect": "allow"
+    },
+    {
+      "action": "edit rule",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/rules/{rule}",
+      "body": {
+        "name": "renamed"
+      },
+      "expect": "deny"
     },
     {
       "action": "toggle rule",
@@ -626,6 +922,17 @@
       "expect": "allow"
     },
     {
+      "action": "toggle rule",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/rules/{rule}",
+      "body": {
+        "enabled": false
+      },
+      "expect": "deny"
+    },
+    {
       "action": "delete rule",
       "role": "analyst",
       "owner": null,
@@ -642,6 +949,15 @@
       "path": "/api/rules/{rule}",
       "body": null,
       "expect": "allow"
+    },
+    {
+      "action": "delete rule",
+      "role": "manager",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/rules/{rule}",
+      "body": null,
+      "expect": "deny"
     },
     {
       "action": "change behavioral settings",
@@ -664,6 +980,152 @@
         "cooldown_min": 30
       },
       "expect": "allow"
+    },
+    {
+      "action": "change behavioral settings",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/behavioral/settings",
+      "body": {
+        "cooldown_min": 30
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "create user",
+      "role": "analyst",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/users",
+      "body": {
+        "username": "matrix-user",
+        "display_name": "Matrix User",
+        "role": "analyst",
+        "password": "matrix-password-1"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "create user",
+      "role": "admin",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/users",
+      "body": {
+        "username": "matrix-user",
+        "display_name": "Matrix User",
+        "role": "analyst",
+        "password": "matrix-password-1"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "create user",
+      "role": "manager",
+      "owner": null,
+      "method": "POST",
+      "path": "/api/users",
+      "body": {
+        "username": "matrix-user",
+        "display_name": "Matrix User",
+        "role": "analyst",
+        "password": "matrix-password-1"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "change user role",
+      "role": "analyst",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "manager"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "change user role",
+      "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "manager"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "change user role",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "manager"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "reset user password",
+      "role": "analyst",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "password": "matrix-password-2"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "reset user password",
+      "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "password": "matrix-password-2"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "reset user password",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "password": "matrix-password-2"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "delete user",
+      "role": "analyst",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/{other}",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete user",
+      "role": "admin",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/{other}",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "delete user",
+      "role": "manager",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/{other}",
+      "body": null,
+      "expect": "deny"
     },
     {
       "action": "read /api/incidents",
@@ -677,6 +1139,15 @@
     {
       "action": "read /api/incidents",
       "role": "admin",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/incidents",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "read /api/incidents",
+      "role": "manager",
       "owner": null,
       "method": "GET",
       "path": "/api/incidents",
@@ -702,6 +1173,15 @@
       "expect": "allow"
     },
     {
+      "action": "read /api/alerts",
+      "role": "manager",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/alerts",
+      "body": null,
+      "expect": "allow"
+    },
+    {
       "action": "read /api/rules",
       "role": "analyst",
       "owner": null,
@@ -713,6 +1193,15 @@
     {
       "action": "read /api/rules",
       "role": "admin",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/rules",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "read /api/rules",
+      "role": "manager",
       "owner": null,
       "method": "GET",
       "path": "/api/rules",
@@ -738,6 +1227,15 @@
       "expect": "allow"
     },
     {
+      "action": "read /api/behavioral/settings",
+      "role": "manager",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/behavioral/settings",
+      "body": null,
+      "expect": "allow"
+    },
+    {
       "action": "read /api/users",
       "role": "analyst",
       "owner": null,
@@ -752,6 +1250,42 @@
       "owner": null,
       "method": "GET",
       "path": "/api/users",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "read /api/users",
+      "role": "manager",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/users",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "read /api/users/directory",
+      "role": "analyst",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/users/directory",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "read /api/users/directory",
+      "role": "admin",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/users/directory",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "read /api/users/directory",
+      "role": "manager",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/users/directory",
       "body": null,
       "expect": "allow"
     },
@@ -767,6 +1301,15 @@
     {
       "action": "read /api/hunts",
       "role": "admin",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/hunts",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "read /api/hunts",
+      "role": "manager",
       "owner": null,
       "method": "GET",
       "path": "/api/hunts",
@@ -790,6 +1333,141 @@
       "path": "/api/stats",
       "body": null,
       "expect": "allow"
+    },
+    {
+      "action": "read /api/stats",
+      "role": "manager",
+      "owner": null,
+      "method": "GET",
+      "path": "/api/stats",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "reset the admin's password",
+      "role": "analyst",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "password": "matrix-password-3"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "reset the admin's password",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "password": "matrix-password-3"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "reset the admin's password",
+      "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "password": "matrix-password-3"
+      },
+      "expect": "allow"
+    },
+    {
+      "action": "grant the admin role",
+      "role": "analyst",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "admin"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "grant the admin role",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "admin"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "grant the admin role",
+      "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/{other}",
+      "body": {
+        "role": "admin"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "demote the admin",
+      "role": "analyst",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "role": "analyst"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "demote the admin",
+      "role": "manager",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "role": "analyst"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "demote the admin",
+      "role": "admin",
+      "owner": null,
+      "method": "PATCH",
+      "path": "/api/users/admin",
+      "body": {
+        "role": "analyst"
+      },
+      "expect": "deny"
+    },
+    {
+      "action": "delete the admin",
+      "role": "analyst",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/admin",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete the admin",
+      "role": "manager",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/admin",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete the admin",
+      "role": "admin",
+      "owner": null,
+      "method": "DELETE",
+      "path": "/api/users/admin",
+      "body": null,
+      "expect": "deny"
     }
   ]
 }

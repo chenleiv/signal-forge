@@ -1,0 +1,115 @@
+<div class="users-page">
+
+  <div class="page-header">
+    <h1 class="page-title">Users</h1>
+    <p class="page-sub">
+      @if (allowed()) { Create accounts, change roles, reset passwords. }
+      @else { Reset analysts' passwords. }
+      Changes sign the affected user out immediately.
+    </p>
+  </div>
+
+  @if (error()) {
+    <div class="msg msg-error" role="alert">{{ error() }}</div>
+  }
+  @if (notice()) {
+    <div class="msg msg-ok" role="status">{{ notice() }}</div>
+  }
+
+  <section class="card">
+    <h2 class="card-title">Accounts</h2>
+    @if (loading()) {
+      <p class="muted">Loading…</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="users-table">
+          <thead>
+            <tr><th>Username</th><th>Name</th><th>Role</th><th class="actions-col">Actions</th></tr>
+          </thead>
+          <tbody>
+            @for (u of users(); track u.username) {
+              <tr>
+                <td class="mono">{{ u.username }} @if (u.username === me()) { <span class="you">you</span> }</td>
+                <td>{{ u.display_name }}</td>
+                <td>
+                  @if (canChangeRole(u)) {
+                    <label class="sr-only" [attr.for]="'role-' + u.username">Role of {{ u.username }}</label>
+                    <select class="role-select" [id]="'role-' + u.username"
+                            (change)="changeRole(u, $any($event.target).value)">
+                      @for (r of roles; track r) {
+                        <option [value]="r" [selected]="u.role === r">{{ r }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <span class="role-text">{{ u.role }}</span>
+                  }
+                </td>
+                <td class="actions-col">
+                  @if (pendingDelete() === u.username) {
+                    <span class="confirm">
+                      Delete {{ u.username }}?
+                      <button type="button" class="btn-danger" (click)="confirmDelete()">Delete</button>
+                      <button type="button" class="btn-plain" (click)="cancel()">Cancel</button>
+                    </span>
+                  } @else if (resetFor() === u.username) {
+                    <span class="confirm">
+                      <label class="sr-only" for="reset-password">New password for {{ u.username }}</label>
+                      <input id="reset-password" type="password" autocomplete="new-password"
+                             placeholder="New password (12+ chars)"
+                             [value]="resetPassword()" (input)="resetPassword.set($any($event.target).value)" />
+                      <button type="button" class="btn-plain" (click)="submitReset()">Save</button>
+                      <button type="button" class="btn-plain" (click)="cancel()">Cancel</button>
+                    </span>
+                  } @else {
+                    @if (canReset(u)) {
+                      <button type="button" class="btn-plain" (click)="startReset(u.username)">Reset password</button>
+                    }
+                    @if (canDelete(u) && u.username !== me()) {
+                      <button type="button" class="btn-plain btn-del" (click)="askDelete(u.username)">Delete</button>
+                    }
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  @if (allowed()) {
+    <section class="card">
+      <h2 class="card-title">New user</h2>
+      <form class="field-grid" (submit)="$event.preventDefault(); create()">
+        <div class="field">
+          <label for="new-username">Username</label>
+          <input id="new-username" autocomplete="off" placeholder="lowercase, digits, -"
+                 [value]="newUsername()" (input)="newUsername.set($any($event.target).value)" />
+        </div>
+        <div class="field">
+          <label for="new-display-name">Name</label>
+          <input id="new-display-name" autocomplete="off"
+                 [value]="newDisplayName()" (input)="newDisplayName.set($any($event.target).value)" />
+        </div>
+        <div class="field">
+          <label for="new-role">Role</label>
+          <select id="new-role" class="role-select" (change)="newRole.set($any($event.target).value)">
+            @for (r of roles; track r) {
+              <option [value]="r" [selected]="newRole() === r">{{ r }}</option>
+            }
+          </select>
+        </div>
+        <div class="field">
+          <label for="new-password">Password</label>
+          <input id="new-password" type="password" autocomplete="new-password" placeholder="12-72 characters"
+                 [value]="newPassword()" (input)="newPassword.set($any($event.target).value)" />
+        </div>
+        <div class="field full">
+          <button type="submit" class="btn-save"
+                  [disabled]="!newUsername().trim() || !newDisplayName().trim() || !newPassword()">Create user</button>
+        </div>
+      </form>
+    </section>
+  }
+
+</div>

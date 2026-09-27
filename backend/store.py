@@ -18,7 +18,7 @@ from constants import (
 )
 from database import AsyncSessionLocal, get_db
 from db_ops import db_update_rule
-from users import ROLES, CurrentUser, analyst_usernames
+from users import ROLES, CurrentUser, analyst_usernames, is_session_current, password_problem
 
 SECRET_KEY = os.environ.get("JWT_SECRET")
 if not SECRET_KEY:
@@ -29,10 +29,11 @@ if not SECRET_KEY:
 DEMO_MODE = os.environ.get("DEMO_MODE", "true").strip().lower() != "false"
 
 # Outside demo mode the only seeded account is `admin`, and its password must
-# come from the operator — never a public default.
+# come from the operator, never a public default. It only bootstraps the admin
+# (see users.seed_users); main.py requires it when no admin can exist yet.
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-if not DEMO_MODE and not 12 <= len(ADMIN_PASSWORD.encode()) <= 72:
-    raise RuntimeError("ADMIN_PASSWORD (12-72 bytes) is required when DEMO_MODE=false")
+if not DEMO_MODE and ADMIN_PASSWORD and password_problem(ADMIN_PASSWORD):
+    raise RuntimeError("ADMIN_PASSWORD must be 12-72 bytes")
 
 _COOKIE = "sf_session"
 
@@ -84,8 +85,10 @@ def verify_token(request: Request) -> CurrentUser:
     """Validate the session cookie and return the authenticated user.
 
     Routes that need to know *who* is acting must use this return value,
-    never an identity field sent by the client. The role comes from the
-    signed token, so a role change takes effect at the next login (<= 8h).
+    never an identity field sent by the client. Besides the signature, every
+    request re-checks the token against the CURRENT user record (active,
+    same role, same session key), so deleting a user, changing their role or
+    resetting their password takes effect immediately.
     """
     token = request.cookies.get(_COOKIE)
     if not token:
@@ -100,6 +103,8 @@ def verify_token(request: Request) -> CurrentUser:
             raise ValueError("missing subject")
         if role not in ROLES:
             raise ValueError("missing or unknown role")
+        if not is_session_current(username, role, payload.get("sk")):
+            raise ValueError("session revoked")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     return CurrentUser(username=username, role=role)

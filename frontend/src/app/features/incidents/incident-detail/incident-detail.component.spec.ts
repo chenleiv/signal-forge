@@ -25,6 +25,7 @@ function incident(assigned_to: string | null): Incident {
 describe('IncidentDetailComponent: handlers ignore forbidden clicks', () => {
   const store = {
     getUsers: vi.fn(() => of([])),
+    getUserDirectory: vi.fn(() => of([])),
     patchIncident: vi.fn((_id: string, p: Partial<Incident>) => of({ ...incident('bob'), ...p })),
     updateIncidentTasks: vi.fn(() => of({ completed_tasks: [] })),
     addIncidentNote: vi.fn(() => of({ author: 'alice', text: 'x', at: '2026-09-26T10:00:00Z' })),
@@ -51,7 +52,7 @@ describe('IncidentDetailComponent: handlers ignore forbidden clicks', () => {
     const fixture = create('bob');
     const btn = fixture.nativeElement.querySelector('.status-btn:not(.active)') as HTMLButtonElement;
     expect(btn.getAttribute('aria-disabled')).toBe('true');
-    expect(btn.title).toBe('Only the assignee or an admin can change this incident');
+    expect(btn.title).toBe('Only the assignee, a manager or an admin can change this incident');
 
     btn.click();
 
@@ -86,6 +87,12 @@ describe('IncidentDetailComponent: handlers ignore forbidden clicks', () => {
     take.click();
 
     expect(store.patchIncident).toHaveBeenCalledWith('INC-1', { assigned_to: 'alice' });
+  });
+
+  it('keeps showing a deleted assignee by name, without offering them as a choice', () => {
+    store.getUserDirectory.mockReturnValueOnce(of([{ username: 'bob', display_name: 'Bob Martinez', deleted: true }]) as never);
+    const fixture = create('bob');
+    expect(fixture.nativeElement.textContent).toContain('Bob Martinez (deleted)');
   });
 
   it('no Take case on an assigned incident', () => {

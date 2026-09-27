@@ -5,7 +5,7 @@ import matrix from '../../../../../testing/permission-matrix.json';
 import { DemoSimulatorService } from '../services/demo-simulator.service';
 import { AuthService } from '../services/auth';
 import { CurrentUser } from './permissions';
-import { Incident } from '../../shared/models/threat.models';
+import { Incident, UserSummary } from '../../shared/models/threat.models';
 
 /**
  * The shared RBAC permission matrix (testing/permission-matrix.json) run
@@ -17,10 +17,20 @@ import { Incident } from '../../shared/models/threat.models';
 
 type Case = (typeof matrix.cases)[number];
 
+// Same people as backend/tests/test_permission_matrix.py. A manager's "other"
+// is an analyst, so "reset user password" exercises the one reset they may do.
 const PEOPLE: Record<string, { self: CurrentUser; other: string; third: string }> = {
-  analyst: { self: { username: 'alice', display_name: 'Alice Chen', role: 'analyst' }, other: 'bob', third: 'admin' },
-  admin:   { self: { username: 'admin', display_name: 'Sarah Kim', role: 'admin' },   other: 'bob', third: 'alice' },
+  analyst: { self: { username: 'alice', display_name: 'Alice Chen', role: 'analyst' }, other: 'bob',   third: 'admin' },
+  manager: { self: { username: 'mira',  display_name: 'Mira Cohen', role: 'manager' }, other: 'alice', third: 'bob' },
+  admin:   { self: { username: 'admin', display_name: 'Sarah Kim', role: 'admin' },   other: 'bob',   third: 'alice' },
 };
+
+const USERS: UserSummary[] = [
+  { username: 'admin', display_name: 'Sarah Kim',    role: 'admin' },
+  { username: 'mira',  display_name: 'Mira Cohen',   role: 'manager' },
+  { username: 'alice', display_name: 'Alice Chen',   role: 'analyst' },
+  { username: 'bob',   display_name: 'Bob Martinez', role: 'analyst' },
+];
 
 function fill<T>(value: T, names: Record<string, string>): T {
   if (typeof value === 'string') {
@@ -44,13 +54,13 @@ describe('permission matrix (shared with the backend)', () => {
     sim = TestBed.inject(DemoSimulatorService);
   });
 
-  it('covers both roles for every action', () => {
+  it('covers every role for every action', () => {
     const roles = new Map<string, Set<string>>();
     for (const c of matrix.cases) {
       const key = `${c.action}|${c.owner}`;
       roles.set(key, (roles.get(key) ?? new Set()).add(c.role));
     }
-    for (const set of roles.values()) expect([...set].sort()).toEqual(['admin', 'analyst']);
+    for (const set of roles.values()) expect([...set].sort()).toEqual(['admin', 'analyst', 'manager']);
   });
 
   it.each(matrix.cases.map((c: Case) => [`${c.role}: ${c.action}${c.owner ? ` [${c.owner}]` : ''}`, c]))(
@@ -59,6 +69,7 @@ describe('permission matrix (shared with the backend)', () => {
       const people = PEOPLE[c.role];
       const owner = { self: people.self.username, other: people.other, none: null }[c.owner ?? 'none'] ?? null;
       user.set(people.self);
+      sim.overlay('/api/users', USERS);  // the simulator learns targets' roles from the users list
       sim.overlay('/api/incidents', [{
         id: 'INC-M001', title: 'm', severity: 'high', status: 'open', attack_type: 'SQLi',
         source_region: 'US', event_count: 1, assigned_to: owner, created_at: 'x', updated_at: 'x',

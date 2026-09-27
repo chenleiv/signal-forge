@@ -315,6 +315,8 @@ def _user_to_dict(u: User) -> dict:
         "display_name": u.display_name,
         "role": u.role,
         "password_hash": u.password_hash,
+        "session_key": u.session_key,
+        "deleted_at": u.deleted_at.isoformat() if isinstance(u.deleted_at, datetime) else u.deleted_at,
     }
 
 
@@ -329,6 +331,7 @@ async def db_create_user(session: AsyncSession, data: dict) -> dict:
         display_name=data["display_name"],
         role=data["role"],
         password_hash=data["password_hash"],
+        session_key=data.get("session_key"),
         created_at=datetime.now(timezone.utc),
     )
     session.add(user)
@@ -336,8 +339,25 @@ async def db_create_user(session: AsyncSession, data: dict) -> dict:
     return _user_to_dict(user)
 
 
-async def db_set_password_hash(session: AsyncSession, username: str, password_hash: str) -> None:
+async def db_update_user(session: AsyncSession, username: str, fields: dict) -> None:
+    """Set any of: password_hash, role, session_key, deleted_at (ISO string)."""
     user = await session.get(User, username)
-    if user is not None:
-        user.password_hash = password_hash
-        await session.commit()
+    if user is None:
+        return
+    for key in ("password_hash", "role", "session_key"):
+        if key in fields:
+            setattr(user, key, fields[key])
+    if "deleted_at" in fields:
+        user.deleted_at = datetime.fromisoformat(fields["deleted_at"]) if fields["deleted_at"] else None
+    await session.commit()
+
+
+async def db_unassign_open_incidents(session: AsyncSession, username: str) -> int:
+    """Unassign every not-closed incident assigned to `username`."""
+    result = await session.execute(
+        update(Incident)
+        .where(Incident.assigned_to == username, Incident.status != "closed")
+        .values(assigned_to=None, updated_at=datetime.now(timezone.utc))
+    )
+    await session.commit()
+    return result.rowcount
