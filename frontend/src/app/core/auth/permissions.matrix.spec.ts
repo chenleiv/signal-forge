@@ -76,7 +76,7 @@ describe('permission matrix (shared with the backend)', () => {
         mitre_tags: [], notes: [], completed_tasks: [],
       } as Incident]);
       const names = {
-        self: people.self.username, other: people.other, third: people.third,
+        self: people.self.username, other: people.other, third: people.third, self_password: 'unused-client-side',
         incident: 'INC-M001', alert: 'ALT-1', rule: 'r1', hunt: 'h1', ip: '8.8.8.8',
       };
       const path = fill(c.path, names);

@@ -27,6 +27,16 @@ export class AuthService {
     this.router.navigate(['/login']);
   }
 
+  /**
+   * Change your own password. The server signs out every other session and
+   * re-issues this one's cookie. Disabled in demo mode (server side too).
+   */
+  changePassword(currentPassword: string, newPassword: string): Observable<CurrentUser> {
+    return this.http
+      .patch<CurrentUser>('/auth/me', { current_password: currentPassword, new_password: newPassword })
+      .pipe(tap(user => this._user.set(user)));
+  }
+
   checkAuth(): Observable<boolean> {
     return this.loadCurrentUser().pipe(
       map(() => true),

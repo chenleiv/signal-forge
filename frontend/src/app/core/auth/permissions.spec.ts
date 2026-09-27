@@ -130,13 +130,14 @@ describe('permissions (mirror of backend/authz.py)', () => {
       expect(canOpenUserAdmin(ALICE).allowed).toBe(false);
     });
 
+    const BOB = { username: 'bob', role: 'analyst' as const };
     it.each([
-      [{ role: 'analyst' as const }, { password: 'x' }, true],
-      [{ role: 'manager' as const }, { password: 'x' }, false],
-      [{ role: 'admin' as const },   { password: 'x' }, false],
-      [{ role: 'analyst' as const }, { password: 'x', role: 'manager' }, false],  // reset smuggling a role
-      [{ role: 'analyst' as const }, { role: 'manager' }, false],
-      [undefined,                    { password: 'x' }, false],                   // unknown target
+      [BOB,                                           { password: 'x' }, true],
+      [{ username: 'dana', role: 'manager' as const }, { password: 'x' }, false],   // another manager
+      [{ username: 'admin', role: 'admin' as const },  { password: 'x' }, false],
+      [BOB,                                           { password: 'x', role: 'manager' }, false],  // reset smuggling a role
+      [BOB,                                           { role: 'manager' }, false],
+      [undefined,                                     { password: 'x' }, false],   // unknown target
     ])('canUpdateUser(target %o, body %o) -> %s', (target, body, allowed) => {
       const d = canUpdateUser(MIRA, target, body);
       expect(d.allowed).toBe(allowed);
@@ -144,11 +145,17 @@ describe('permissions (mirror of backend/authz.py)', () => {
     });
 
     it('admins update anyone; analysts nobody', () => {
-      expect(canUpdateUser(ADMIN, { role: 'analyst' }, { role: 'manager' }).allowed).toBe(true);
-      expect(canUpdateUser(ADMIN, { role: 'manager' }, { role: 'analyst' }).allowed).toBe(true);
-      expect(canUpdateUser(ADMIN, { role: 'admin' }, { password: 'x' }).allowed).toBe(true);   // own password
-      expect(canUpdateUser(ADMIN, { role: 'admin' }, { role: 'admin' }).allowed).toBe(true);   // unchanged
-      expect(canUpdateUser(ALICE, { role: 'analyst' }, { password: 'x' })).toEqual({ allowed: false, reason: DENY_REASONS.admin });
+      expect(canUpdateUser(ADMIN, BOB, { role: 'manager' }).allowed).toBe(true);
+      expect(canUpdateUser(ADMIN, { username: 'dana', role: 'manager' }, { role: 'analyst' }).allowed).toBe(true);
+      expect(canUpdateUser(ADMIN, BOB, { password: 'x' }).allowed).toBe(true);
+      expect(canUpdateUser(ADMIN, { username: 'admin', role: 'admin' }, { role: 'admin' }).allowed).toBe(true);   // unchanged
+      expect(canUpdateUser(ALICE, BOB, { password: 'x' })).toEqual({ allowed: false, reason: DENY_REASONS.admin });
+    });
+
+    it('nobody resets their OWN password here (Settings asks for the current one)', () => {
+      const own = { allowed: false, reason: DENY_REASONS.ownPasswordInSettings };
+      expect(canUpdateUser(ADMIN, { username: 'admin', role: 'admin' }, { password: 'x' })).toEqual(own);
+      expect(canUpdateUser(MIRA, { username: 'mira', role: 'manager' }, { password: 'x' })).toEqual(own);
     });
   });
 
@@ -156,14 +163,14 @@ describe('permissions (mirror of backend/authz.py)', () => {
     const fixed = { allowed: false, reason: DENY_REASONS.adminRoleFixed };
 
     it('the admin role is never granted', () => {
-      expect(canUpdateUser(ADMIN, { role: 'analyst' }, { role: 'admin' })).toEqual(fixed);
-      expect(canUpdateUser(ADMIN, { role: 'manager' }, { role: 'admin', password: 'x' })).toEqual(fixed);
+      expect(canUpdateUser(ADMIN, { username: 'bob', role: 'analyst' }, { role: 'admin' })).toEqual(fixed);
+      expect(canUpdateUser(ADMIN, { username: 'dana', role: 'manager' }, { role: 'admin', password: 'x' })).toEqual(fixed);
       expect(canCreateUser(ADMIN, { role: 'admin' })).toEqual(fixed);
       expect(canCreateUser(ADMIN, { role: 'manager' }).allowed).toBe(true);
     });
 
     it('the admin is never demoted or deleted', () => {
-      expect(canUpdateUser(ADMIN, { role: 'admin' }, { role: 'analyst' })).toEqual(fixed);
+      expect(canUpdateUser(ADMIN, { username: 'admin', role: 'admin' }, { role: 'analyst' })).toEqual(fixed);
       expect(canDeleteUser(ADMIN, { role: 'admin' })).toEqual({ allowed: false, reason: DENY_REASONS.adminUndeletable });
       expect(canDeleteUser(ADMIN, { role: 'manager' }).allowed).toBe(true);
     });

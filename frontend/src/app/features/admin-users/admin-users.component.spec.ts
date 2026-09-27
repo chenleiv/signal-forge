@@ -44,6 +44,14 @@ describe('AdminUsersComponent', () => {
     expect(rows[1].querySelector('.btn-del')).not.toBeNull();
   });
 
+  it('no Reset password on your own row (that is in Settings, with the current password)', () => {
+    const el = create().nativeElement as HTMLElement;
+    const [ownRow, aliceRow] = [...el.querySelectorAll('tbody tr')];
+    const hasReset = (row: Element) => [...row.querySelectorAll('button')].some(b => b.textContent?.includes('Reset'));
+    expect(hasReset(ownRow)).toBe(false);
+    expect(hasReset(aliceRow)).toBe(true);
+  });
+
   it('creates a user', () => {
     const c = create().componentInstance;
     c.newUsername.set(' carol '); c.newDisplayName.set('Carol'); c.newPassword.set('long-enough-pass');

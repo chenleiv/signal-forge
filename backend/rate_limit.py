@@ -86,6 +86,10 @@ LOGIN_FAILURES_PER_USER = KeyedLimit("login-user", "10/minute;100/hour")
 # user from flooding the incident list; in memory only 50 incidents are kept.
 CASES_PER_USER = KeyedLimit("case-user", "5/minute;30/hour")
 
+# ── Per-user wrong current password (self-service password change) ──
+# Stops a stolen session from brute-forcing the account's current password.
+PASSWORD_CHANGE_FAILURES = KeyedLimit("password-change", "5/minute;20/hour")
+
 
 def login_locked(username: str) -> bool:
     return LOGIN_FAILURES_PER_USER.exceeded(username)

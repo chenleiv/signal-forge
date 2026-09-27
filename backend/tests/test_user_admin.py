@@ -190,11 +190,14 @@ def test_grant_hidden_in_a_password_reset_is_refused(admin):
     assert _login("bob", ANALYST_PASSWORD)  # the password did not change either
 
 
-def test_admin_keeps_role_and_password_changes(admin):
-    """Unchanged role is fine; the admin may still reset their own password."""
+def test_admin_unchanged_role_is_fine_but_own_password_goes_through_settings(admin):
+    """Unchanged role is a no-op. The admin's own password is NOT reset here
+    (no current password asked); it changes only through PATCH /auth/me."""
     assert admin.patch("/api/users/admin", json={"role": "admin"}).status_code == 200
-    assert admin.patch("/api/users/admin", json={"password": NEW_PASSWORD}).status_code == 200
-    assert _login("admin", NEW_PASSWORD)
+    r = admin.patch("/api/users/admin", json={"password": NEW_PASSWORD})
+    assert r.status_code == 403
+    assert r.json() == {"detail": "Change your own password in Settings (it asks for your current password)"}
+    assert _login("admin", "test-admin-password")
 
 
 def test_there_is_exactly_one_admin():
@@ -349,11 +352,14 @@ def test_manager_resets_an_analysts_password_and_signs_them_out(manager):
     assert _login("bob", NEW_PASSWORD).get("/auth/me").status_code == 200
 
 
-@pytest.mark.parametrize("target", ["admin", "mira"])
-def test_manager_cannot_reset_a_non_analysts_password(manager, target):
+@pytest.mark.parametrize("target,reason", [
+    ("admin", "Managers can only reset analysts' passwords"),
+    ("mira", "Change your own password in Settings (it asks for your current password)"),  # self
+])
+def test_manager_cannot_reset_a_non_analysts_password(manager, target, reason):
     r = manager.patch(f"/api/users/{target}", json={"password": NEW_PASSWORD})
     assert r.status_code == 403
-    assert r.json() == {"detail": "Managers can only reset analysts' passwords"}
+    assert r.json() == {"detail": reason}
     assert _login(target, "test-admin-password" if target == "admin" else ANALYST_PASSWORD)
 
 

@@ -305,3 +305,23 @@ $accent: var(--c-accent);
         padding: 16px;
     }
 }
+
+// ── Change password card ─────────────────────────────────────
+.card-note {
+    margin: 0;
+    font-size: 12px;
+    color: $muted;
+}
+
+.pw-msg {
+    margin: 0;
+    font-size: 12px;
+}
+
+.pw-error {
+    color: #f87171;
+}
+
+.pw-ok {
+    color: #4ade80;
+}

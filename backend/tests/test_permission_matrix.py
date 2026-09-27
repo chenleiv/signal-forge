@@ -15,7 +15,7 @@ import copy
 
 import store
 import users
-from tests.conftest import session_client
+from tests.conftest import ANALYST_PASSWORD, session_client
 
 MATRIX = json.loads(
     (pathlib.Path(__file__).resolve().parents[2] / "testing" / "permission-matrix.json").read_text()
@@ -25,9 +25,9 @@ PUBLIC_IP = "8.8.8.8"
 # Who "self", "other" and "third" are for each role. A manager's "other" is
 # an analyst, so "reset user password" exercises the one reset they may do.
 PEOPLE = {
-    "analyst": {"self": "alice", "other": "bob",   "third": "admin"},
-    "manager": {"self": "mira",  "other": "alice", "third": "bob"},
-    "admin":   {"self": "admin", "other": "bob",   "third": "alice"},
+    "analyst": {"self": "alice", "other": "bob",   "third": "admin", "self_password": ANALYST_PASSWORD},
+    "manager": {"self": "mira",  "other": "alice", "third": "bob",   "self_password": ANALYST_PASSWORD},
+    "admin":   {"self": "admin", "other": "bob",   "third": "alice", "self_password": "test-admin-password"},
 }
 
 
