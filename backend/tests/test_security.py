@@ -2,13 +2,16 @@
 
 Each test is a small attack. If one fails, a security control regressed.
 """
+from __future__ import annotations
+
 import base64
 import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from jose import jwt
+from starlette.websockets import WebSocketDisconnect
+import jwt
 
 import main
 from tests.conftest import ANALYST_PASSWORD
@@ -30,15 +33,53 @@ def logged_in(client):
     return client
 
 
-def _token(claims: dict, key: str = SECRET_KEY) -> str:
-    base = {"sub": "alice", "role": "analyst", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
-    return jwt.encode({**base, **claims}, key, algorithm="HS256")
+def _token(claims: dict | None = None, key: str = SECRET_KEY, drop: tuple = ()) -> str:
+    """A session token for alice that is valid in EVERY respect (signature,
+    expiry, type, role, current session key) except what the test changes.
+    Otherwise an attack could be rejected for an unrelated reason (e.g. a
+    missing session key) and the test would pass while the control is broken."""
+    import users
+    base = {
+        "sub": "alice", "role": "analyst", "typ": "session",
+        "sk": users.get_user("alice")["session_key"],
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    }
+    payload = {k: v for k, v in {**base, **(claims or {})}.items() if k not in drop}
+    return jwt.encode(payload, key, algorithm="HS256")
+
+
+def _ws_ticket(claims: dict | None = None, key: str = SECRET_KEY, drop: tuple = ()) -> str:
+    """A WebSocket ticket valid in every respect except what the test changes."""
+    base = {"sub": "alice", "typ": "ws", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    payload = {k: v for k, v in {**base, **(claims or {})}.items() if k not in drop}
+    return jwt.encode(payload, key, algorithm="HS256")
 
 
 def _as_session(client: TestClient, token: str) -> TestClient:
     client.cookies.clear()
     client.cookies.set(COOKIE, token)
     return client
+
+
+def _ws_accepts(client: TestClient, ticket: str) -> bool:
+    """Connect only (never wait for a message, so a wrongly accepted ticket
+    fails the test instead of hanging it)."""
+    try:
+        with client.websocket_connect(f"/ws/threats?ticket={ticket}"):
+            return True
+    except WebSocketDisconnect:
+        return False
+
+
+# ── 0. Controls: the crafted tokens are otherwise valid ───────────
+# Without these, every "is rejected" test below could pass for the wrong reason.
+
+def test_control_crafted_session_token_is_accepted(client):
+    assert _as_session(client, _token()).get("/api/stats").status_code == 200
+
+
+def test_control_crafted_ws_ticket_is_accepted(client):
+    assert _ws_accepts(client, _ws_ticket())
 
 
 # ── 1. Token confusion (the bug fixed in 0f88e23) ─────────────────
@@ -58,14 +99,15 @@ class TestTokenConfusion:
 
         assert attacker.get("/auth/ws-ticket").status_code == 401
 
-    def test_session_cookie_is_rejected_as_ws_ticket(self, logged_in):
-        session = logged_in.cookies.get(COOKIE)
-        with pytest.raises(Exception):
-            with logged_in.websocket_connect(f"/ws/threats?ticket={session}") as ws:
-                ws.receive_text()
+    def test_session_typed_ws_is_rejected_even_with_a_valid_session_key(self, client):
+        """Only the 'typ' differs from a valid session: the type check alone must reject it."""
+        assert _as_session(client, _token({"typ": "ws"})).get("/api/stats").status_code == 401
+
+    def test_session_cookie_is_rejected_as_ws_ticket(self, client):
+        assert not _ws_accepts(client, _token())
 
     def test_token_without_type_is_rejected(self, client):
-        legacy = _token({})  # pre-fix format: valid signature, no "typ"
+        legacy = _token(drop=("typ",))  # pre-fix format: valid signature and key, no "typ"
         assert _as_session(client, legacy).get("/api/stats").status_code == 401
 
 
@@ -73,21 +115,34 @@ class TestTokenConfusion:
 
 class TestJwtAttacks:
     def test_forged_signature_is_rejected(self, client):
-        forged = _token({"typ": "session"}, key="attacker-guessed-key")
+        forged = _token(key="attacker-guessed-key-of-a-valid-32-byte-length")
         assert _as_session(client, forged).get("/api/stats").status_code == 401
 
     def test_expired_token_is_rejected(self, client):
-        expired = _token({"typ": "session", "exp": datetime.now(timezone.utc) - timedelta(seconds=1)})
+        expired = _token({"exp": datetime.now(timezone.utc) - timedelta(seconds=1)})
         assert _as_session(client, expired).get("/api/stats").status_code == 401
 
     def test_alg_none_is_rejected(self, client):
         """'alg: none' = unsigned token. Libraries that honour it accept anything."""
+        import users
+
         def b64(d: dict) -> str:
             return base64.urlsafe_b64encode(json.dumps(d).encode()).rstrip(b"=").decode()
 
         exp = int((datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp())
-        unsigned = f'{b64({"alg": "none", "typ": "JWT"})}.{b64({"sub": "alice", "role": "analyst", "typ": "session", "exp": exp})}.'
+        claims = {"sub": "alice", "role": "analyst", "typ": "session",
+                  "sk": users.get_user("alice")["session_key"], "exp": exp}
+        unsigned = f'{b64({"alg": "none", "typ": "JWT"})}.{b64(claims)}.'
         assert _as_session(client, unsigned).get("/api/stats").status_code == 401
+
+    def test_forged_ws_ticket_is_rejected(self, client):
+        assert not _ws_accepts(client, _ws_ticket(key="attacker-guessed-key-of-a-valid-32-byte-length"))
+
+    def test_expired_ws_ticket_is_rejected(self, client):
+        assert not _ws_accepts(client, _ws_ticket({"exp": datetime.now(timezone.utc) - timedelta(seconds=1)}))
+
+    def test_ws_ticket_without_type_is_rejected(self, client):
+        assert not _ws_accepts(client, _ws_ticket(drop=("typ",)))
 
 
 # ── 3. Every API route requires authentication ────────────────────

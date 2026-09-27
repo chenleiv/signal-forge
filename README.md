@@ -34,7 +34,7 @@ A real-time Security Operations Center (SOC) dashboard built with Angular 21 and
 | Database | Optional: SQLAlchemy (async) + Alembic — SQLite locally, Postgres in production; in-memory without `DATABASE_URL` |
 | AI | Groq API (model set by `GROQ_MODEL`) |
 | Threat Intel | AbuseIPDB (IP reputation), ipinfo (geolocation) |
-| Auth | JWT (python-jose, HS256) in an HttpOnly cookie, bcrypt password hashes, slowapi rate limits |
+| Auth | JWT (PyJWT, HS256) in an HttpOnly cookie, bcrypt password hashes, slowapi rate limits |
 | Styling | SCSS, dark and light themes |
 
 ---
@@ -87,20 +87,20 @@ signalforge/
 ### Prerequisites
 
 - Node.js 20.19+ (required by Angular 21)
-- Python 3.9+
+- Python 3.13 (pinned in `.python-version`; Render reads it too)
 - Angular CLI (`npm install -g @angular/cli`)
 
 ### Backend
 
 ```bash
 cd backend
-python3 -m venv venv
+python3.13 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
 cp .env.example .env
 # Edit .env. For local development set at least:
-#   JWT_SECRET=<a long random string>   (required, startup fails without it)
+#   JWT_SECRET=<random, at least 32 bytes>   (required, startup fails without it)
 #   ENV=development                     (allows the session cookie over plain HTTP)
 # Leave DEMO_MODE unset (demo mode is ON by default), or set DEMO_MODE=false
 # together with ADMIN_PASSWORD (12-72 bytes) to run with writes enabled.
@@ -231,7 +231,8 @@ The server is the security boundary. Everything the frontend does with permissio
 - Every request also checks the token against the **current** user record: the user must still exist, have
   the role in the token, and still have the session key in the token. So deleting a user, changing their role or
   resetting their password takes effect **immediately**, on every open session.
-- The server refuses to start without `JWT_SECRET`, and with `DEMO_MODE=false` without an `ADMIN_PASSWORD` of 12-72 bytes.
+- The server refuses to start without a `JWT_SECRET` of at least 32 bytes, and with `DEMO_MODE=false` when there is
+  no admin yet (or the admin still has the demo password) and no `ADMIN_PASSWORD` of 12-72 bytes.
 
 ### Passwords and login
 
@@ -326,7 +327,7 @@ SSRF, and demo mode. Security tests are mutation-checked: each check is broken o
 
 ### Deployment checklist
 
-- Set `JWT_SECRET` (long and random), and either leave demo mode on or set `DEMO_MODE=false` with `ADMIN_PASSWORD`.
+- Set `JWT_SECRET` (random, at least 32 bytes: `python -c "import secrets; print(secrets.token_urlsafe(48))"`), and either leave demo mode on or set `DEMO_MODE=false` with `ADMIN_PASSWORD`.
 - Run a **single** uvicorn worker (rate-limit counters are per process).
 - **Verify `TRUSTED_PROXY_HOPS`** on the host: temporarily log only the **number** of `X-Forwarded-For` entries
   (never the IPs) for one real request, set the variable to the number of proxies that append to the header, then

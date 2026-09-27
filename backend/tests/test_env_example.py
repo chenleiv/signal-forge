@@ -36,7 +36,7 @@ def test_example_values_are_empty():
 def test_app_starts_from_the_example_with_only_jwt_secret():
     env = {k: v for k, v in os.environ.items() if k not in _example_vars()}
     env.update(_example_vars())
-    env["JWT_SECRET"] = "example-secret"
+    env["JWT_SECRET"] = "example-secret-that-is-at-least-32-bytes"
     probe = (
         "import json, main, rate_limit, store; from routers import ip; "
         "print(json.dumps({'hops': rate_limit.TRUSTED_PROXY_HOPS, 'model': ip.GROQ_MODEL, "
@@ -48,3 +48,17 @@ def test_app_starts_from_the_example_with_only_jwt_secret():
     assert r.returncode == 0, r.stderr[-2000:]
     out = json.loads(r.stdout.strip().splitlines()[-1])
     assert out == {"hops": 1, "model": "openai/gpt-oss-20b", "demo": True}
+
+
+def test_startup_refuses_a_short_jwt_secret():
+    """HS256 with a short key can be brute-forced: fail closed at startup."""
+    env = {**os.environ, "JWT_SECRET": "x" * 31, "PYTHONPATH": str(BACKEND)}
+    r = subprocess.run([sys.executable, "-c", "import store"], cwd=BACKEND / "tests", env=env,
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode != 0
+    assert "JWT_SECRET must be at least 32 bytes" in r.stderr
+
+    env["JWT_SECRET"] = "x" * 32
+    r = subprocess.run([sys.executable, "-c", "import store"], cwd=BACKEND / "tests", env=env,
+                       capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr[-2000:]
