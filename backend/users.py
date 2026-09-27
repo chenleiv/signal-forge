@@ -179,7 +179,11 @@ async def sync_users_with_db(session: AsyncSession, demo_mode: bool, admin_passw
     - Seeded users missing from the table are created.
     - Demo mode: the admin always has the public demo password.
       Otherwise the admin is created from ADMIN_PASSWORD only if the table has
-      no admin yet; an existing admin's password is never overwritten.
+      no admin yet; an existing admin's REAL password is never overwritten.
+    - Outside demo mode, an admin that still has the public demo password
+      (left over from a demo deployment on the same DB) gets ADMIN_PASSWORD
+      instead; without ADMIN_PASSWORD, startup fails. A real deployment must
+      never run with an admin whose password is shown on the login page.
     - Outside demo mode, rows still holding a public demo password (left over
       from a demo deployment on the same DB) are not loaded: they cannot log in.
     - Rows without a session key get one.
@@ -201,6 +205,23 @@ async def sync_users_with_db(session: AsyncSession, demo_mode: bool, admin_passw
             row.update(fields)
 
     admins = [u for u, r in rows.items() if r["role"] == "admin" and not r.get("deleted_at")]
+
+    if not demo_mode:
+        for username in admins:
+            row = rows[username]
+            if not verify_password(_DEMO_PASSWORDS["admin"], row["password_hash"]):
+                continue  # a real password: never touched
+            if not admin_password:
+                raise RuntimeError(
+                    f"Admin '{username}' still has the public demo password: "
+                    "set ADMIN_PASSWORD (12-72 bytes) to replace it"
+                )
+            # A new key also signs out every session opened with the demo password.
+            fields = {"password_hash": hash_password(admin_password), "session_key": new_session_key()}
+            await db_update_user(session, username, fields)
+            row.update(fields)
+            print(f"[Users] Replaced the public demo password of admin '{username}' with ADMIN_PASSWORD")
+
     if not admins:
         raise RuntimeError("No admin account exists: set ADMIN_PASSWORD (12-72 bytes) to create it")
     if len(admins) > 1:

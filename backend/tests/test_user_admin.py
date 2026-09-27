@@ -415,3 +415,66 @@ async def test_startup_accepts_one_admin_plus_a_deleted_one(db_session):
     await db_update_user(db_session, "root", {"deleted_at": "2026-01-01T00:00:00+00:00"})
     await users.sync_users_with_db(db_session, demo_mode=False, admin_password="")
     assert users.get_user("admin") is not None
+
+
+# ── Switching a demo database to real mode ────────────────────
+# Render: the site ran in demo mode (admin = public "admin-demo"), then
+# DEMO_MODE=false on the SAME database. The admin must not keep the public
+# password, and a real admin password must never be overwritten.
+
+REAL_ADMIN_PASSWORD = "a-real-admin-password-1"
+
+
+async def _run_demo_deployment(db_session):
+    users.seed_users(demo_mode=True, admin_password="")
+    await users.sync_users_with_db(db_session, demo_mode=True, admin_password="")
+
+
+async def _switch_to_real_mode(db_session, admin_password: str):
+    users.seed_users(demo_mode=False, admin_password=admin_password)
+    await users.sync_users_with_db(db_session, demo_mode=False, admin_password=admin_password)
+
+
+@pytest.mark.asyncio
+async def test_real_mode_replaces_the_admins_public_demo_password(db_session):
+    await _run_demo_deployment(db_session)
+    demo_session_key = users.get_user("admin")["session_key"]
+
+    await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)
+
+    assert users.authenticate("admin", "admin-demo") is None
+    assert users.authenticate("admin", REAL_ADMIN_PASSWORD) is not None
+    assert users.get_user("admin")["session_key"] != demo_session_key  # demo sessions signed out
+    # persisted, not only in memory
+    from db_ops import db_get_users
+    row = next(r for r in await db_get_users(db_session) if r["username"] == "admin")
+    assert users.verify_password(REAL_ADMIN_PASSWORD, row["password_hash"])
+
+
+@pytest.mark.asyncio
+async def test_real_mode_refuses_to_start_with_a_demo_admin_and_no_admin_password(db_session):
+    await _run_demo_deployment(db_session)
+    with pytest.raises(RuntimeError, match="public demo password"):
+        await _switch_to_real_mode(db_session, admin_password="")
+
+
+@pytest.mark.asyncio
+async def test_real_mode_never_overwrites_a_real_admin_password(db_session):
+    await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)          # first real start
+    await _switch_to_real_mode(db_session, "another-admin-password-2")  # env var changed later
+    assert users.authenticate("admin", REAL_ADMIN_PASSWORD) is not None
+    assert users.authenticate("admin", "another-admin-password-2") is None
+
+
+@pytest.mark.asyncio
+async def test_real_mode_with_a_real_admin_needs_no_admin_password(db_session):
+    await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)
+    await _switch_to_real_mode(db_session, admin_password="")  # variable removed afterwards
+    assert users.authenticate("admin", REAL_ADMIN_PASSWORD) is not None
+
+
+@pytest.mark.asyncio
+async def test_demo_accounts_are_not_loaded_after_the_switch(db_session):
+    await _run_demo_deployment(db_session)
+    await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)
+    assert users.get_user("alice") is None and users.get_user("bob") is None
