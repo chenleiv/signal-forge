@@ -135,6 +135,11 @@ In demo mode (the default) these public accounts exist, and the login page has
 They are **never created when `DEMO_MODE=false`**. Outside demo mode the only seeded account is `admin`,
 with the password from `ADMIN_PASSWORD`.
 
+**Switching an existing demo deployment to real mode** (same database, `DEMO_MODE=false`): set `ADMIN_PASSWORD`
+first. On startup the admin's public demo password is replaced with it and every demo session is signed out;
+without `ADMIN_PASSWORD` the server refuses to start. The demo analyst and manager accounts can no longer log in.
+A real admin password, once set, is never overwritten by `ADMIN_PASSWORD`.
+
 ### Tests
 
 ```bash
