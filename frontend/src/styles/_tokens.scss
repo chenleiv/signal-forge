@@ -1,0 +1,25 @@
+// Design tokens: SCSS names for the theme's CSS variables (defined for light
+// and dark in src/styles.scss). Components: @use 'tokens' as *;
+
+$bg:        var(--c-bg);
+$panel:     var(--c-panel);
+$border:    var(--c-border);
+$text:      var(--c-text);
+$secondary: var(--c-text-2);
+$muted:     var(--c-muted);
+$accent:    var(--c-accent);
+$green:     rgba(255,255,255,.65);
+
+// Severity colors
+$sev-critical: #ef4444;
+$sev-high:     #f97316;
+$sev-medium:   #f59e0b;
+$sev-low:      #60a5fa;
+$red:    #ef4444;
+$orange: #f97316;
+$yellow: #f59e0b;
+$blue:   #60a5fa;
+$purple: #a855f7;
+
+// Phones and small tablets: layouts switch to one column below this width.
+$narrow: 768px;

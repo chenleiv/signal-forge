@@ -90,12 +90,20 @@ def test_matrix_covers_every_role_for_every_action():
     assert len(MATRIX["cases"]) >= 70
 
 
+def _state() -> tuple:
+    """Everything a write could change, in comparable form."""
+    return (copy.deepcopy(list(store.incidents_store)), copy.deepcopy(list(store.alerts_store)),
+            copy.deepcopy(store._rules), copy.deepcopy(store._saved_hunts), set(store._blocked_ips),
+            dict(store._behavioral_config), copy.deepcopy(users._users))
+
+
 @pytest.mark.parametrize("case", MATRIX["cases"], ids=_case_id)
 def test_permission_matrix(case):
     people = PEOPLE[case["role"]]
     owner = {"self": people["self"], "other": people["other"], "none": None, None: None}[case["owner"]]
     names = {**people, **_fixtures(owner)}
     client = session_client(people["self"], case["role"])
+    before = _state()
 
     r = client.request(case["method"], _fill(case["path"], names), json=_fill(case["body"], names))
 
@@ -103,3 +111,4 @@ def test_permission_matrix(case):
         assert 200 <= r.status_code < 300, f"expected success, got {r.status_code}: {r.text}"
     else:
         assert r.status_code == 403, f"expected 403, got {r.status_code}: {r.text}"
+        assert _state() == before, "a denied request changed something"

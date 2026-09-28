@@ -48,7 +48,7 @@ for (const path of PAGES) {
 // stream; alerts and incidents depend on slower rules, so they are not waited for here.
 test('/threats: an opened detail drawer fits the screen', async ({ page }) => {
   await page.goto('/threats');
-  const first = page.locator('tbody tr').first();
+  const first = page.locator('tr.ip-row').first();   // a data row, not a loading placeholder
   await first.waitFor({ timeout: 20_000 });   // wait for streamed data
   await first.click();
   await page.waitForTimeout(400);             // slide-in animation
@@ -57,7 +57,7 @@ test('/threats: an opened detail drawer fits the screen', async ({ page }) => {
 
 test('/hunting: a full results table fits the screen', async ({ page }) => {
   await page.goto('/threats');
-  await page.locator('tbody tr').first().waitFor({ timeout: 20_000 });   // events exist
+  await page.locator('tr.ip-row').first().waitFor({ timeout: 20_000 });   // events exist
   await page.goto('/hunting');
   await page.locator('button.btn-run').first().click();
   await page.locator('.results-table tbody tr').first().waitFor();

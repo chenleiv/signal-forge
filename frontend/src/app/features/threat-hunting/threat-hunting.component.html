@@ -9,14 +9,14 @@
       <span class="section-label">QUERY</span>
 
       <div class="field">
-        <label>IP Address</label>
-        <input [value]="ip()" (input)="ip.set($any($event.target).value)"
+        <label for="hunt-ip">IP Address</label>
+        <input id="hunt-ip" [value]="ip()" (input)="ip.set($any($event.target).value)"
                placeholder="e.g. 185.220" class="field-input" />
       </div>
 
       <div class="field">
-        <label>Attack Type</label>
-        <select class="field-input" [value]="attack_type()" (change)="attack_type.set($any($event.target).value)">
+        <label for="hunt-attack-type">Attack Type</label>
+        <select id="hunt-attack-type" class="field-input" [value]="attack_type()" (change)="attack_type.set($any($event.target).value)">
           <option value="">All types</option>
           @for (t of attackTypes; track t) {
             <option [value]="t">{{ t }}</option>
@@ -25,8 +25,8 @@
       </div>
 
       <div class="field">
-        <label>Region</label>
-        <select class="field-input" [value]="region()" (change)="region.set($any($event.target).value)">
+        <label for="hunt-region">Region</label>
+        <select id="hunt-region" class="field-input" [value]="region()" (change)="region.set($any($event.target).value)">
           <option value="">All regions</option>
           @for (r of regions; track r) {
             <option [value]="r">{{ r }}</option>
@@ -35,12 +35,12 @@
       </div>
 
       <div class="field">
-        <label>Score Range</label>
-        <div class="score-range">
-          <input type="number" class="field-input range-input" [value]="min_score()"
+        <span class="field-heading" id="hunt-score-label">Score Range</span>
+        <div class="score-range" role="group" aria-labelledby="hunt-score-label">
+          <input type="number" class="field-input range-input" aria-label="Minimum score" [value]="min_score()"
                  (input)="min_score.set(+$any($event.target).value)" min="0" max="100" placeholder="Min" />
           <span class="range-sep">—</span>
-          <input type="number" class="field-input range-input" [value]="max_score()"
+          <input type="number" class="field-input range-input" aria-label="Maximum score" [value]="max_score()"
                  (input)="max_score.set(+$any($event.target).value)" min="0" max="100" placeholder="Max" />
         </div>
       </div>
@@ -73,7 +73,7 @@
         <span class="section-label">SAVED HUNTS</span>
         <div class="saved-list">
           @for (hunt of savedHunts(); track hunt.id) {
-            <div class="saved-item" (click)="loadHunt(hunt)">
+            <div class="saved-item" tabindex="0" (click)="loadHunt(hunt)" (keydown.enter)="loadHunt(hunt)">
               <div class="saved-left">
                 <span class="saved-name">{{ hunt.name }}</span>
                 <span class="saved-meta">{{ hunt.result_count }} results · {{ hunt.created_at | date:'HH:mm' }}</span>

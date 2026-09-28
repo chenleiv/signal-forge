@@ -1,0 +1,74 @@
+// Right-hand detail drawer, shared by Threats, Incidents and Alerts.
+@use 'tokens' as *;
+
+// Drag handle on the drawer's left edge (DrawerResize); hidden on narrow screens.
+@mixin resize-handle($bar-height: 48px) {
+  .resize-handle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: col-resize;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover .handle-bar,
+    &:active .handle-bar {
+      background: $accent;
+      box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+    }
+  }
+
+  .handle-bar {
+    width: 1px;
+    height: $bar-height;
+    background: #2a3347;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+
+  @media (max-width: $narrow) {
+    .resize-handle {
+      display: none;
+    }
+  }
+}
+
+// A drawer that slides over the page, with a click-to-close backdrop.
+// Narrow screens: full width (its inline width is a desktop preference).
+@mixin overlay-drawer {
+  .drawer-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    cursor: default;
+    pointer-events: none;
+
+    &.active { pointer-events: auto; }
+  }
+
+  .drawer-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    border-left: 1px solid $border;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.55);
+    transform: translateX(100%);
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.open { transform: translateX(0); }
+  }
+
+  @media (max-width: $narrow) {
+    .drawer-overlay {
+      max-width: 100%;
+    }
+  }
+}

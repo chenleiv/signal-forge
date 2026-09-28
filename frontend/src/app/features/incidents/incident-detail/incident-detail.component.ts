@@ -128,7 +128,8 @@ export class IncidentDetailComponent {
     const inc = this.incident();
     if (!inc || !this.work().allowed) return;
     const next = new Set(this.completedTasks());
-    next.has(index) ? next.delete(index) : next.add(index);
+    if (next.has(index)) next.delete(index);
+    else next.add(index);
     this.completedTasks.set(next);
     this.store.updateIncidentTasks(inc.id, [...next])
       .pipe(takeUntilDestroyed(this.destroyRef))

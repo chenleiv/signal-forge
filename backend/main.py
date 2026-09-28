@@ -3,14 +3,12 @@ from dotenv import load_dotenv
 load_dotenv()
 import asyncio
 import json
-import os
 import pathlib
 import random
 import subprocess
 import sys
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
 import httpx
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
@@ -22,13 +20,11 @@ from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text as _sa_text
 from starlette.requests import Request
 
-from database import AsyncSessionLocal, engine as db_engine, get_db
+from database import AsyncSessionLocal, engine as db_engine
 from db_ops import db_get_rules, db_get_behavioral_settings
 from simulation import refresh_threat_ips, fetch_ipinfo, generate_threat, THREAT_IPS, IPINFO_TOKEN
 from store import (
-    _rules, _behavioral_config, _ip_coords,
-    ip_store, minute_buckets, _current_minute, _current_bucket_count,
-    _behavioral_flagged, _score_to_level, _create_alert, _record_event,
+    _score_to_level, _create_alert, _record_event,
     SECRET_KEY, DEMO_MODE, ADMIN_PASSWORD, verify_token,
 )
 import store as _store

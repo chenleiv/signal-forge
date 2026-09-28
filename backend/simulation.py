@@ -9,8 +9,7 @@ from typing import Optional
 import httpx
 
 from constants import (
-    COUNTRY_NAMES, ATTACK_TYPES, REGIONS, MITRE_MAP,
-    _SEVERITY_BANDS, _SQLI_PAYLOADS, _MALWARE_FAMILIES,
+    COUNTRY_NAMES, ATTACK_TYPES, REGIONS, _SEVERITY_BANDS, _SQLI_PAYLOADS, _MALWARE_FAMILIES,
     _SERVICES, _PROTOCOLS, _SCAN_TYPES, _ENDPOINTS,
 )
 from store import _ip_coords
@@ -20,7 +19,8 @@ IPINFO_TOKEN      = os.environ.get("IPINFO_TOKEN", "")
 
 THREAT_IPS: dict[str, int] = {}
 
-_CACHE_FILE = pathlib.Path(__file__).parent / "threat_ips_cache.json"
+# THREAT_IPS_CACHE: another cache file (e2e tests use a fixed one).
+_CACHE_FILE = pathlib.Path(os.environ.get("THREAT_IPS_CACHE") or pathlib.Path(__file__).parent / "threat_ips_cache.json")
 
 
 def _load_cache() -> dict[str, int]:

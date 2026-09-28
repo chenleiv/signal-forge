@@ -1,6 +1,7 @@
 import os
 
 import pytest
+import pytest_asyncio
 
 os.environ.setdefault("JWT_SECRET", "test-secret-key-for-pytest-at-least-32-bytes")
 
@@ -36,6 +37,16 @@ def _reset_rate_limits():
     reset_limits()
 
 
+def login(username: str = "alice", password: str = ANALYST_PASSWORD):
+    """A TestClient logged in through the real /auth/login."""
+    from fastapi.testclient import TestClient
+    import main
+    client = TestClient(main.app)
+    r = client.post("/auth/login", json={"username": username, "password": password})
+    assert r.status_code == 200, r.text
+    return client
+
+
 def session_client(username: str, role: str):
     """A TestClient carrying a valid session for `username` (no login round trip)."""
     from datetime import datetime, timedelta, timezone
@@ -55,3 +66,59 @@ def session_client(username: str, role: str):
     client = TestClient(main.app)
     client.cookies.set("sf_session", token)
     return client
+
+
+# ── Database fixtures ─────────────────────────────────────────
+
+@pytest_asyncio.fixture
+async def db_session():
+    """A fresh in-memory SQLite database with every table."""
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+    from sqlalchemy.orm import sessionmaker
+    from database import Base
+    import models  # noqa: F401  (registers the tables)
+    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    async with sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as session:
+        yield session
+    await engine.dispose()
+
+
+@pytest.fixture
+def db_app(tmp_path, monkeypatch):
+    """Run the API against a real SQLite database (as with DATABASE_URL set):
+    routes get sessions on it and take their database paths. Returns a
+    function that runs an async query against the same database."""
+    import asyncio
+    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+    from sqlalchemy.orm import sessionmaker
+    import main
+    import store
+    from database import Base, get_db
+    import models  # noqa: F401
+
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'test.db'}")
+    make_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+    async def create():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    asyncio.run(create())
+
+    async def override_get_db():
+        async with make_session() as session:
+            yield session
+
+    main.app.dependency_overrides[get_db] = override_get_db
+    monkeypatch.setattr(store, "USE_DB", True)
+
+    def query(fn):
+        async def run():
+            async with make_session() as session:
+                return await fn(session)
+        return asyncio.run(run())
+
+    yield query
+    main.app.dependency_overrides.pop(get_db, None)
+    asyncio.run(engine.dispose())

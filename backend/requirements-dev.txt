@@ -1,0 +1,5 @@
+# Tests and lint (CI and local development). Runtime deps: requirements.txt.
+-r requirements.txt
+pytest>=9.0.3
+pytest-asyncio
+ruff>=0.16

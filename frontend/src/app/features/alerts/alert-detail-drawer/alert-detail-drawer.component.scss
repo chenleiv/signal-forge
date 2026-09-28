@@ -1,7 +1,4 @@
-$border: var(--c-border);
-$text:   var(--c-text);
-$muted:  var(--c-text-2);
-$panel:  var(--c-panel);
+@use 'tokens' as *;
 
 :host {
   display: flex;
@@ -21,7 +18,7 @@ $panel:  var(--c-panel);
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: $muted;
+  color: $secondary;
   font-size: 13px;
 }
 
@@ -47,7 +44,7 @@ $panel:  var(--c-panel);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.07em;
-  color: $muted;
+  color: $secondary;
   text-transform: uppercase;
 }
 
@@ -60,7 +57,7 @@ $panel:  var(--c-panel);
 .close-btn {
   background: transparent;
   border: none;
-  color: $muted;
+  color: $secondary;
   cursor: pointer;
   font-size: 14px;
   padding: 4px 6px;
@@ -87,7 +84,7 @@ $panel:  var(--c-panel);
   border-radius: 4px;
   border: 1px solid $border;
   background: transparent;
-  color: $muted;
+  color: $secondary;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
@@ -96,7 +93,7 @@ $panel:  var(--c-panel);
   svg { width: 13px; height: 13px; }
 
   &:disabled { opacity: 0.5; cursor: default; }
-  &:not(:disabled):hover { color: $text; border-color: $muted; }
+  &:not(:disabled):hover { color: $text; border-color: $secondary; }
 
   &.case:not(:disabled):hover { color: #3b82f6; border-color: #3b82f6; }
 }
@@ -124,7 +121,7 @@ $panel:  var(--c-panel);
 
 .alert-message {
   font-size: 12px;
-  color: $muted;
+  color: $secondary;
   line-height: 1.6;
   margin: 0;
 }
@@ -133,7 +130,7 @@ $panel:  var(--c-panel);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  color: $muted;
+  color: $secondary;
   text-transform: uppercase;
   margin-bottom: 10px;
 }
@@ -149,7 +146,7 @@ $panel:  var(--c-panel);
 
 .info-key {
   font-size: 11px;
-  color: $muted;
+  color: $secondary;
 }
 
 .info-val {
@@ -245,7 +242,7 @@ $panel:  var(--c-panel);
 
 .risk-sub {
   font-size: 9px;
-  color: $muted;
+  color: $secondary;
 }
 
 .risk-meta {
@@ -274,7 +271,7 @@ $panel:  var(--c-panel);
 
 .factor-name {
   font-size: 10px;
-  color: $muted;
+  color: $secondary;
   width: 120px;
   flex-shrink: 0;
 }
@@ -317,7 +314,7 @@ $panel:  var(--c-panel);
 
 .mitre-type {
   font-size: 12px;
-  color: $muted;
+  color: $secondary;
 }
 
 // ── Timeline ──────────────────────────────────────────────────
@@ -355,7 +352,7 @@ $panel:  var(--c-panel);
   font-size: 10px;
   flex-shrink: 0;
   background: $border;
-  color: $muted;
+  color: $secondary;
 
   .tl-detection & { background: rgba(59,130,246,.15); color: #3b82f6; }
   .tl-attempt  &  { background: rgba(239,68,68,.15);  color: #ef4444; }
@@ -377,13 +374,13 @@ $panel:  var(--c-panel);
 
 .tl-desc {
   font-size: 11px;
-  color: $muted;
+  color: $secondary;
   margin-top: 2px;
 }
 
 .tl-time {
   font-size: 10px;
-  color: $muted;
+  color: $secondary;
   margin-top: 2px;
   font-family: monospace;
 }

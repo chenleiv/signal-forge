@@ -1,17 +1,7 @@
-// ── Palette ──────────────────────────────────────────────────
-$panel-bg:  var(--c-panel);
-$border:    var(--c-border);
+@use 'tokens' as *;
 
-$red:    #ef4444;
-$orange: #f97316;
-$yellow: #f59e0b;
-$blue:   #60a5fa;
-$green: rgba(255,255,255,.65);
-$purple: #a855f7;
-$accent:    var(--c-accent);
-$text:      var(--c-text);
-$muted:     var(--c-muted);
-$secondary: var(--c-text-2);
+// ── Palette ──────────────────────────────────────────────────
+
 
 // ── Host ─────────────────────────────────────────────────────
 :host {
@@ -33,7 +23,7 @@ $secondary: var(--c-text-2);
 
 // ── KPI Summary Panel ────────────────────────────────────────
 .summary-panel {
-  background: $panel-bg;
+  background: $panel;
   border: 1px solid $border;
   border-radius: 4px;
   flex-shrink: 0;
@@ -104,21 +94,21 @@ $secondary: var(--c-text-2);
   }
 
   &.regions {
-    background: rgba($blue, 0.1);
-    color: $blue;
-    border: 1px solid rgba($blue, 0.2);
+    background: rgba($sev-low, 0.1);
+    color: $sev-low;
+    border: 1px solid rgba($sev-low, 0.2);
   }
 
   &.high {
-    background: rgba($orange, 0.1);
-    color: $orange;
-    border: 1px solid rgba($orange, 0.2);
+    background: rgba($sev-high, 0.1);
+    color: $sev-high;
+    border: 1px solid rgba($sev-high, 0.2);
   }
 
   &.critical {
-    background: rgba($red, 0.1);
-    color: $red;
-    border: 1px solid rgba($red, 0.2);
+    background: rgba($sev-critical, 0.1);
+    color: $sev-critical;
+    border: 1px solid rgba($sev-critical, 0.2);
   }
 }
 
@@ -130,7 +120,7 @@ $secondary: var(--c-text-2);
   color: $text;
 
   &.critical-val {
-    color: $red;
+    color: $sev-critical;
   }
 }
 
@@ -194,7 +184,7 @@ $secondary: var(--c-text-2);
 
 // ── Panel ────────────────────────────────────────────────────
 .panel {
-  background: $panel-bg;
+  background: $panel;
   border: 1px solid $border;
   border-radius: 4px;
   display: flex;
@@ -277,8 +267,8 @@ $secondary: var(--c-text-2);
   }
 
   &.frozen {
-    border-color: $yellow;
-    color: $yellow;
+    border-color: $sev-medium;
+    color: $sev-medium;
   }
 }
 
@@ -361,19 +351,19 @@ $secondary: var(--c-text-2);
   color: #fff;
 
   &.sev-critical {
-    background: $red;
+    background: $sev-critical;
   }
 
   &.sev-high {
-    background: $orange;
+    background: $sev-high;
   }
 
   &.sev-medium {
-    background: $yellow;
+    background: $sev-medium;
   }
 
   &.sev-low {
-    background: $blue;
+    background: $sev-low;
   }
 }
 
@@ -408,7 +398,7 @@ tr.row-high td {
 
 // ── Narrow screens (same breakpoint as the app layout) ───────
 // One column that scrolls vertically; KPIs wrap, charts stack.
-@media (max-width: 768px) {
+@media (max-width: $narrow) {
   .dashboard {
     height: 100%;
     overflow-y: auto;

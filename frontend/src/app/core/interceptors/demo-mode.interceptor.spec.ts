@@ -57,7 +57,7 @@ describe('demoModeInterceptor', () => {
     });
 
     it('sends writes it does not simulate, so the server can reject them', () => {
-      http.delete('/api/rules/r1').subscribe({ error: () => {} });
+      http.delete('/api/rules/r1').subscribe({ error: () => { /* the 403 is expected here */ } });
 
       server.expectOne('/api/rules/r1').flush(
         { detail: 'Read-only demo' },
@@ -108,7 +108,7 @@ describe('demoModeInterceptor', () => {
     });
 
     it('shows nothing for a 403 without a text reason', () => {
-      http.post('/api/other', {}).subscribe({ error: () => {} });
+      http.post('/api/other', {}).subscribe({ error: () => { /* the 403 is expected here */ } });
       server.expectOne('/api/other').flush({ detail: { html: '<b>x</b>' } }, { status: 403, statusText: 'Forbidden' });
       expect(demo.notice()).toBeNull();
     });

@@ -1,13 +1,9 @@
 import { Incident, UserRole, UserSummary } from '../../shared/models/threat.models';
 
 /**
- * The RBAC permission matrix, client side. Mirrors backend/authz.py and is
- * used by BOTH the UI (to hide/disable actions) and DemoSimulatorService (so
- * the demo never "succeeds" at something the real server would deny).
- *
- * UX only: the server is the security boundary and re-checks everything.
- * Reasons are the server's exact `detail` strings, so users see the same
- * message in the demo and against the real API.
+ * Client-side mirror of backend/authz.py, used by the UI and the demo
+ * simulator. Reasons are the server's exact messages. UX only: the server
+ * re-checks everything.
  */
 
 export type CurrentUser = UserSummary;

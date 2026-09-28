@@ -1,8 +1,6 @@
-$border:    var(--c-border);
-$text:      var(--c-text);
-$secondary: var(--c-text-2);
-$muted:     var(--c-muted);
-$accent:    var(--c-accent);
+@use 'tokens' as *;
+@use 'filter-bar';
+@use 'drawer';
 
 :host {
   display: block;
@@ -33,108 +31,6 @@ $accent:    var(--c-accent);
   color: $text;
   margin: 0;
   letter-spacing: 0.2px;
-}
-
-.filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 20px 10px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  border-bottom: 1px solid $border;
-}
-
-.filter-input {
-  background: var(--c-input);
-  border: 1px solid $border;
-  color: $text;
-  border-radius: 3px;
-  padding: 4px 10px;
-  font-size: 11px;
-  outline: none;
-  width: 180px;
-
-  &::placeholder { color: $muted; }
-  &:focus { border-color: rgba(59,130,246,0.4); }
-}
-
-.export-wrap {
-  position: relative;
-  margin-left: auto;
-}
-
-.btn-export {
-  padding: 4px 12px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  color: $accent;
-  border-radius: 3px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-
-  &:hover { background: rgba(59, 130, 246, 0.2); }
-}
-
-.export-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  background: var(--c-panel);
-  border: 1px solid $border;
-  border-radius: 4px;
-  overflow: hidden;
-  z-index: 100;
-  min-width: 90px;
-
-  button {
-    display: block;
-    width: 100%;
-    padding: 7px 14px;
-    background: none;
-    border: none;
-    color: $text;
-    font-size: 11px;
-    text-align: left;
-    cursor: pointer;
-    transition: background 0.12s;
-
-    &:hover { background: rgba(255, 255, 255, 0.06); }
-  }
-}
-
-.filter-pills {
-  display: flex;
-  gap: 4px;
-}
-
-.pill {
-  padding: 3px 10px;
-  border-radius: 12px;
-  border: 1px solid $border;
-  background: transparent;
-  color: $muted;
-  font-size: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  text-transform: capitalize;
-
-  &:hover { color: $secondary; border-color: rgba(255,255,255,0.15); }
-
-  &.active {
-    &.pill-all          { background: rgba(59,130,246,0.15);  color: $accent;  border-color: rgba(59,130,246,0.4); }
-    &.pill-open         { background: rgba(239,68,68,0.12);   color: #ef4444;  border-color: rgba(239,68,68,0.35); }
-    &.pill-investigating{ background: rgba(249,115,22,0.12);  color: #f97316;  border-color: rgba(249,115,22,0.35); }
-    &.pill-contained    { background: rgba(245,158,11,0.12);  color: #f59e0b;  border-color: rgba(245,158,11,0.35); }
-    &.pill-closed       { background: rgba(107,114,128,0.15); color: var(--c-text-2);  border-color: rgba(107,114,128,0.35); }
-    &.pill-critical     { background: rgba(239,68,68,0.12);   color: #ef4444;  border-color: rgba(239,68,68,0.35); }
-    &.pill-high         { background: rgba(249,115,22,0.12);  color: #f97316;  border-color: rgba(249,115,22,0.35); }
-    &.pill-medium       { background: rgba(245,158,11,0.12);  color: #f59e0b;  border-color: rgba(245,158,11,0.35); }
-    &.pill-low          { background: rgba(96,165,250,0.12);  color: #60a5fa;  border-color: rgba(96,165,250,0.35); }
-  }
 }
 
 .count-badge {
@@ -277,72 +173,10 @@ $accent:    var(--c-accent);
 }
 
 // ── Backdrop ──────────────────────────────────────────────────
-.drawer-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  cursor: default;
-  pointer-events: none;
-
-  &.active { pointer-events: auto; }
-}
-
-// ── Overlay drawer ────────────────────────────────────────────
-.drawer-overlay {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 100%;
-  z-index: 20;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid $border;
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.55);
-  transform: translateX(100%);
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-
-  &.open { transform: translateX(0); }
-}
-
-// ── Resize handle ─────────────────────────────────────────────
-.resize-handle {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 6px;
-  cursor: col-resize;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover .handle-bar,
-  &:active .handle-bar {
-    background: $accent;
-    box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
-  }
-}
-
-.handle-bar {
-  width: 1px;
-  height: 70px;
-  background: #2a3347;
-  border-radius: 2px;
-  transition: all 0.15s;
-}
 .sk-row td { padding: 10px 12px; }
 .sk-row span { display: inline-block; }
 
-// ── Narrow screens (same breakpoint as the app layout) ───────
-// The detail drawer takes the whole width (its inline width is a desktop
-// preference); resizing is a mouse feature.
-@media (max-width: 768px) {
-  .drawer-overlay {
-    max-width: 100%;
-  }
+@include drawer.overlay-drawer;
+@include drawer.resize-handle(70px);
 
-  .resize-handle {
-    display: none;
-  }
-}
+@include filter-bar.filter-bar(6px 20px 10px, 180px);

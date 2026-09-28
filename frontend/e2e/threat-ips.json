@@ -1,0 +1,5 @@
+{
+  "_comment": "Test data for the e2e layout checks: well-known public resolvers, used only so the simulated stream has events. Not threat intelligence.",
+  "saved_at": 0,
+  "ips": { "8.8.8.8": 90, "8.8.4.4": 80, "1.1.1.1": 70, "1.0.0.1": 60, "9.9.9.9": 85, "149.112.112.112": 55, "208.67.222.222": 75, "208.67.220.220": 45 }
+}

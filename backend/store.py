@@ -6,17 +6,16 @@ import os
 import random
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 import jwt
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import (
+    BEHAVIORAL_DEFAULTS,
     INCIDENT_TITLES, MITRE_MAP, GEO_DATA, COUNTRY_NAMES,
     ASSET_NAMES, ASSET_CRITICALITY, GEO_RISK_SCORES, DETECTION_SOURCES,
 )
-from database import AsyncSessionLocal, get_db
+from database import AsyncSessionLocal
 from db_ops import db_update_rule
 from users import ROLES, CurrentUser, analyst_usernames, is_session_current, password_problem
 from sessions import is_revoked
@@ -63,11 +62,7 @@ MAX_BLOCKED_IPS = 1000
 _ip_coords: dict[str, tuple[float, float]] = {}
 
 _behavioral_flagged: dict[str, dict] = {}
-_behavioral_config: dict = {
-    "cooldown_min": 30,
-    "repeated_threshold": 8,
-    "escalation_delta": 20,
-}
+_behavioral_config: dict = dict(BEHAVIORAL_DEFAULTS)
 
 _rules: list[dict] = []
 _saved_hunts: list[dict] = []
@@ -87,14 +82,9 @@ def block_ip(ip: str) -> bool:
 # ── Auth helpers ──────────────────────────────────────────────
 
 def verify_token(request: Request) -> CurrentUser:
-    """Validate the session cookie and return the authenticated user.
-
-    Routes that need to know *who* is acting must use this return value,
-    never an identity field sent by the client. Besides the signature, every
-    request re-checks the token against the CURRENT user record (active,
-    same role, same session key), so deleting a user, changing their role or
-    resetting their password takes effect immediately.
-    """
+    """The authenticated user: the only source of "who is acting". Besides the
+    signature, checks the token against the current user record and the logout
+    list, so deletions, role changes, resets and logouts apply immediately."""
     token = request.cookies.get(_COOKIE)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -114,7 +104,7 @@ def verify_token(request: Request) -> CurrentUser:
         if not is_session_current(username, role, payload.get("sk")):
             raise ValueError("session revoked")
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from None
     return CurrentUser(username=username, role=role)
 
 
@@ -122,7 +112,7 @@ def validate_ip(ip: str) -> str:
     try:
         parsed = ipaddress.ip_address(ip)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid IP address format")
+        raise HTTPException(status_code=422, detail="Invalid IP address format") from None
     if parsed.is_private or parsed.is_loopback or parsed.is_link_local or parsed.is_reserved or parsed.is_multicast:
         raise HTTPException(status_code=422, detail="Private or reserved IP not allowed")
     return str(parsed)

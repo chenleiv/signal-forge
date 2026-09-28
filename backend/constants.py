@@ -86,15 +86,6 @@ GEO_RISK_SCORES: dict[str, int] = {
     "TR": 50, "PL": 40, "JP": 20, "KR": 20, "IS": 15,
 }
 
-THREAT_CATEGORIES: dict[str, str] = {
-    "SQLi":       "Web Attack",
-    "DDoS":       "Availability Attack",
-    "BruteForce": "Credential Attack",
-    "PortScan":   "Reconnaissance",
-    "Malware":    "Malware",
-    "RepeatedIP": "Persistent Threat",
-    "Escalation": "Threat Escalation",
-}
 
 
 # Response playbook per attack type. completed_tasks are indexes into these
@@ -108,3 +99,12 @@ RESPONSE_TASKS: dict[str, list[str]] = {
 }
 
 MAX_NOTE_LENGTH = 2000
+
+
+# Behavioral detection settings: defaults and allowed ranges (inclusive).
+BEHAVIORAL_DEFAULTS: dict[str, int] = {"repeated_threshold": 8, "escalation_delta": 20, "cooldown_min": 30}
+BEHAVIORAL_LIMITS: dict[str, tuple[int, int]] = {
+    "repeated_threshold": (1, 1000),   # events from one IP before it is flagged
+    "escalation_delta":   (1, 100),    # score jump that counts as an escalation
+    "cooldown_min":       (1, 1440),   # minutes before the same IP can be flagged again
+}

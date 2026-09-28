@@ -1,8 +1,4 @@
-$panel:  var(--c-panel);
-$border: var(--c-border);
-$text:   var(--c-text);
-$muted:  var(--c-text-2);
-$accent: var(--c-accent);
+@use 'tokens' as *;
 
 :host {
     display: block;
@@ -27,7 +23,7 @@ $accent: var(--c-accent);
 .page-sub,
 .muted {
     font-size: 12px;
-    color: $muted;
+    color: $secondary;
     margin: 0;
 }
 
@@ -77,7 +73,7 @@ $accent: var(--c-accent);
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: $muted;
+        color: $secondary;
         padding: 6px 8px;
         border-bottom: 1px solid $border;
     }
@@ -93,7 +89,7 @@ $accent: var(--c-accent);
 
 .you {
     font-size: 10px;
-    color: $muted;
+    color: $secondary;
     border: 1px solid $border;
     border-radius: 3px;
     padding: 0 4px;
@@ -176,7 +172,7 @@ input {
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: $muted;
+        color: $secondary;
     }
 }
 

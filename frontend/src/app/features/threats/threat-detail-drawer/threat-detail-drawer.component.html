@@ -290,7 +290,7 @@
           @if (relatedOpen()) {
             <div class="related-list">
               @for (r of relatedIps(); track r.ip) {
-                <div class="related-item" (click)="selectRelated(r.ip)">
+                <div class="related-item" tabindex="0" (click)="selectRelated(r.ip)" (keydown.enter)="selectRelated(r.ip)">
                   <div class="related-left">
                     <span class="related-ip">{{ r.ip }}</span>
                     <div class="related-attacks">

@@ -174,20 +174,11 @@ def seed_users(demo_mode: bool, admin_password: str) -> None:
 
 
 async def sync_users_with_db(session: AsyncSession, demo_mode: bool, admin_password: str) -> None:
-    """Persist the seeded users and load the table into memory.
+    """Create missing seeded users, then load the table into memory.
 
-    - Seeded users missing from the table are created.
-    - Demo mode: the admin always has the public demo password.
-      Otherwise the admin is created from ADMIN_PASSWORD only if the table has
-      no admin yet; an existing admin's REAL password is never overwritten.
-    - Outside demo mode, an admin that still has the public demo password
-      (left over from a demo deployment on the same DB) gets ADMIN_PASSWORD
-      instead; without ADMIN_PASSWORD, startup fails. A real deployment must
-      never run with an admin whose password is shown on the login page.
-    - Outside demo mode, rows still holding a public demo password (left over
-      from a demo deployment on the same DB) are not loaded: they cannot log in.
-    - Rows without a session key get one.
-    - Soft-deleted rows are loaded too (history shows their names).
+    A real admin password is never overwritten. Outside demo mode, public demo
+    passwords never survive: the admin's is replaced with ADMIN_PASSWORD (or
+    startup fails), other demo accounts are not loaded.
     """
     rows = {r["username"]: r for r in await db_get_users(session)}
     table_has_admin = any(r["role"] == "admin" and not r.get("deleted_at") for r in rows.values())

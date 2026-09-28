@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from sqlalchemy import String, Integer, Text, Boolean, ForeignKey, TIMESTAMP
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from constants import BEHAVIORAL_DEFAULTS
 from database import Base
 
 
@@ -64,9 +65,9 @@ class BehavioralSettings(Base):
     __tablename__ = "behavioral_settings"
 
     id:                    Mapped[int]      = mapped_column(Integer, primary_key=True)
-    repeated_threshold:    Mapped[int]      = mapped_column(Integer, nullable=False, default=8)
-    escalation_delta:      Mapped[int]      = mapped_column(Integer, nullable=False, default=20)
-    cooldown_min:          Mapped[int]      = mapped_column(Integer, nullable=False, default=30)
+    repeated_threshold:    Mapped[int]      = mapped_column(Integer, nullable=False, default=BEHAVIORAL_DEFAULTS["repeated_threshold"])
+    escalation_delta:      Mapped[int]      = mapped_column(Integer, nullable=False, default=BEHAVIORAL_DEFAULTS["escalation_delta"])
+    cooldown_min:          Mapped[int]      = mapped_column(Integer, nullable=False, default=BEHAVIORAL_DEFAULTS["cooldown_min"])
     created_at:            Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
     updated_at:            Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
 

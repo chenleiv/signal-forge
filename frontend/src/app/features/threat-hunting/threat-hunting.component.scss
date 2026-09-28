@@ -1,9 +1,4 @@
-$panel:     var(--c-panel);
-$border:    var(--c-border);
-$text:      var(--c-text);
-$secondary: var(--c-text-2);
-$muted:     var(--c-muted);
-$accent:    var(--c-accent);
+@use 'tokens' as *;
 
 :host {
   display: block;
@@ -64,7 +59,8 @@ $accent:    var(--c-accent);
   flex-direction: column;
   gap: 4px;
 
-  label {
+  label,
+  .field-heading {
     font-size: 9px;
     color: $muted;
     text-transform: uppercase;
@@ -346,7 +342,7 @@ $accent:    var(--c-accent);
 
 // Narrow screens (same breakpoint as the app layout): the results table
 // scrolls sideways inside its own box.
-@media (max-width: 768px) {
+@media (max-width: $narrow) {
   .results-table-wrap {
     overflow-x: auto;
   }

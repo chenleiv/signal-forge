@@ -96,7 +96,7 @@ signalforge/
 cd backend
 python3.13 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # runtime deps + pytest and ruff
 
 cp .env.example .env
 # Edit .env. For local development set at least:
@@ -143,10 +143,13 @@ A real admin password, once set, is never overwritten by `ADMIN_PASSWORD`.
 ### Tests
 
 ```bash
-cd backend && python -m pytest          # all backend tests
-cd frontend && npm test -- --watch=false # all frontend tests (Vitest)
-cd frontend && npm run e2e               # layout checks in a real browser (Playwright)
+cd backend && ruff check . && python -m pytest   # lint + all backend tests
+cd frontend && npm run lint                       # ESLint (incl. template accessibility rules)
+cd frontend && npm test -- --watch=false          # all frontend tests (Vitest)
+cd frontend && npm run e2e                        # layout checks in a real browser (Playwright)
 ```
+
+**CI** (`.github/workflows/ci.yml`) runs all of the above on every pull request and on `master`.
 
 **Layout checks (`npm run e2e`).** Builds the frontend, serves it from the backend in demo mode (like on Render,
 no database), and checks every page on a phone (390 px) and a desktop (1440 px): nothing may be cut off by the

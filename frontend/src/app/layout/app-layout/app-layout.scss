@@ -1,14 +1,7 @@
-// ── Palo Alto / XSIAM Palette ────────────────────────────────
-$bg: var(--c-bg);
-$sb-bg: var(--c-panel);
-$panel-bg: var(--c-panel);
-$border: var(--c-border);
+@use 'tokens' as *;
 
-$accent: var(--c-accent);
-$text: var(--c-text);
-$secondary: var(--c-text-2);
-$muted: var(--c-muted);
-$green: rgba(255,255,255,.65);
+// ── Palo Alto / XSIAM Palette ────────────────────────────────
+
 
 // ── Root ─────────────────────────────────────────────────────
 :host {
@@ -29,7 +22,7 @@ $green: rgba(255,255,255,.65);
 .sidebar {
   width: 220px;
   flex-shrink: 0;
-  background: $sb-bg;
+  background: $panel;
   border-right: 1px solid $border;
   display: flex;
   flex-direction: column;
@@ -261,7 +254,7 @@ $green: rgba(255,255,255,.65);
 .topbar {
   height: 46px;
   flex-shrink: 0;
-  background: $sb-bg;
+  background: $panel;
   border-bottom: 1px solid $border;
   display: flex;
   align-items: center;
@@ -414,7 +407,7 @@ $green: rgba(255,255,255,.65);
   padding: 7px 16px;
   font-size: 12px;
   color: $secondary;
-  background: $panel-bg;
+  background: $panel;
   border-bottom: 1px solid $border;
 }
 
@@ -440,7 +433,7 @@ $green: rgba(255,255,255,.65);
   padding: 10px 14px;
   font-size: 13px;
   color: $text;
-  background: $panel-bg;
+  background: $panel;
   border: 1px solid $border;
   border-left: 3px solid $accent;
   border-radius: 4px;
@@ -466,7 +459,7 @@ $green: rgba(255,255,255,.65);
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: $narrow) {
   .sidebar {
     position: fixed;
     top: 0;

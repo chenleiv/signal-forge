@@ -1,14 +1,6 @@
-"""Per-session revocation: logging out ends THIS session only.
-
-Every session token carries a random session id ("sid"). Logging out puts
-that id on a revocation list until the token would have expired anyway, so
-a copied cookie stops working at once. Other sessions of the same user
-(another device, or other visitors of a shared demo account) are untouched.
-
-The list lives in memory (checked on every request by store.verify_token)
-and, with a database, is persisted so a restart does not bring revoked
-sessions back. One process only (README: single worker).
-"""
+"""Logout revocation: each session token has its own id ("sid"); logout
+revokes that id until the token expires. Only that session ends. Kept in
+memory, persisted with a database so a restart keeps it."""
 from __future__ import annotations
 import secrets
 import time

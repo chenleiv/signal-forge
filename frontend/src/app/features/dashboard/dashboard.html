@@ -5,105 +5,62 @@
       <span class="summary-title">SOC Monitoring Summary</span>
     </div>
     <div class="summary-stats">
-
-      <div class="kpi-stat">
-        <div class="kpi-icon-wrap tracked">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <circle cx="12" cy="12" r="10" />
-            <circle cx="12" cy="10" r="3" />
-            <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
-          </svg>
+      @for (kpi of kpis(); track kpi.key; let last = $last) {
+        <div class="kpi-stat">
+          <div class="kpi-icon-wrap {{ kpi.key }}">
+            @switch (kpi.key) {
+            @case ('tracked') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="10" />
+              <circle cx="12" cy="10" r="3" />
+              <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
+              </svg>
+            }
+            @case ('events') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+            }
+            @case ('epm') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="2" y="3" width="20" height="14" rx="2" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+            }
+            @case ('regions') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+              </svg>
+            }
+            @case ('high') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              <polyline points="17 6 23 6 23 12" />
+              </svg>
+            }
+            @case ('critical') {
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            }
+            }
+          </div>
+          <span class="kpi-value" [class.critical-val]="kpi.key === 'critical'">{{ kpi.value }}</span>
+          <span class="kpi-label">{{ kpi.label }}</span>
         </div>
-        <span class="kpi-value">{{ store.trackedIPs() }}</span>
-        <span class="kpi-label">Tracked IPs</span>
-      </div>
-
-      <div class="kpi-arrow">
-        <span class="arrow-line"></span>
-        <span class="arrow-dot"></span>
-        <span class="arrow-line"></span>
-      </div>
-
-      <div class="kpi-stat">
-        <div class="kpi-icon-wrap events">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-          </svg>
-        </div>
-        <span class="kpi-value">{{ store.events().length }}</span>
-        <span class="kpi-label">Processed Events</span>
-      </div>
-
-      <div class="kpi-arrow">
-        <span class="arrow-line"></span>
-        <span class="arrow-dot"></span>
-        <span class="arrow-line"></span>
-      </div>
-
-      <div class="kpi-stat">
-        <div class="kpi-icon-wrap epm">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <rect x="2" y="3" width="20" height="14" rx="2" />
-            <line x1="8" y1="21" x2="16" y2="21" />
-            <line x1="12" y1="17" x2="12" y2="21" />
-          </svg>
-        </div>
-        <span class="kpi-value">{{ store.eventsPerMinute() }}</span>
-        <span class="kpi-label">Events / Min</span>
-      </div>
-
-      <div class="kpi-arrow">
-        <span class="arrow-line"></span>
-        <span class="arrow-dot"></span>
-        <span class="arrow-line"></span>
-      </div>
-
-      <div class="kpi-stat">
-        <div class="kpi-icon-wrap regions">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="2" y1="12" x2="22" y2="12" />
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-          </svg>
-        </div>
-        <span class="kpi-value">{{ store.activeRegions() }}</span>
-        <span class="kpi-label">Active Regions</span>
-      </div>
-
-      <div class="kpi-arrow">
-        <span class="arrow-line"></span>
-        <span class="arrow-dot"></span>
-        <span class="arrow-line"></span>
-      </div>
-
-      <div class="kpi-stat">
-        <div class="kpi-icon-wrap high">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-            <polyline points="17 6 23 6 23 12" />
-          </svg>
-        </div>
-        <span class="kpi-value">{{ store.highCount() }}</span>
-        <span class="kpi-label">High Severity</span>
-      </div>
-
-      <div class="kpi-arrow">
-        <span class="arrow-line"></span>
-        <span class="arrow-dot"></span>
-        <span class="arrow-line"></span>
-      </div>
-
-      <div class="kpi-stat">
-        <div class="kpi-icon-wrap critical">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-            <line x1="12" y1="9" x2="12" y2="13" />
-            <line x1="12" y1="17" x2="12.01" y2="17" />
-          </svg>
-        </div>
-        <span class="kpi-value critical-val">{{ store.criticalCount() }}</span>
-        <span class="kpi-label">Critical Alerts</span>
-      </div>
+        @if (!last) {
+          <div class="kpi-arrow">
+            <span class="arrow-line"></span>
+            <span class="arrow-dot"></span>
+            <span class="arrow-line"></span>
+          </div>
+        }
+      }
 
     </div>
   </div>

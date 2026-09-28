@@ -14,9 +14,7 @@ from db_ops import (
     db_find_open_incident_by_ip, StaleIncident,
 )
 from store import (
-    ip_store, incidents_store, _incident_counter,
-    _score_to_level, _find_incident, validate_ip, verify_token, USE_DB,
-)
+    ip_store, incidents_store, _score_to_level, _find_incident, validate_ip, verify_token, )
 import store as _store
 from rate_limit import CASES_PER_USER
 from authz import check_incident_patch, check_work_on_incident
@@ -27,7 +25,7 @@ router = APIRouter()
 
 async def _load_incident(incident_id: str, db) -> dict:
     """Current state of an incident, for permission checks. 404 if missing."""
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         inc = await db_get_incident(db, incident_id)
     else:
         inc = _find_incident(incident_id)
@@ -68,7 +66,7 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
     """Open case for `ip`: the existing open one (unchanged), or a new one
     assigned to its creator. Creating a new case counts toward the creator's
     CASES_PER_USER limit (429 when exceeded)."""
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         existing = await db_find_open_incident_by_ip(db, ip)
         if existing:
             return {**existing, "existing": True}
@@ -107,7 +105,7 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
         "notes": [],
         "completed_tasks": [],
     }
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         saved = await db_create_incident(db, incident)
         return {**saved, "existing": False}
     incidents_store.appendleft(incident)
@@ -116,7 +114,7 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
 
 @router.get("/api/incidents")
 async def get_incidents(db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         return await db_get_incidents(db)
     return list(incidents_store)
 
@@ -128,13 +126,13 @@ async def patch_incident(
 ):
     inc = await _load_incident(incident_id, db)
     patch = check_incident_patch(user, inc, body)
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         try:
             result = await db_patch_incident(
                 db, incident_id, patch, expected_assignee=inc["assigned_to"]
             )
         except StaleIncident:
-            raise HTTPException(status_code=409, detail="Incident was reassigned meanwhile, reload and retry")
+            raise HTTPException(status_code=409, detail="Incident was reassigned meanwhile, reload and retry") from None
         if result is None:
             raise HTTPException(status_code=404, detail="Incident not found")
         return result
@@ -149,7 +147,7 @@ async def get_ip_case(
     ip: str = Depends(validate_ip),
     db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
 ):
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         inc = await db_find_open_incident_by_ip(db, ip)
         return {"case_id": inc["id"] if inc else None}
     for inc in incidents_store:
@@ -177,7 +175,7 @@ async def update_tasks(
     inc = await _load_incident(incident_id, db)
     check_work_on_incident(user, inc)
     completed = _validate_completed_tasks(body, inc)
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         result = await db_update_tasks(db, incident_id, completed)
         if result is None:
             raise HTTPException(status_code=404, detail="Incident not found")
@@ -196,7 +194,7 @@ async def add_note(
     author = user.username  # from the verified session, never from the request body
     inc = await _load_incident(incident_id, db)
     check_work_on_incident(user, inc)
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         return await db_add_note(db, incident_id, text=text, author=author)
     note = {"author": author, "text": text, "at": datetime.now(timezone.utc).isoformat()}
     inc["notes"].append(note)

@@ -5,13 +5,12 @@ import copy
 from datetime import datetime, timezone
 
 import pytest
-import pytest_asyncio
 from fastapi.testclient import TestClient
 
 import main
 import store
 import users
-from tests.conftest import ANALYST_PASSWORD, session_client
+from tests.conftest import ANALYST_PASSWORD, login, session_client
 
 NEW_PASSWORD = "brand-new-password-1"
 
@@ -37,32 +36,12 @@ def alice():
     return session_client("alice", "analyst")
 
 
-def _login(username: str, password: str) -> TestClient:
-    client = TestClient(main.app)
-    r = client.post("/auth/login", json={"username": username, "password": password})
-    assert r.status_code == 200, r.text
-    return client
-
-
 def _new_user(admin, username="carol", role="analyst", password=NEW_PASSWORD, display_name="Carol Diaz"):
     return admin.post("/api/users", json={"username": username, "display_name": display_name,
                                           "role": role, "password": password})
 
 
-# ── Admin only ────────────────────────────────────────────────
-
-@pytest.mark.parametrize("method,path,body", [
-    ("POST", "/api/users", {"username": "eve", "display_name": "Eve", "role": "admin", "password": NEW_PASSWORD}),
-    ("PATCH", "/api/users/bob", {"role": "admin"}),
-    ("PATCH", "/api/users/bob", {"password": NEW_PASSWORD}),
-    ("DELETE", "/api/users/bob", None),
-])
-def test_analyst_cannot_manage_users(alice, method, path, body):
-    before = copy.deepcopy(users._users)
-    r = alice.request(method, path, json=body)
-    assert r.status_code == 403 and r.json() == {"detail": "Admin role required"}
-    assert users._users == before
-
+# Who may manage users at all is the shared permission matrix.
 
 # ── Create ────────────────────────────────────────────────────
 
@@ -70,7 +49,7 @@ def test_admin_creates_a_user_who_can_log_in(admin):
     r = _new_user(admin)
     assert r.status_code == 201
     assert r.json() == {"username": "carol", "display_name": "Carol Diaz", "role": "analyst"}
-    me = _login("carol", NEW_PASSWORD).get("/auth/me").json()
+    me = login("carol", NEW_PASSWORD).get("/auth/me").json()
     assert me["role"] == "analyst"
     assert "carol" in {u["username"] for u in admin.get("/api/users").json()}
 
@@ -102,36 +81,36 @@ def test_username_taken_is_409(admin):
 # ── Change role / reset password ──────────────────────────────
 
 def test_role_change_takes_effect_on_existing_sessions_immediately(admin):
-    bob = _login("bob", ANALYST_PASSWORD)
+    bob = login("bob", ANALYST_PASSWORD)
     assert bob.get("/auth/me").json()["role"] == "analyst"
 
     assert admin.patch("/api/users/bob", json={"role": "manager"}).status_code == 200
 
     assert bob.get("/auth/me").status_code == 401            # old session is gone
-    assert _login("bob", ANALYST_PASSWORD).get("/auth/me").json()["role"] == "manager"
+    assert login("bob", ANALYST_PASSWORD).get("/auth/me").json()["role"] == "manager"
 
 
 def test_demoted_manager_loses_manager_rights_immediately(admin):
     _new_user(admin, username="dana", role="manager")
-    dana = _login("dana", NEW_PASSWORD)
+    dana = login("dana", NEW_PASSWORD)
     assert dana.patch("/api/users/bob", json={"password": "another-password-1"}).status_code == 200
 
     assert admin.patch("/api/users/dana", json={"role": "analyst"}).status_code == 200
 
     assert dana.get("/auth/me").status_code == 401
-    again = _login("dana", NEW_PASSWORD)
+    again = login("dana", NEW_PASSWORD)
     assert again.patch("/api/users/bob", json={"password": "another-password-2"}).status_code == 403
 
 
 def test_password_reset_signs_out_every_session(admin):
-    bob1, bob2 = _login("bob", ANALYST_PASSWORD), _login("bob", ANALYST_PASSWORD)
+    bob1, bob2 = login("bob", ANALYST_PASSWORD), login("bob", ANALYST_PASSWORD)
 
     assert admin.patch("/api/users/bob", json={"password": NEW_PASSWORD}).status_code == 200
 
     assert bob1.get("/auth/me").status_code == 401
     assert bob2.get("/auth/me").status_code == 401
     assert TestClient(main.app).post("/auth/login", json={"username": "bob", "password": ANALYST_PASSWORD}).status_code == 401
-    assert _login("bob", NEW_PASSWORD).get("/auth/me").status_code == 200
+    assert login("bob", NEW_PASSWORD).get("/auth/me").status_code == 200
 
 
 @pytest.mark.parametrize("body", [
@@ -145,7 +124,7 @@ def test_patch_accepts_only_role_and_password(admin, body):
 
 
 def test_unchanged_role_does_not_sign_the_user_out(admin):
-    bob = _login("bob", ANALYST_PASSWORD)
+    bob = login("bob", ANALYST_PASSWORD)
     assert admin.patch("/api/users/bob", json={"role": "analyst"}).status_code == 200
     assert bob.get("/auth/me").status_code == 200
 
@@ -187,7 +166,7 @@ def test_grant_hidden_in_a_password_reset_is_refused(admin):
     r = admin.patch("/api/users/bob", json={"password": NEW_PASSWORD, "role": "admin"})
     assert r.status_code == 403
     assert users._users["bob"]["role"] == "analyst"
-    assert _login("bob", ANALYST_PASSWORD)  # the password did not change either
+    assert login("bob", ANALYST_PASSWORD)  # the password did not change either
 
 
 def test_admin_unchanged_role_is_fine_but_own_password_goes_through_settings(admin):
@@ -197,7 +176,7 @@ def test_admin_unchanged_role_is_fine_but_own_password_goes_through_settings(adm
     r = admin.patch("/api/users/admin", json={"password": NEW_PASSWORD})
     assert r.status_code == 403
     assert r.json() == {"detail": "Change your own password in Settings (it asks for your current password)"}
-    assert _login("admin", "test-admin-password")
+    assert login("admin", "test-admin-password")
 
 
 def test_there_is_exactly_one_admin():
@@ -217,7 +196,7 @@ def _incident(inc_id: str, assigned_to: str, status: str) -> None:
 
 
 def test_deleted_user_is_signed_out_and_cannot_log_in(admin):
-    bob = _login("bob", ANALYST_PASSWORD)
+    bob = login("bob", ANALYST_PASSWORD)
     assert admin.delete("/api/users/bob").status_code == 200
 
     assert bob.get("/auth/me").status_code == 401
@@ -256,7 +235,7 @@ def test_deleting_a_user_unassigns_open_incidents_only(admin):
 
 def test_deleted_username_can_never_be_reused(admin):
     """A new 'bob' must not inherit the old bob's history or sessions."""
-    old_bob = _login("bob", ANALYST_PASSWORD)
+    old_bob = login("bob", ANALYST_PASSWORD)
     admin.delete("/api/users/bob")
     assert _new_user(admin, username="bob").status_code == 409
     assert old_bob.get("/auth/me").status_code == 401
@@ -279,19 +258,6 @@ def test_token_without_session_key_is_rejected():
 
 
 # ── DB path ───────────────────────────────────────────────────
-
-@pytest_asyncio.fixture
-async def db_session():
-    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-    from sqlalchemy.orm import sessionmaker
-    from database import Base
-    import models  # noqa: F401
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    async with sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as session:
-        yield session
-    await engine.dispose()
 
 
 @pytest.mark.asyncio
@@ -344,12 +310,12 @@ def manager():
 
 
 def test_manager_resets_an_analysts_password_and_signs_them_out(manager):
-    bob = _login("bob", ANALYST_PASSWORD)
+    bob = login("bob", ANALYST_PASSWORD)
 
     assert manager.patch("/api/users/bob", json={"password": NEW_PASSWORD}).status_code == 200
 
     assert bob.get("/auth/me").status_code == 401
-    assert _login("bob", NEW_PASSWORD).get("/auth/me").status_code == 200
+    assert login("bob", NEW_PASSWORD).get("/auth/me").status_code == 200
 
 
 @pytest.mark.parametrize("target,reason", [
@@ -360,7 +326,7 @@ def test_manager_cannot_reset_a_non_analysts_password(manager, target, reason):
     r = manager.patch(f"/api/users/{target}", json={"password": NEW_PASSWORD})
     assert r.status_code == 403
     assert r.json() == {"detail": reason}
-    assert _login(target, "test-admin-password" if target == "admin" else ANALYST_PASSWORD)
+    assert login(target, "test-admin-password" if target == "admin" else ANALYST_PASSWORD)
 
 
 @pytest.mark.parametrize("body", [

@@ -9,13 +9,9 @@ const PASS_THROUGH_WRITES = new Set(['/auth/login', '/auth/logout']);
 const SIMULATED_LATENCY_MS = 150;
 
 /**
- * Demo mode, client side:
- *  - writes are answered locally by DemoSimulatorService and never sent;
- *  - GET responses get the local overlay applied, so the UI stays consistent;
- *  - a server 403 "Read-only demo" (anything not simulated) becomes a notice;
- *  - any other server 403 (permission denied) shows the server's reason;
- *  - writes the current user may not make are refused locally, the same way.
- * UX only: the server enforces read-only mode whether or not this runs.
+ * Demo mode, client side: writes are checked against the permission matrix,
+ * then simulated locally (never sent); GETs get the local overlay; a server
+ * 403 shows as a notice. UX only: the server enforces read-only mode anyway.
  */
 export const demoModeInterceptor: HttpInterceptorFn = (req, next) => {
   const demo = inject(DemoModeService);

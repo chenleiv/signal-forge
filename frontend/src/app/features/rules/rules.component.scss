@@ -1,10 +1,4 @@
-$panel:     var(--c-panel);
-$border:    var(--c-border);
-$text:      var(--c-text);
-$secondary: var(--c-text-2);
-$muted:     var(--c-muted);
-$accent:    var(--c-accent);
-$green: rgba(255,255,255,.65);
+@use 'tokens' as *;
 
 :host {
   display: block;
@@ -436,7 +430,7 @@ $green: rgba(255,255,255,.65);
 // ── Narrow screens (same breakpoint as the app layout) ───────
 // One pane at a time: the list, or (after choosing a rule / "New") the
 // editor full width. Cancel returns to the list.
-@media (max-width: 768px) {
+@media (max-width: $narrow) {
   .rules-sidebar {
     width: 100%;
     border-right: 0;
