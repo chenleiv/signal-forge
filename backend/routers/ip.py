@@ -22,9 +22,20 @@ GROQ_API_KEY      = os.environ.get("GROQ_API_KEY", "")
 # Groq retires models over time; override without a code change via GROQ_MODEL.
 GROQ_MODEL        = os.environ.get("GROQ_MODEL") or "openai/gpt-oss-20b"  # empty = default
 
+# Per-IP lookup caches. Bounded: any public IP can be looked up, so an
+# unbounded cache grows without limit on a long-running server.
+MAX_CACHED_IPS = 5000
 _abuse_cache: dict[str, dict] = {}
 _geo_cache: dict[str, dict] = {}
 _ai_summary_cache: dict[str, str] = {}
+
+
+def _cache_put(cache: dict, key: str, value) -> None:
+    """Insert, evicting the oldest entries (dicts keep insertion order) past the cap."""
+    cache.pop(key, None)
+    cache[key] = value
+    while len(cache) > MAX_CACHED_IPS:
+        del cache[next(iter(cache))]
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
@@ -61,6 +72,7 @@ async def enrich_ip(ip: str) -> Optional[dict]:
                 headers={"Key": ABUSEIPDB_API_KEY, "Accept": "application/json"},
                 timeout=5.0,
             )
+            r.raise_for_status()   # a 429 (quota) or 401 must not be cached as "no data"
             data = r.json().get("data", {})
             result = {
                 "abuse_confidence": data.get("abuseConfidenceScore"),
@@ -68,7 +80,7 @@ async def enrich_ip(ip: str) -> Optional[dict]:
                 "isp":              data.get("isp"),
                 "total_reports":    data.get("totalReports"),
             }
-            _abuse_cache[ip] = result
+            _cache_put(_abuse_cache, ip, result)
             return result
     except Exception:
         return None
@@ -137,7 +149,7 @@ async def get_ip_ai_summary(
         name, status, code = _safe_error_fields(exc)
         logger.warning("AI summary failed for %s: %s status=%s code=%s", ip, name, status, code)
         return {"summary": None}
-    _ai_summary_cache[ip] = summary
+    _cache_put(_ai_summary_cache, ip, summary)
     return {"summary": summary}
 
 
@@ -153,13 +165,14 @@ async def get_ip_geo(
         async with httpx.AsyncClient() as client:
             data = await fetch_ipinfo(client, ip)
         if data:
-            _geo_cache[ip] = data
+            _cache_put(_geo_cache, ip, data)
             if "lat" in data:
-                _ip_coords[ip] = (data["lat"], data["lng"])
+                _cache_put(_ip_coords, ip, (data["lat"], data["lng"]))
             return data
 
     fallback = GEO_DATA.get(ip, {"country": "Unknown", "country_code": "??", "city": "Unknown", "org": "Unknown", "asn": "Unknown", "timezone": "UTC"})
-    _geo_cache[ip] = fallback
+    if not IPINFO_TOKEN:
+        _cache_put(_geo_cache, ip, fallback)   # with a token the failure may be temporary: retry next time
     return fallback
 
 

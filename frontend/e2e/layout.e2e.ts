@@ -145,3 +145,23 @@ test.describe('desktop', () => {
     await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
   });
 });
+
+test.describe('threat feed banner', () => {
+  test('stays hidden while the feed has data', async ({ page }) => {
+    const status = page.waitForResponse('**/api/threat-feed');
+    await page.goto('/dashboard');
+    expect((await status).status()).toBe(200);   // the test server streams its cache: state "cached"
+    await expect(page.locator('.feed-banner')).toHaveCount(0);
+  });
+
+  test('explains sample data when the AbuseIPDB quota is used up, and fits the screen', async ({ page }) => {
+    await page.route('**/api/threat-feed', route =>
+      route.fulfill({ json: { state: 'sample', reason: 'quota' } }));
+    await page.goto('/dashboard');
+    const banner = page.locator('.feed-banner');
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText(/quota/i);
+    const box = (await banner.boundingBox())!;
+    expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1);
+  });
+});

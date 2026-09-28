@@ -21,6 +21,17 @@ THREAT_IPS: dict[str, int] = {}
 
 # THREAT_IPS_CACHE: another cache file (e2e tests use a fixed one).
 _CACHE_FILE = pathlib.Path(os.environ.get("THREAT_IPS_CACHE") or pathlib.Path(__file__).parent / "threat_ips_cache.json")
+# Bundled sample IPs: demo mode only, when there is no feed and no cache.
+_SAMPLE_FILE = pathlib.Path(__file__).parent / "threat_ips_sample.json"
+
+REFRESH_SECONDS = 24 * 3600
+RETRY_SECONDS   = 3600
+
+# What the live stream is built from, served to the UI so a paused or sample
+# feed is explained instead of looking like a fault.
+#   state:  live (fresh data) | cached (older data) | sample | unavailable
+#   reason: why it is not live: quota (AbuseIPDB 429) | no_key | error
+FEED_STATUS: dict[str, Optional[str]] = {"state": "unavailable", "reason": None}
 
 
 def _load_cache() -> dict[str, int]:
@@ -33,6 +44,13 @@ def _load_cache() -> dict[str, int]:
     except Exception:
         pass
     return {}
+
+
+def _load_sample() -> dict[str, int]:
+    try:
+        return json.loads(_SAMPLE_FILE.read_text()).get("ips") or {}
+    except Exception:
+        return {}
 
 
 def _cache_is_fresh() -> bool:
@@ -65,6 +83,7 @@ async def fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
             params={"token": IPINFO_TOKEN},
             timeout=5.0,
         )
+        r.raise_for_status()   # an error body (quota, bad token) is not geolocation data
         d = r.json()
         raw_org = d.get("org", "")
         parts = raw_org.split(" ", 1)
@@ -89,15 +108,40 @@ async def fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
         return None
 
 
-async def refresh_threat_ips() -> None:
+def _set_status(state: str, reason: Optional[str]) -> None:
+    FEED_STATUS.update(state=state, reason=reason)
+
+
+def _use_fallback(reason: str, allow_sample: bool) -> None:
+    """No fresh data: stream the cache, else the sample (demo only), else nothing."""
+    global THREAT_IPS
+    if cached := _load_cache():
+        THREAT_IPS, state = cached, "cached"
+    elif allow_sample and (sample := _load_sample()):
+        THREAT_IPS, state = sample, "sample"
+        print(f"[AbuseIPDB] Using {len(sample)} bundled sample IPs")
+    else:
+        THREAT_IPS, state = {}, "unavailable"
+    _set_status(state, reason)
+
+
+def next_refresh_in() -> int:
+    """Retry hourly while the feed is not live, so it resumes soon after the quota resets."""
+    if FEED_STATUS["state"] == "live" or FEED_STATUS["reason"] == "no_key":
+        return REFRESH_SECONDS
+    return RETRY_SECONDS
+
+
+async def refresh_threat_ips(allow_sample: bool = False) -> None:
     global THREAT_IPS
     if not ABUSEIPDB_API_KEY:
-        THREAT_IPS = _load_cache()
+        _use_fallback("no_key", allow_sample)
         if not THREAT_IPS:
             print("[AbuseIPDB] No API key and no cache — simulation paused")
         return
-    if _cache_is_fresh():
-        THREAT_IPS = _load_cache()
+    if _cache_is_fresh() and (cached := _load_cache()):
+        THREAT_IPS = cached
+        _set_status("live", None)
         print(f"[AbuseIPDB] Cache is fresh — skipping API call ({len(THREAT_IPS)} IPs)")
         return
     try:
@@ -117,16 +161,16 @@ async def refresh_threat_ips() -> None:
             if ip_scores:
                 THREAT_IPS = ip_scores
                 _save_cache(ip_scores)
+                _set_status("live", None)
                 print(f"[AbuseIPDB] Loaded {len(ip_scores)} threat IPs with real scores")
             else:
-                THREAT_IPS = _load_cache()
+                _use_fallback("error", allow_sample)
                 print("[AbuseIPDB] Empty response — falling back to cache")
     except Exception as exc:
-        THREAT_IPS = _load_cache()
-        if THREAT_IPS:
-            print(f"[AbuseIPDB] Refresh failed ({exc}) — using cached data")
-        else:
-            print(f"[AbuseIPDB] Refresh failed ({exc}) — no cache available")
+        status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+        _use_fallback("quota" if status == 429 else "error", allow_sample)
+        # Type and status only: the message may echo the request (and its key).
+        print(f"[AbuseIPDB] Refresh failed ({type(exc).__name__}, status={status}) — feed is {FEED_STATUS['state']}")
 
 
 def _attack_metadata(attack_type: str) -> dict:
