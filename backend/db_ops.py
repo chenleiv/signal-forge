@@ -7,7 +7,7 @@ from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from models import Incident, Note, IncidentTask, Rule, BehavioralSettings, User
+from models import Incident, Note, IncidentTask, Rule, BehavioralSettings, User, RevokedSession
 
 
 def _incident_to_dict(inc: Incident) -> dict:
@@ -361,3 +361,23 @@ async def db_unassign_open_incidents(session: AsyncSession, username: str) -> in
     )
     await session.commit()
     return result.rowcount
+
+
+# ── Revoked sessions (logout) ─────────────────────────────────
+
+async def db_revoke_session(session: AsyncSession, sid: str, expires_at: datetime) -> None:
+    await session.merge(RevokedSession(sid=sid, expires_at=expires_at))
+    await session.commit()
+
+
+async def db_load_revoked_sessions(session: AsyncSession) -> list[tuple[str, datetime]]:
+    """Delete expired revocations, return the rest."""
+    now = datetime.now(timezone.utc)
+    await session.execute(delete(RevokedSession).where(RevokedSession.expires_at <= now))
+    await session.commit()
+    result = await session.execute(select(RevokedSession))
+    rows = []
+    for r in result.scalars().all():
+        exp = r.expires_at if r.expires_at.tzinfo else r.expires_at.replace(tzinfo=timezone.utc)
+        rows.append((r.sid, exp))
+    return rows

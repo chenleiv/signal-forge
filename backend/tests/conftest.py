@@ -48,6 +48,7 @@ def session_client(username: str, role: str):
     token = jwt.encode(
         {"sub": username, "role": role, "typ": "session",
          "sk": record["session_key"] if record else None,
+         "sid": __import__("sessions").new_session_id(),
          "exp": datetime.now(timezone.utc) + timedelta(minutes=5)},
         SECRET_KEY, algorithm="HS256",
     )

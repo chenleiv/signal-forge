@@ -42,6 +42,7 @@ def _token(claims: dict | None = None, key: str = SECRET_KEY, drop: tuple = ()) 
     base = {
         "sub": "alice", "role": "analyst", "typ": "session",
         "sk": users.get_user("alice")["session_key"],
+        "sid": "crafted-test-session-id",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
     }
     payload = {k: v for k, v in {**base, **(claims or {})}.items() if k not in drop}
@@ -131,7 +132,7 @@ class TestJwtAttacks:
 
         exp = int((datetime.now(timezone.utc) + timedelta(minutes=5)).timestamp())
         claims = {"sub": "alice", "role": "analyst", "typ": "session",
-                  "sk": users.get_user("alice")["session_key"], "exp": exp}
+                  "sk": users.get_user("alice")["session_key"], "sid": "crafted-test-session-id", "exp": exp}
         unsigned = f'{b64({"alg": "none", "typ": "JWT"})}.{b64(claims)}.'
         assert _as_session(client, unsigned).get("/api/stats").status_code == 401
 

@@ -85,3 +85,11 @@ class User(Base):
     # Soft delete: the row stays so history keeps the name and the username
     # can never be reused; the user cannot log in or be assigned.
     deleted_at:    Mapped[Optional[datetime]] = mapped_column(TIMESTAMP(timezone=True), nullable=True)
+
+
+class RevokedSession(Base):
+    """A logged-out session id, kept until its token would have expired."""
+    __tablename__ = "revoked_sessions"
+
+    sid:        Mapped[str]      = mapped_column(String(32), primary_key=True)
+    expires_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)

@@ -99,13 +99,18 @@ def test_ws_ticket_carries_real_username(client):
 
 def test_session_without_role_is_rejected(client):
     """Pre-RBAC session tokens (no role claim) must force a new login."""
-    legacy = jwt.encode({"sub": "alice", "typ": "session", "exp": int(time.time()) + 300}, SECRET_KEY, algorithm="HS256")
+    import users
+    legacy = jwt.encode({"sub": "alice", "typ": "session", "sid": "s1", "sk": users.get_user("alice")["session_key"],
+                         "exp": int(time.time()) + 300}, SECRET_KEY, algorithm="HS256")   # only "role" is missing
     client.cookies.set(COOKIE, legacy)
     assert client.get("/auth/me").status_code == 401
 
 
 def test_session_with_unknown_role_is_rejected(client):
-    forged = jwt.encode({"sub": "alice", "role": "superuser", "typ": "session", "exp": int(time.time()) + 300}, SECRET_KEY, algorithm="HS256")
+    import users
+    forged = jwt.encode({"sub": "alice", "role": "superuser", "typ": "session", "sid": "s1",
+                         "sk": users.get_user("alice")["session_key"], "exp": int(time.time()) + 300},
+                        SECRET_KEY, algorithm="HS256")   # only the role is wrong
     client.cookies.set(COOKIE, forged)
     assert client.get("/api/stats").status_code == 401
 

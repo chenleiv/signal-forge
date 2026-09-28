@@ -117,9 +117,18 @@ test.describe('phone menu', () => {
     await page.locator('.nav-backdrop').click({ position: { x: 350, y: 400 } });
     await expect(page.locator('#app-sidebar')).toBeHidden();
   });
+});
 
-  test('logout is reachable from the menu', async ({ page }) => {
-    await page.goto('/dashboard');
+test.describe('phone logout', () => {
+  test.skip(({ isMobile }) => !isMobile, 'phone only');
+  // Logout ends the session on the server, so this test must not use the
+  // session shared by every other test: it logs in on its own first.
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test('logout is reachable from the menu and ends the session', async ({ page }) => {
+    await page.goto('/login');
+    await page.getByRole('button', { name: /Try as Admin/ }).click();
+    await page.waitForURL(/dashboard/);
     await page.getByRole('button', { name: 'Open menu' }).click();
     await page.getByRole('button', { name: 'Log out' }).click();
     await page.waitForURL(/login/);
