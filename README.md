@@ -49,6 +49,8 @@ signalforge/
 │   ├── users.py             # Users, bcrypt, seeding, session checks
 │   ├── user_admin.py        # Admin user management (create, role, password, soft delete)
 │   ├── authz.py             # Authorization rules (single source for the server)
+│   ├── repositories.py      # Storage: database or in-memory, one interface per data type
+│   ├── sessions.py          # Logout revocation (per-session ids)
 │   ├── rate_limit.py        # Per-IP and per-key rate limits
 │   ├── routers/             # auth, users, incidents, alerts, rules, behavioral, hunting, ip
 │   ├── models.py, db_ops.py # SQLAlchemy models and data access
@@ -213,9 +215,11 @@ FastAPI (port 8000)
   ├── Demo-mode middleware  → rejects every write in demo mode (before any route runs)
   ├── Event generator       → ONE shared stream, fanned out to every WebSocket client
   ├── /auth/*               → login (bcrypt, rate limits), session, WebSocket tickets
-  ├── /api/*                → routers → authz.py (permissions) → store / db_ops
-  └── Optional database     → SQLAlchemy + Alembic (in-memory without DATABASE_URL)
+  ├── /api/*                → routers → authz.py (permissions) → repositories.py
+  └── Storage               → database (SQLAlchemy + Alembic) with DATABASE_URL, else in memory
 ```
+
+Routers never branch on the storage: `repositories.py` gives them the database or the in-memory implementation, and both are tested the same way (the permission matrix and `test_storage_parity.py` run in both modes).
 
 The frontend uses a central `ThreatStoreService` (Angular signals) as the single source of truth for HTTP calls and cached state. WebSocket events are pushed into the store, and components react to signal changes. The current user (from `/auth/me`) lives in `AuthService`; the UI hides or disables actions the user is not allowed to take, using the same permission rules as the server.
 

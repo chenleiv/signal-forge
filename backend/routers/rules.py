@@ -6,25 +6,22 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
-from db_ops import db_get_rules, db_create_rule, db_update_rule, db_delete_rule
 from authz import require_admin
-from store import _rules, verify_token
-import store as _store
+from database import get_db
+from repositories import RULE_FIELDS, rules
+from store import verify_token
 
 router = APIRouter()
 
 
 @router.get("/api/rules")
 async def get_rules(db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
-    if _store.USE_DB and db is not None:
-        return await db_get_rules(db)
-    return _rules
+    return await rules(db).list()
 
 
 @router.post("/api/rules")
 async def create_rule(body: dict, db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)):
-    rule_data = {
+    return await rules(db).create({
         "id":          str(uuid4())[:8],
         "name":        body.get("name", "Unnamed Rule"),
         "enabled":     body.get("enabled", True),
@@ -33,40 +30,18 @@ async def create_rule(body: dict, db: Optional[AsyncSession] = Depends(get_db), 
         "actions":     body.get("actions", ["alert"]),
         "created_at":  datetime.now(timezone.utc).isoformat(),
         "match_count": 0,
-    }
-    if _store.USE_DB and db is not None:
-        saved = await db_create_rule(db, rule_data)
-        _store._rules.append(saved)
-        return saved
-    _store._rules.append(rule_data)
-    return rule_data
+    })
 
 
 @router.patch("/api/rules/{rule_id}")
 async def update_rule(rule_id: str, body: dict, db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)):
-    if _store.USE_DB and db is not None:
-        updated = await db_update_rule(db, rule_id, body)
-        if updated is None:
-            raise HTTPException(status_code=404, detail="Rule not found")
-        for rule in _store._rules:
-            if rule["id"] == rule_id:
-                for key in ["name", "enabled", "conditions", "logic", "actions"]:
-                    if key in body:
-                        rule[key] = body[key]
-                break
-        return updated
-    rule_in_mem = next((r for r in _store._rules if r["id"] == rule_id), None)
-    if rule_in_mem is None:
+    updated = await rules(db).update(rule_id, {k: body[k] for k in RULE_FIELDS if k in body})
+    if updated is None:
         raise HTTPException(status_code=404, detail="Rule not found")
-    for key in ["name", "enabled", "conditions", "logic", "actions"]:
-        if key in body:
-            rule_in_mem[key] = body[key]
-    return rule_in_mem
+    return updated
 
 
 @router.delete("/api/rules/{rule_id}")
 async def delete_rule(rule_id: str, db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)):
-    _store._rules[:] = [r for r in _store._rules if r["id"] != rule_id]
-    if _store.USE_DB and db is not None:
-        await db_delete_rule(db, rule_id)
+    await rules(db).delete(rule_id)
     return {"ok": True}

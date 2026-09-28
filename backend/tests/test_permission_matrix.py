@@ -1,5 +1,7 @@
 """The shared RBAC permission matrix (testing/permission-matrix.json), run
-against the real API for every role: allow -> 2xx, deny -> 403.
+against the real API for every role: allow -> 2xx, deny -> 403 and nothing
+changed. Runs twice: in-memory storage and a real database, so the two
+storage paths cannot drift apart.
 
 The frontend runs the same file through its client-side permission check
 (permissions.matrix.spec.ts), so the two can never silently diverge.
@@ -7,7 +9,6 @@ The frontend runs the same file through its client-side permission check
 from __future__ import annotations
 import json
 import pathlib
-from datetime import datetime, timezone
 
 import pytest
 
@@ -52,22 +53,29 @@ def _restore_state():
     store._behavioral_config.clear(); store._behavioral_config.update(behavioral)
 
 
+@pytest.fixture(params=["memory", "database"])
+def storage(request):
+    """Each case runs with in-memory storage and with a real database."""
+    if request.param == "database":
+        request.getfixturevalue("db_app")
+    return request.param
+
+
+def _admin():
+    return session_client("admin", "admin")
+
+
 def _fixtures(owner_username: str | None) -> dict:
-    """Create the objects the placeholders refer to; return their ids."""
+    """Create the objects the placeholders refer to through the API (so they
+    land in whichever storage is active); return their ids."""
     store.incidents_store.clear()
-    now = datetime.now(timezone.utc).isoformat()
-    store.incidents_store.appendleft({
-        "id": "INC-M001", "title": "matrix", "severity": "high", "status": "open",
-        "attack_type": "SQLi", "source_ip": "1.1.1.1", "source_region": "US",
-        "event_count": 1, "assigned_to": owner_username, "created_at": now,
-        "updated_at": now, "mitre_tags": [], "notes": [], "completed_tasks": [],
-    })
-    alert = store._create_alert("test", "SQLi", "high", "9.9.9.9", "matrix alert")
-    rule = {"id": "rmatrix1", "name": "matrix", "enabled": True, "conditions": [], "logic": "AND",
-            "actions": ["alert"], "created_at": now, "match_count": 0}
-    store._rules.append(rule)
-    store._saved_hunts.append({"id": "hmatrix1", "name": "h", "query": {}, "result_count": 0, "created_at": now})
-    return {"incident": "INC-M001", "alert": alert["id"], "rule": rule["id"], "hunt": "hmatrix1", "ip": PUBLIC_IP}
+    admin = _admin()
+    incident = admin.post("/api/incidents/from-ip", json={"ip": "1.1.1.1"}).json()["id"]
+    assert admin.patch(f"/api/incidents/{incident}", json={"assigned_to": owner_username}).status_code == 200
+    rule = admin.post("/api/rules", json={"name": "matrix"}).json()["id"]
+    hunt = admin.post("/api/hunts", json={"name": "h", "query": {}}).json()["id"]
+    alert = store._create_alert("test", "SQLi", "high", "9.9.9.9", "matrix alert")["id"]   # alerts live in memory
+    return {"incident": incident, "alert": alert, "rule": rule, "hunt": hunt, "ip": PUBLIC_IP}
 
 
 def _fill(value, names: dict):
@@ -91,14 +99,16 @@ def test_matrix_covers_every_role_for_every_action():
 
 
 def _state() -> tuple:
-    """Everything a write could change, in comparable form."""
-    return (copy.deepcopy(list(store.incidents_store)), copy.deepcopy(list(store.alerts_store)),
-            copy.deepcopy(store._rules), copy.deepcopy(store._saved_hunts), set(store._blocked_ips),
-            dict(store._behavioral_config), copy.deepcopy(users._users))
+    """Everything a write could change, read through the API for stored data
+    (so it reflects memory or the database, whichever is active)."""
+    admin = _admin()
+    stored = tuple(admin.get(path).json() for path in ("/api/incidents", "/api/rules", "/api/behavioral/settings"))
+    return stored + (copy.deepcopy(list(store.alerts_store)), copy.deepcopy(store._saved_hunts),
+                     set(store._blocked_ips), copy.deepcopy(users._users))
 
 
 @pytest.mark.parametrize("case", MATRIX["cases"], ids=_case_id)
-def test_permission_matrix(case):
+def test_permission_matrix(case, storage):
     people = PEOPLE[case["role"]]
     owner = {"self": people["self"], "other": people["other"], "none": None, None: None}[case["owner"]]
     names = {**people, **_fixtures(owner)}

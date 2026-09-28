@@ -8,13 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import INCIDENT_TITLES, MITRE_MAP, RESPONSE_TASKS, MAX_NOTE_LENGTH
 from database import get_db
-from db_ops import (
-    db_get_incidents, db_get_incident, db_create_incident,
-    db_patch_incident, db_add_note, db_update_tasks,
-    db_find_open_incident_by_ip, StaleIncident,
-)
-from store import (
-    ip_store, incidents_store, _score_to_level, _find_incident, validate_ip, verify_token, )
+from db_ops import StaleIncident
+from repositories import incidents
+from store import ip_store, _score_to_level, validate_ip, verify_token
 import store as _store
 from rate_limit import CASES_PER_USER
 from authz import check_incident_patch, check_work_on_incident
@@ -25,10 +21,7 @@ router = APIRouter()
 
 async def _load_incident(incident_id: str, db) -> dict:
     """Current state of an incident, for permission checks. 404 if missing."""
-    if _store.USE_DB and db is not None:
-        inc = await db_get_incident(db, incident_id)
-    else:
-        inc = _find_incident(incident_id)
+    inc = await incidents(db).get(incident_id)
     if inc is None:
         raise HTTPException(status_code=404, detail="Incident not found")
     return inc
@@ -66,14 +59,9 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
     """Open case for `ip`: the existing open one (unchanged), or a new one
     assigned to its creator. Creating a new case counts toward the creator's
     CASES_PER_USER limit (429 when exceeded)."""
-    if _store.USE_DB and db is not None:
-        existing = await db_find_open_incident_by_ip(db, ip)
-        if existing:
-            return {**existing, "existing": True}
-    else:
-        for inc in incidents_store:
-            if inc.get("source_ip") == ip and inc["status"] != "closed":
-                return {**inc, "existing": True}
+    existing = await incidents(db).open_case_for_ip(ip)
+    if existing:
+        return {**existing, "existing": True}
 
     if CASES_PER_USER.exceeded(creator.username):
         raise HTTPException(status_code=429, detail="Too many new cases, try again later")
@@ -105,18 +93,13 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
         "notes": [],
         "completed_tasks": [],
     }
-    if _store.USE_DB and db is not None:
-        saved = await db_create_incident(db, incident)
-        return {**saved, "existing": False}
-    incidents_store.appendleft(incident)
-    return {**incident, "existing": False}
+    saved = await incidents(db).add(incident)
+    return {**saved, "existing": False}
 
 
 @router.get("/api/incidents")
 async def get_incidents(db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
-    if _store.USE_DB and db is not None:
-        return await db_get_incidents(db)
-    return list(incidents_store)
+    return await incidents(db).list()
 
 
 @router.patch("/api/incidents/{incident_id}")
@@ -126,20 +109,14 @@ async def patch_incident(
 ):
     inc = await _load_incident(incident_id, db)
     patch = check_incident_patch(user, inc, body)
-    if _store.USE_DB and db is not None:
-        try:
-            result = await db_patch_incident(
-                db, incident_id, patch, expected_assignee=inc["assigned_to"]
-            )
-        except StaleIncident:
-            raise HTTPException(status_code=409, detail="Incident was reassigned meanwhile, reload and retry") from None
-        if result is None:
-            raise HTTPException(status_code=404, detail="Incident not found")
-        return result
-    # In memory there is no await between the check and this write: atomic.
-    inc.update(patch)
-    inc["updated_at"] = datetime.now(timezone.utc).isoformat()
-    return inc
+    try:
+        # Written only if the assignee is still the one the check saw.
+        result = await incidents(db).patch(incident_id, patch, expected_assignee=inc["assigned_to"])
+    except StaleIncident:
+        raise HTTPException(status_code=409, detail="Incident was reassigned meanwhile, reload and retry") from None
+    if result is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return result
 
 
 @router.get("/api/ip/{ip}/case")
@@ -147,13 +124,8 @@ async def get_ip_case(
     ip: str = Depends(validate_ip),
     db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
 ):
-    if _store.USE_DB and db is not None:
-        inc = await db_find_open_incident_by_ip(db, ip)
-        return {"case_id": inc["id"] if inc else None}
-    for inc in incidents_store:
-        if inc.get("source_ip") == ip and inc["status"] != "closed":
-            return {"case_id": inc["id"]}
-    return {"case_id": None}
+    inc = await incidents(db).open_case_for_ip(ip)
+    return {"case_id": inc["id"] if inc else None}
 
 
 @router.post("/api/incidents/from-ip")
@@ -175,14 +147,10 @@ async def update_tasks(
     inc = await _load_incident(incident_id, db)
     check_work_on_incident(user, inc)
     completed = _validate_completed_tasks(body, inc)
-    if _store.USE_DB and db is not None:
-        result = await db_update_tasks(db, incident_id, completed)
-        if result is None:
-            raise HTTPException(status_code=404, detail="Incident not found")
-        return {"completed_tasks": result}
-    inc["completed_tasks"] = completed
-    inc["updated_at"] = datetime.now(timezone.utc).isoformat()
-    return {"completed_tasks": inc["completed_tasks"]}
+    result = await incidents(db).set_tasks(incident_id, completed)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return {"completed_tasks": result}
 
 
 @router.post("/api/incidents/{incident_id}/notes")
@@ -194,9 +162,7 @@ async def add_note(
     author = user.username  # from the verified session, never from the request body
     inc = await _load_incident(incident_id, db)
     check_work_on_incident(user, inc)
-    if _store.USE_DB and db is not None:
-        return await db_add_note(db, incident_id, text=text, author=author)
-    note = {"author": author, "text": text, "at": datetime.now(timezone.utc).isoformat()}
-    inc["notes"].append(note)
-    inc["updated_at"] = note["at"]
+    note = await incidents(db).add_note(incident_id, text, author)
+    if note is None:
+        raise HTTPException(status_code=404, detail="Incident not found")
     return note
