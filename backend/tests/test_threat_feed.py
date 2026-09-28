@@ -37,6 +37,7 @@ def _feed(monkeypatch):
     monkeypatch.setattr(m, "ABUSEIPDB_API_KEY", "test-key")
     monkeypatch.setattr(m, "THREAT_IPS", {})
     monkeypatch.setattr(m, "FEED_STATUS", {"state": "unavailable", "reason": None})
+    monkeypatch.setattr(m, "_quota_resets_in", None)
 
 
 # ── Feed state ────────────────────────────────────────────────
@@ -176,3 +177,49 @@ def test_lookup_caches_are_bounded(monkeypatch):
     for i in range(5):
         ip_router._cache_put(cache, f"8.8.8.{i}", i)
     assert list(cache) == ["8.8.8.2", "8.8.8.3", "8.8.8.4"]   # oldest evicted
+
+
+# ── Retry at the quota reset ──────────────────────────────────
+
+def _quota_response(retry_after: str | None) -> httpx.Response:
+    headers = {"Retry-After": retry_after} if retry_after is not None else {}
+    return httpx.Response(429, headers=headers, request=httpx.Request("GET", "https://api.test"))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("header, wait", [
+    ("7200", 7200),                         # retry exactly at the reset
+    ("0", m.MIN_RETRY_SECONDS),             # never hammer the API
+    ("999999999", m.REFRESH_SECONDS),       # never freeze the feed
+    (None, m.RETRY_SECONDS),                # no header: hourly
+    ("soon", m.RETRY_SECONDS),              # unreadable: hourly
+    ("", m.RETRY_SECONDS),
+])
+async def test_a_429_retries_when_the_quota_resets(header, wait):
+    await _refresh_with(_quota_response(header), cache={}, allow_sample=True)
+    assert m.next_refresh_in() == wait
+
+
+@pytest.mark.asyncio
+async def test_retry_after_as_an_http_date():
+    from email.utils import format_datetime
+    from datetime import datetime, timedelta, timezone
+    reset = format_datetime(datetime.now(timezone.utc) + timedelta(hours=3), usegmt=True)
+    await _refresh_with(_quota_response(reset), cache={}, allow_sample=True)
+    assert abs(m.next_refresh_in() - 3 * 3600) <= 5
+
+
+@pytest.mark.asyncio
+async def test_retry_after_on_other_errors_is_ignored():
+    response = httpx.Response(503, headers={"Retry-After": "7200"}, request=httpx.Request("GET", "https://api.test"))
+    await _refresh_with(response, cache={}, allow_sample=True)
+    assert m.next_refresh_in() == m.RETRY_SECONDS
+
+
+@pytest.mark.asyncio
+async def test_a_successful_fetch_forgets_the_old_reset_time():
+    await _refresh_with(_quota_response("7200"), cache={}, allow_sample=True)
+    body = {"data": [{"ipAddress": "8.8.8.8", "abuseConfidenceScore": 97}]}
+    await _refresh_with(_response(200, body), cache={}, allow_sample=True)
+    assert m.next_refresh_in() == m.REFRESH_SECONDS
+    assert m._quota_resets_in is None
