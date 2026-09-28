@@ -178,6 +178,7 @@ All endpoints require a session except those marked *public*. Role requirements 
 | GET | `/auth/ws-ticket` | Short-lived (5 min) ticket for the WebSocket | any user |
 | WS | `/ws/threats?ticket=…` | Live threat event stream | valid ticket |
 | GET | `/api/config` | `{demo_mode}` | public |
+| GET | `/api/threat-feed` | Threat feed `{state, reason}` (see below) | any user |
 | GET | `/api/users` | Active users (no password hashes) | any user |
 | GET | `/api/users/directory` | Every name ever used, incl. deleted users (for history) | any user |
 | POST | `/api/users` | Create a user | admin |
@@ -223,6 +224,22 @@ FastAPI (port 8000)
 ```
 
 Routers never branch on the storage: `repositories.py` gives them the database or the in-memory implementation, and both are tested the same way (the permission matrix and `test_storage_parity.py` run in both modes).
+
+### Threat feed
+
+The live stream is built from the AbuseIPDB blacklist (fetched at most once a day; the free tier allows only a few
+blacklist calls per day). The last list is kept in a file cache and, with a database, in the `threat_feed_snapshot`
+table, so a restart on a host with an ephemeral disk (Render) does not spend the quota.
+
+| State | Meaning |
+|-------|---------|
+| `live` | A list fetched within the last day |
+| `cached` | An older stored list, because the refresh failed (`reason`: `quota`, `error`) or there is no `ABUSEIPDB_API_KEY` |
+| `sample` | Demo mode only, with no stored list: the bundled `threat_ips_sample.json` |
+| `unavailable` | Nothing to stream (outside demo mode, sample data is never used) |
+
+While the feed is not `live` the backend retries hourly. The UI shows a banner for `sample` and `unavailable`.
+Stored lists are validated before use: public IPs with an integer score 0-100, at most 1000 entries.
 
 The frontend uses a central `ThreatStoreService` (Angular signals) as the single source of truth for HTTP calls and cached state. WebSocket events are pushed into the store, and components react to signal changes. The current user (from `/auth/me`) lives in `AuthService`; the UI hides or disables actions the user is not allowed to take, using the same permission rules as the server.
 

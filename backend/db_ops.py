@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from constants import BEHAVIORAL_DEFAULTS
-from models import Incident, Note, IncidentTask, Rule, BehavioralSettings, User, RevokedSession
+from models import Incident, Note, IncidentTask, Rule, BehavioralSettings, ThreatFeedSnapshot, User, RevokedSession
 
 
 def _incident_to_dict(inc: Incident) -> dict:
@@ -286,6 +286,27 @@ async def db_update_behavioral_settings(session: AsyncSession, patch: dict) -> d
     await session.commit()
     await session.refresh(bs)
     return _behavioral_settings_to_dict(bs)
+
+
+# ── Threat feed snapshot ──────────────────────────────────────
+# Raw stored data: simulation.py validates it before streaming anything.
+
+async def db_get_threat_feed_snapshot(session: AsyncSession) -> tuple[object, datetime] | None:
+    row = (await session.execute(select(ThreatFeedSnapshot).limit(1))).scalar_one_or_none()
+    if row is None:
+        return None
+    saved_at = row.saved_at if row.saved_at.tzinfo else row.saved_at.replace(tzinfo=timezone.utc)
+    return json.loads(row.ips), saved_at
+
+
+async def db_save_threat_feed_snapshot(session: AsyncSession, ips: dict[str, int]) -> None:
+    row = (await session.execute(select(ThreatFeedSnapshot).limit(1))).scalar_one_or_none()
+    if row is None:
+        row = ThreatFeedSnapshot(id=1)
+        session.add(row)
+    row.ips = json.dumps(ips)
+    row.saved_at = datetime.now(timezone.utc)
+    await session.commit()
 
 
 # ── Users ─────────────────────────────────────────────────────

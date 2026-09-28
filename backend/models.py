@@ -72,6 +72,15 @@ class BehavioralSettings(Base):
     updated_at:            Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
 
 
+class ThreatFeedSnapshot(Base):
+    """The last AbuseIPDB blacklist (one row), so a restart does not spend the daily quota."""
+    __tablename__ = "threat_feed_snapshot"
+
+    id:       Mapped[int]      = mapped_column(Integer, primary_key=True)
+    ips:      Mapped[str]      = mapped_column(Text, nullable=False)   # JSON: {"ip": score}
+    saved_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), nullable=False)
+
+
 class User(Base):
     __tablename__ = "users"
 

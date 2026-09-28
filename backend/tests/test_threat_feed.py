@@ -121,7 +121,7 @@ def test_feed_status_is_served(monkeypatch):
 # ── Regression: startup read a stale copy of THREAT_IPS ───────
 
 def test_ipinfo_prefetch_sees_the_refreshed_ip_list(monkeypatch):
-    async def fake_refresh(allow_sample: bool = False) -> None:
+    async def fake_refresh(**_) -> None:
         m.THREAT_IPS = {"8.8.8.8": 90}
 
     async def fake_ipinfo(client, ip):

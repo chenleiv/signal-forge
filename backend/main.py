@@ -117,7 +117,7 @@ async def lifespan(app: FastAPI):
                 })
                 print(f"[DB] Loaded behavioral settings: {_store._behavioral_config}")
 
-    await refresh_threat_ips(allow_sample=DEMO_MODE)
+    await refresh_threat_ips(allow_sample=DEMO_MODE, session_factory=AsyncSessionLocal if USE_DB else None)
 
     async def _prefetch_ipinfo():
         if IPINFO_TOKEN:
@@ -131,7 +131,7 @@ async def lifespan(app: FastAPI):
     async def _refresh_loop():
         while True:
             await asyncio.sleep(next_refresh_in())
-            await refresh_threat_ips(allow_sample=DEMO_MODE)
+            await refresh_threat_ips(allow_sample=DEMO_MODE, session_factory=AsyncSessionLocal if USE_DB else None)
 
     async def _behavioral_loop():
         while True:

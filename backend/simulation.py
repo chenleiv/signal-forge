@@ -4,7 +4,7 @@ import os
 import pathlib
 import random
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Callable, Optional
 
 import httpx
 
@@ -12,7 +12,8 @@ from constants import (
     COUNTRY_NAMES, ATTACK_TYPES, REGIONS, _SEVERITY_BANDS, _SQLI_PAYLOADS, _MALWARE_FAMILIES,
     _SERVICES, _PROTOCOLS, _SCAN_TYPES, _ENDPOINTS,
 )
-from store import _ip_coords
+from db_ops import db_get_threat_feed_snapshot, db_save_threat_feed_snapshot
+from store import _ip_coords, is_public_ip
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 IPINFO_TOKEN      = os.environ.get("IPINFO_TOKEN", "")
@@ -33,14 +34,30 @@ RETRY_SECONDS   = 3600
 #   reason: why it is not live: quota (AbuseIPDB 429) | no_key | error
 FEED_STATUS: dict[str, Optional[str]] = {"state": "unavailable", "reason": None}
 
+# Stored lists (file, database) are only trusted after this check, since
+# they feed the live stream directly.
+MAX_FEED_IPS = 1000
+
+
+def _clean_ips(raw: object) -> dict[str, int]:
+    """Public IPs with an integer score 0-100; anything else is dropped."""
+    if not isinstance(raw, dict):
+        return {}
+    clean = {
+        ip: score for ip, score in raw.items()
+        if is_public_ip(ip) and type(score) is int and 0 <= score <= 100
+    }
+    return dict(list(clean.items())[:MAX_FEED_IPS])
+
 
 def _load_cache() -> dict[str, int]:
     try:
         if _CACHE_FILE.exists():
             data = json.loads(_CACHE_FILE.read_text())
-            if isinstance(data, dict) and data.get("ips"):
-                print(f"[AbuseIPDB] Loaded {len(data['ips'])} threat IPs from cache")
-                return data["ips"]
+            ips = _clean_ips(data.get("ips")) if isinstance(data, dict) else {}
+            if ips:
+                print(f"[AbuseIPDB] Loaded {len(ips)} threat IPs from cache")
+                return ips
     except Exception:
         pass
     return {}
@@ -112,10 +129,45 @@ def _set_status(state: str, reason: Optional[str]) -> None:
     FEED_STATUS.update(state=state, reason=reason)
 
 
-def _use_fallback(reason: str, allow_sample: bool) -> None:
-    """No fresh data: stream the cache, else the sample (demo only), else nothing."""
+# ── Database snapshot ─────────────────────────────────────────
+# Render's disk is wiped on every restart, so the file cache alone let each
+# restart spend one of the few daily blacklist calls. The snapshot survives.
+
+SessionFactory = Callable[[], object]
+
+
+async def _load_snapshot(session_factory: Optional[SessionFactory]) -> Optional[tuple[dict[str, int], float]]:
+    """(ips, age in seconds), or None: no database, no row, or unusable data."""
+    if session_factory is None:
+        return None
+    try:
+        async with session_factory() as session:
+            stored = await db_get_threat_feed_snapshot(session)
+    except Exception as exc:
+        print(f"[AbuseIPDB] Could not read the stored snapshot ({type(exc).__name__})")
+        return None
+    if stored is None:
+        return None
+    ips = _clean_ips(stored[0])
+    age = datetime.now(timezone.utc).timestamp() - stored[1].timestamp()
+    return (ips, age) if ips else None
+
+
+async def _save_snapshot(session_factory: Optional[SessionFactory], ips: dict[str, int]) -> None:
+    if session_factory is None:
+        return
+    try:
+        async with session_factory() as session:
+            await db_save_threat_feed_snapshot(session, ips)
+    except Exception as exc:
+        print(f"[AbuseIPDB] Could not store the snapshot ({type(exc).__name__})")
+
+
+def _use_fallback(reason: str, allow_sample: bool, stored: Optional[tuple[dict[str, int], float]] = None) -> None:
+    """No fresh data: stream the file cache or the stored snapshot, else the
+    sample (demo only), else nothing."""
     global THREAT_IPS
-    if cached := _load_cache():
+    if cached := _load_cache() or (stored[0] if stored else {}):
         THREAT_IPS, state = cached, "cached"
     elif allow_sample and (sample := _load_sample()):
         THREAT_IPS, state = sample, "sample"
@@ -132,10 +184,11 @@ def next_refresh_in() -> int:
     return RETRY_SECONDS
 
 
-async def refresh_threat_ips(allow_sample: bool = False) -> None:
+async def refresh_threat_ips(allow_sample: bool = False, session_factory: Optional[SessionFactory] = None) -> None:
     global THREAT_IPS
+    stored = await _load_snapshot(session_factory)
     if not ABUSEIPDB_API_KEY:
-        _use_fallback("no_key", allow_sample)
+        _use_fallback("no_key", allow_sample, stored)
         if not THREAT_IPS:
             print("[AbuseIPDB] No API key and no cache — simulation paused")
         return
@@ -143,6 +196,11 @@ async def refresh_threat_ips(allow_sample: bool = False) -> None:
         THREAT_IPS = cached
         _set_status("live", None)
         print(f"[AbuseIPDB] Cache is fresh — skipping API call ({len(THREAT_IPS)} IPs)")
+        return
+    if stored and stored[1] < REFRESH_SECONDS:
+        THREAT_IPS = stored[0]
+        _set_status("live", None)
+        print(f"[AbuseIPDB] Stored snapshot is fresh — skipping API call ({len(THREAT_IPS)} IPs)")
         return
     try:
         async with httpx.AsyncClient() as client:
@@ -154,21 +212,22 @@ async def refresh_threat_ips(allow_sample: bool = False) -> None:
             )
             r.raise_for_status()
             entries = r.json().get("data", [])
-            ip_scores = {
+            ip_scores = _clean_ips({
                 e["ipAddress"]: e.get("abuseConfidenceScore", 50)
-                for e in entries if e.get("ipAddress")
-            }
+                for e in entries if isinstance(e, dict) and e.get("ipAddress")
+            })
             if ip_scores:
                 THREAT_IPS = ip_scores
                 _save_cache(ip_scores)
+                await _save_snapshot(session_factory, ip_scores)
                 _set_status("live", None)
                 print(f"[AbuseIPDB] Loaded {len(ip_scores)} threat IPs with real scores")
             else:
-                _use_fallback("error", allow_sample)
+                _use_fallback("error", allow_sample, stored)
                 print("[AbuseIPDB] Empty response — falling back to cache")
     except Exception as exc:
         status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
-        _use_fallback("quota" if status == 429 else "error", allow_sample)
+        _use_fallback("quota" if status == 429 else "error", allow_sample, stored)
         # Type and status only: the message may echo the request (and its key).
         print(f"[AbuseIPDB] Refresh failed ({type(exc).__name__}, status={status}) — feed is {FEED_STATUS['state']}")
 

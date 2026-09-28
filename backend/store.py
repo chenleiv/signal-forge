@@ -108,12 +108,23 @@ def verify_token(request: Request) -> CurrentUser:
     return CurrentUser(username=username, role=role)
 
 
+def _is_non_public(parsed: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return parsed.is_private or parsed.is_loopback or parsed.is_link_local or parsed.is_reserved or parsed.is_multicast
+
+
+def is_public_ip(ip: object) -> bool:
+    try:
+        return isinstance(ip, str) and not _is_non_public(ipaddress.ip_address(ip))
+    except ValueError:
+        return False
+
+
 def validate_ip(ip: str) -> str:
     try:
         parsed = ipaddress.ip_address(ip)
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid IP address format") from None
-    if parsed.is_private or parsed.is_loopback or parsed.is_link_local or parsed.is_reserved or parsed.is_multicast:
+    if _is_non_public(parsed):
         raise HTTPException(status_code=422, detail="Private or reserved IP not allowed")
     return str(parsed)
 
