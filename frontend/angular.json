@@ -4,7 +4,9 @@
   "cli": {
     "packageManager": "npm",
     "analytics": false,
-    "schematicCollections": ["angular-eslint"]
+    "schematicCollections": [
+      "angular-eslint"
+    ]
   },
   "newProjectRoot": "projects",
   "projects": {
@@ -32,7 +34,9 @@
                 "input": "public"
               }
             ],
-            "styles": ["src/styles.scss"],
+            "styles": [
+              "src/styles.scss"
+            ],
             "allowedCommonJsDependencies": [
               "canvg",
               "html2canvas",
@@ -52,7 +56,12 @@
               "core-js/modules/es.string.includes.js",
               "core-js/modules/es.array.reverse.js",
               "core-js/modules/es.regexp.to-string.js"
-            ]
+            ],
+            "stylePreprocessorOptions": {
+              "includePaths": [
+                "src/styles"
+              ]
+            }
           },
           "configurations": {
             "production": {
@@ -102,13 +111,18 @@
         "test": {
           "builder": "@angular/build:unit-test",
           "options": {
-            "setupFiles": ["src/test-setup.ts"]
+            "setupFiles": [
+              "src/test-setup.ts"
+            ]
           }
         },
         "lint": {
           "builder": "@angular-eslint/builder:lint",
           "options": {
-            "lintFilePatterns": ["src/**/*.ts", "src/**/*.html"]
+            "lintFilePatterns": [
+              "src/**/*.ts",
+              "src/**/*.html"
+            ]
           }
         }
       }

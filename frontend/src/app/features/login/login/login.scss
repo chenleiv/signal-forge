@@ -1,10 +1,4 @@
-$bg:        var(--c-bg);
-$card:      var(--c-panel);
-$border:    var(--c-border);
-$text:      var(--c-text);
-$muted:     var(--c-muted);
-$secondary: var(--c-text-2);
-$accent:    var(--c-accent);
+@use 'tokens' as *;
 
 // ── Page ─────────────────────────────────────────────────────
 .login-page {
@@ -22,7 +16,7 @@ $accent:    var(--c-accent);
 // ── Card ─────────────────────────────────────────────────────
 .login-card {
     width: 360px;
-    background: $card;
+    background: $panel;
     border: 1px solid $border;
     border-radius: 10px;
     padding: 32px 36px 28px;

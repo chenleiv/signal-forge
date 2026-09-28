@@ -35,6 +35,16 @@ export class Dashboard {
 
   // ── private injections ────────────────────────────────────────
   protected readonly store = inject(ThreatStoreService);
+
+  /** Summary cards, in display order (icons are chosen by key in the template). */
+  readonly kpis = computed(() => [
+    { key: 'tracked',  label: 'Tracked IPs',      value: this.store.trackedIPs() },
+    { key: 'events',   label: 'Processed Events', value: this.store.events().length },
+    { key: 'epm',      label: 'Events / Min',     value: this.store.eventsPerMinute() },
+    { key: 'regions',  label: 'Active Regions',   value: this.store.activeRegions() },
+    { key: 'high',     label: 'High Severity',    value: this.store.highCount() },
+    { key: 'critical', label: 'Critical Alerts',  value: this.store.criticalCount() },
+  ]);
   private readonly themeService = inject(ThemeService);
 
   constructor() {

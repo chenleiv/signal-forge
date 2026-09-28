@@ -1,0 +1,28 @@
+// Search + filters row above a table (Incidents, Threats).
+@use 'tokens' as *;
+
+@mixin filter-bar($padding: 8px 16px, $input-width: 160px) {
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: $padding;
+    border-bottom: 1px solid $border;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .filter-input {
+    background: var(--c-input);
+    border: 1px solid $border;
+    color: $text;
+    border-radius: 3px;
+    padding: 4px 10px;
+    font-size: 11px;
+    outline: none;
+    width: $input-width;
+
+    &::placeholder { color: $muted; }
+    &:focus { border-color: rgba(59,130,246,0.4); }
+  }
+}

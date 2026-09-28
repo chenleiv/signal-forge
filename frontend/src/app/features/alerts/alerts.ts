@@ -7,6 +7,7 @@ import {
   DestroyRef,
   OnInit,
 } from '@angular/core';
+import { DrawerResize } from '../../shared/ui/drawer-resize';
 import { TitleCasePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -39,18 +40,14 @@ const DRAWER_MAX = 700;
   styleUrl: './alerts.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '(document:mousemove)': 'onMouseMove($event)',
-    '(document:mouseup)': 'onMouseUp()',
+    '(document:mousemove)': 'drawer.move($event)',
+    '(document:mouseup)': 'drawer.end()',
   },
 })
 export class Alerts implements OnInit {
   private store      = inject(ThreatStoreService);
   private destroyRef = inject(DestroyRef);
-
-  drawerWidth   = signal(420);
-  private dragging      = false;
-  private dragStartX    = 0;
-  private dragStartWidth = 0;
+  readonly drawer = new DrawerResize(420, DRAWER_MIN, DRAWER_MAX);
 
   readonly statusFilter = signal<AlertStatus | 'all'>('all');
   readonly sevFilter    = signal<SevFilter>('all');
@@ -152,21 +149,4 @@ export class Alerts implements OnInit {
       });
   }
 
-  startResize(e: MouseEvent) {
-    this.dragging      = true;
-    this.dragStartX    = e.clientX;
-    this.dragStartWidth = this.drawerWidth();
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  onMouseMove(e: MouseEvent) {
-    if (!this.dragging) return;
-    const delta = this.dragStartX - e.clientX;
-    this.drawerWidth.set(Math.min(DRAWER_MAX, Math.max(DRAWER_MIN, this.dragStartWidth + delta)));
-  }
-
-  onMouseUp() {
-    this.dragging = false;
-  }
 }

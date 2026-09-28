@@ -1,9 +1,4 @@
-$bg:     var(--c-bg);
-$panel:  var(--c-panel);
-$border: var(--c-border);
-$text:   var(--c-text);
-$muted:  var(--c-text-2);
-$accent: var(--c-accent);
+@use 'tokens' as *;
 
 :host {
     display: block;
@@ -31,7 +26,7 @@ $accent: var(--c-accent);
 
 .page-sub {
     font-size: 12px;
-    color: $muted;
+    color: $secondary;
     margin: 0;
 }
 
@@ -61,7 +56,7 @@ $accent: var(--c-accent);
 .card-icon {
     width: 16px;
     height: 16px;
-    color: $muted;
+    color: $secondary;
     flex-shrink: 0;
 }
 
@@ -76,7 +71,7 @@ $accent: var(--c-accent);
 
 .card-sub {
     font-size: 11px;
-    color: $muted;
+    color: $secondary;
     width: 100%;
     margin-left: 26px;
 }
@@ -101,7 +96,7 @@ $accent: var(--c-accent);
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-        color: $muted;
+        color: $secondary;
     }
 
     input {
@@ -181,7 +176,7 @@ $accent: var(--c-accent);
 
 .threshold-op {
     font-size: 14px;
-    color: $muted;
+    color: $secondary;
     margin-left: 4px;
 }
 
@@ -218,13 +213,13 @@ $accent: var(--c-accent);
     border: 1px solid $border;
     border-radius: 4px;
     background: transparent;
-    color: $muted;
+    color: $secondary;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.15s;
 
     &:hover {
-        border-color: $muted;
+        border-color: $secondary;
         color: $text;
     }
 }
@@ -292,7 +287,7 @@ $accent: var(--c-accent);
 }
 
 // Narrow screens (same breakpoint as the app layout): one column.
-@media (max-width: 768px) {
+@media (max-width: $narrow) {
     .settings-page {
         padding: 12px;
     }
@@ -311,7 +306,7 @@ $accent: var(--c-accent);
 .card-note {
     margin: 0;
     font-size: 12px;
-    color: $muted;
+    color: $secondary;
 }
 
 .pw-msg {

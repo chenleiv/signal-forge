@@ -3,8 +3,8 @@
 
   <!-- Mouse shortcut only: keyboard users close the drawer with its close button. -->
   <div class="drawer-backdrop" [class.active]="selectedIp()" (click)="closeDrawer()" aria-hidden="true"></div>
-  <div class="drawer-overlay" [class.open]="selectedIp()" [style.width.px]="drawerWidth()">
-    <div class="resize-handle" (mousedown)="startResize($event)">
+  <div class="drawer-overlay" [class.open]="selectedIp()" [style.width.px]="drawer.width()">
+    <div class="resize-handle" (mousedown)="drawer.start($event)">
       <div class="handle-bar"></div>
     </div>
     <app-threat-detail-drawer [ip]="selectedIp()" (closed)="closeDrawer()" (ipChange)="openDrawer($event)" />

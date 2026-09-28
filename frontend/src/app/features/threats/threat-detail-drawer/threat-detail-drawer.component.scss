@@ -1,10 +1,4 @@
-$bg:        var(--c-bg);
-$panel:     var(--c-panel);
-$border:    var(--c-border);
-$text:      var(--c-text);
-$secondary: var(--c-text-2);
-$muted:     var(--c-muted);
-$accent:    var(--c-accent);
+@use 'tokens' as *;
 
 :host {
   display: flex;

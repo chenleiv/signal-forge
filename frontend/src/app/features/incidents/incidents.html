@@ -9,31 +9,9 @@
     <input class="filter-input" [value]="searchText()"
            (input)="searchText.set($any($event.target).value)"
            placeholder="Search title or ID…" />
-    <div class="filter-pills">
-      @for (s of ['all','open','investigating','contained','closed']; track s) {
-        <button class="pill pill-status pill-{{ s }}" [class.active]="statusFilter() === s"
-                (click)="statusFilter.set(s)">
-          {{ s === 'all' ? 'All Status' : s }}
-        </button>
-      }
-    </div>
-    <div class="filter-pills">
-      @for (sev of ['all','critical','high','medium','low']; track sev) {
-        <button class="pill pill-sev pill-{{ sev }}" [class.active]="severityFilter() === sev"
-                (click)="severityFilter.set(sev)">
-          {{ sev === 'all' ? 'All Sev' : sev }}
-        </button>
-      }
-    </div>
-    <div class="export-wrap">
-      <button class="btn-export" (click)="exportOpen.update(v => !v)">↓ Export</button>
-      @if (exportOpen()) {
-        <div class="export-dropdown">
-          <button (click)="exportCsv()">CSV</button>
-          <button (click)="exportPdf()">PDF</button>
-        </div>
-      }
-    </div>
+    <app-filter-pills [options]="statuses" allLabel="All Status" [(value)]="statusFilter" />
+    <app-filter-pills [options]="severities" allLabel="All Sev" [(value)]="severityFilter" />
+    <app-export-menu (csv)="exportCsv()" (pdf)="exportPdf()" />
   </div>
 
   <div class="table-wrap h-scroll">
@@ -96,8 +74,8 @@
 
   <!-- Mouse shortcut only: keyboard users close the drawer with its close button. -->
   <div class="drawer-backdrop" [class.active]="selected()" (click)="close()" aria-hidden="true"></div>
-  <div class="drawer-overlay" [class.open]="selected()" [style.width.px]="drawerWidth()">
-    <div class="resize-handle" (mousedown)="startResize($event)">
+  <div class="drawer-overlay" [class.open]="selected()" [style.width.px]="drawer.width()">
+    <div class="resize-handle" (mousedown)="drawer.start($event)">
       <div class="handle-bar"></div>
     </div>
     <app-incident-detail

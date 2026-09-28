@@ -6,6 +6,9 @@ import {
   ChangeDetectionStrategy,
   DestroyRef,
 } from '@angular/core';
+import { ExportMenuComponent } from '../../shared/ui/export-menu.component';
+import { FilterPillsComponent } from '../../shared/ui/filter-pills.component';
+import { DrawerResize } from '../../shared/ui/drawer-resize';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
@@ -18,14 +21,13 @@ import { downloadCsv, downloadPdf } from '../../core/utils/export.utils';
 @Component({
   selector: 'app-incidents',
   standalone: true,
-  imports: [DatePipe, IncidentDetailComponent],
+  imports: [DatePipe, IncidentDetailComponent, FilterPillsComponent, ExportMenuComponent],
   templateUrl: './incidents.html',
   styleUrl: './incidents.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '(document:click)': 'onDocClick($event)',
-    '(document:mousemove)': 'onMouseMove($event)',
-    '(document:mouseup)': 'onMouseUp()',
+    '(document:mousemove)': 'drawer.move($event)',
+    '(document:mouseup)': 'drawer.end()',
   },
 })
 export class Incidents {
@@ -35,8 +37,9 @@ export class Incidents {
   searchText = signal('');
   statusFilter = signal('all');
   severityFilter = signal('all');
-  exportOpen = signal(false);
-  drawerWidth = signal(500);
+  readonly statuses = ['open', 'investigating', 'contained', 'closed'] as const;
+  readonly severities = ['critical', 'high', 'medium', 'low'] as const;
+  readonly drawer = new DrawerResize(500, 500, 700);
   toast = signal<string | null>(null);
 
   readonly filtered = computed(() => {
@@ -56,10 +59,6 @@ export class Incidents {
   private destroyRef = inject(DestroyRef);
   private store = inject(ThreatStoreService);
   private route = inject(ActivatedRoute);
-
-  private dragging = false;
-  private dragStartX = 0;
-  private dragStartWidth = 0;
 
   private readonly exportHeaders = [
     'ID',
@@ -122,31 +121,8 @@ export class Incidents {
     this.incidents.update((list) => list.map((i) => (i.id === updated.id ? updated : i)));
   }
 
-  startResize(e: MouseEvent) {
-    this.dragging = true;
-    this.dragStartX = e.clientX;
-    this.dragStartWidth = this.drawerWidth();
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  onDocClick(e: MouseEvent) {
-    if (!(e.target as HTMLElement).closest('.export-wrap')) this.exportOpen.set(false);
-  }
-
-  onMouseMove(e: MouseEvent) {
-    if (!this.dragging) return;
-    const delta = this.dragStartX - e.clientX;
-    this.drawerWidth.set(Math.min(700, Math.max(500, this.dragStartWidth + delta)));
-  }
-
-  onMouseUp() {
-    this.dragging = false;
-  }
-
   exportCsv() {
     downloadCsv(this.exportHeaders, this.exportRows, 'incidents.csv');
-    this.exportOpen.set(false);
   }
   exportPdf() {
     downloadPdf(
@@ -154,7 +130,7 @@ export class Incidents {
       this.exportHeaders,
       this.exportRows,
       'incidents.pdf',
-    ).then(() => this.exportOpen.set(false));
+    );
   }
 
   readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? '#9ca3af';

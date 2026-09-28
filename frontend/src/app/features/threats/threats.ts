@@ -1,3 +1,4 @@
+import { DrawerResize } from '../../shared/ui/drawer-resize';
 import { Component, signal, inject, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -12,8 +13,8 @@ import { ThreatDetailDrawerComponent } from './threat-detail-drawer/threat-detai
   styleUrl: './threats.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    '(document:mousemove)': 'onMouseMove($event)',
-    '(document:mouseup)': 'onMouseUp()',
+    '(document:mousemove)': 'drawer.move($event)',
+    '(document:mouseup)': 'drawer.end()',
   },
 })
 export class Threats {
@@ -22,11 +23,7 @@ export class Threats {
   private destroyRef = inject(DestroyRef);
 
   selectedIp = signal<string | null>(null);
-  drawerWidth = signal(500);
-
-  private dragging = false;
-  private dragStartX = 0;
-  private dragStartWidth = 0;
+  readonly drawer = new DrawerResize(500, 500, 700);
 
   constructor() {
     this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -45,21 +42,4 @@ export class Threats {
     this.selectedIp.set(null);
   }
 
-  startResize(e: MouseEvent) {
-    this.dragging = true;
-    this.dragStartX = e.clientX;
-    this.dragStartWidth = this.drawerWidth();
-    e.preventDefault();
-    e.stopPropagation();
-  }
-
-  onMouseMove(e: MouseEvent) {
-    if (!this.dragging) return;
-    const delta = this.dragStartX - e.clientX;
-    this.drawerWidth.set(Math.min(700, Math.max(500, this.dragStartWidth + delta)));
-  }
-
-  onMouseUp() {
-    this.dragging = false;
-  }
 }
