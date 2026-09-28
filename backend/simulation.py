@@ -4,6 +4,7 @@ import os
 import pathlib
 import random
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Callable, Optional
 
 import httpx
@@ -27,6 +28,10 @@ _SAMPLE_FILE = pathlib.Path(__file__).parent / "threat_ips_sample.json"
 
 REFRESH_SECONDS = 24 * 3600
 RETRY_SECONDS   = 3600
+# A 429's Retry-After is clamped to [MIN_RETRY_SECONDS, REFRESH_SECONDS]: a
+# huge value must not freeze the feed, a tiny one must not hammer the API.
+MIN_RETRY_SECONDS = 5 * 60
+_quota_resets_in: Optional[int] = None
 
 # What the live stream is built from, served to the UI so a paused or sample
 # feed is explained instead of looking like a fault.
@@ -177,15 +182,36 @@ def _use_fallback(reason: str, allow_sample: bool, stored: Optional[tuple[dict[s
     _set_status(state, reason)
 
 
+def _retry_after(response: httpx.Response) -> Optional[int]:
+    """Seconds until the quota resets, from Retry-After (seconds or an HTTP date).
+    None when the header is missing or unreadable."""
+    value = response.headers.get("Retry-After", "").strip()
+    if value.isdigit():
+        seconds = float(value)
+    else:
+        try:
+            when = parsedate_to_datetime(value)
+        except (TypeError, ValueError, IndexError):
+            return None
+        if when.tzinfo is None:
+            when = when.replace(tzinfo=timezone.utc)
+        seconds = (when - datetime.now(timezone.utc)).total_seconds()
+    return int(min(max(seconds, MIN_RETRY_SECONDS), REFRESH_SECONDS))
+
+
 def next_refresh_in() -> int:
-    """Retry hourly while the feed is not live, so it resumes soon after the quota resets."""
+    """When to fetch again: daily when live; at the quota reset after a 429
+    that says when; otherwise hourly, so the feed resumes soon."""
     if FEED_STATUS["state"] == "live" or FEED_STATUS["reason"] == "no_key":
         return REFRESH_SECONDS
+    if FEED_STATUS["reason"] == "quota" and _quota_resets_in is not None:
+        return _quota_resets_in
     return RETRY_SECONDS
 
 
 async def refresh_threat_ips(allow_sample: bool = False, session_factory: Optional[SessionFactory] = None) -> None:
-    global THREAT_IPS
+    global THREAT_IPS, _quota_resets_in
+    _quota_resets_in = None
     stored = await _load_snapshot(session_factory)
     if not ABUSEIPDB_API_KEY:
         _use_fallback("no_key", allow_sample, stored)
@@ -227,6 +253,8 @@ async def refresh_threat_ips(allow_sample: bool = False, session_factory: Option
                 print("[AbuseIPDB] Empty response — falling back to cache")
     except Exception as exc:
         status = exc.response.status_code if isinstance(exc, httpx.HTTPStatusError) else None
+        if status == 429:
+            _quota_resets_in = _retry_after(exc.response)
         _use_fallback("quota" if status == 429 else "error", allow_sample, stored)
         # Type and status only: the message may echo the request (and its key).
         print(f"[AbuseIPDB] Refresh failed ({type(exc).__name__}, status={status}) — feed is {FEED_STATUS['state']}")

@@ -238,7 +238,7 @@ table, so a restart on a host with an ephemeral disk (Render) does not spend the
 | `sample` | Demo mode only, with no stored list: the bundled `threat_ips_sample.json` |
 | `unavailable` | Nothing to stream (outside demo mode, sample data is never used) |
 
-While the feed is not `live` the backend retries hourly. The UI shows a banner for `sample` and `unavailable`.
+While the feed is not `live` the backend retries: at the quota reset when a 429 carries `Retry-After` (clamped to 5 minutes - 24 hours), otherwise hourly. The UI shows a banner for `sample` and `unavailable`.
 Stored lists are validated before use: public IPs with an integer score 0-100, at most 1000 entries.
 
 The frontend uses a central `ThreatStoreService` (Angular signals) as the single source of truth for HTTP calls and cached state. WebSocket events are pushed into the store, and components react to signal changes. The current user (from `/auth/me`) lives in `AuthService`; the UI hides or disables actions the user is not allowed to take, using the same permission rules as the server.
