@@ -5,7 +5,6 @@ import {
   IpGeo,
   RelatedIp,
   ThreatEvent,
-  ThreatLevel,
   ThreatStats,
   Incident,
   IncidentNote,

@@ -82,14 +82,9 @@ def block_ip(ip: str) -> bool:
 # ── Auth helpers ──────────────────────────────────────────────
 
 def verify_token(request: Request) -> CurrentUser:
-    """Validate the session cookie and return the authenticated user.
-
-    Routes that need to know *who* is acting must use this return value,
-    never an identity field sent by the client. Besides the signature, every
-    request re-checks the token against the CURRENT user record (active,
-    same role, same session key), so deleting a user, changing their role or
-    resetting their password takes effect immediately.
-    """
+    """The authenticated user: the only source of "who is acting". Besides the
+    signature, checks the token against the current user record and the logout
+    list, so deletions, role changes, resets and logouts apply immediately."""
     token = request.cookies.get(_COOKIE)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")

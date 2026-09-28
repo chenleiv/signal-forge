@@ -18,39 +18,19 @@ const ALICE: CurrentUser = { username: 'alice', display_name: 'Alice Chen', role
 const ADMIN: CurrentUser = { username: 'admin', display_name: 'Sarah Kim', role: 'admin' };
 const inc = (assigned_to: string | null) => ({ assigned_to });
 
+// Who may do what, per role, is the shared permission matrix
+// (permissions.matrix.spec.ts). These are the edges it does not reach:
+// server wording, no-ops, smuggled fields, and helpers used only by the UI.
 describe('permissions (mirror of backend/authz.py)', () => {
   describe('canWorkOnIncident', () => {
-    it.each([
-      ['own', 'alice', true],
-      ["someone else's", 'bob', false],
-      ['unassigned', null, false],
-    ])('analyst on %s incident -> %s', (_label, owner, allowed) => {
-      expect(canWorkOnIncident(ALICE, inc(owner as string | null)).allowed).toBe(allowed);
-    });
-
-    it.each(['alice', 'bob', null])('admin on incident owned by %s -> allowed', owner => {
-      expect(canWorkOnIncident(ADMIN, inc(owner)).allowed).toBe(true);
-    });
-
     it('uses the server wording for the reason', () => {
       expect(canWorkOnIncident(ALICE, inc('bob'))).toEqual({ allowed: false, reason: DENY_REASONS.work });
     });
   });
 
   describe('canAssign', () => {
-    it.each([
-      // owner,  new,     analyst, admin
-      [null,     'alice', true,    true],   // take unassigned for self
-      [null,     'bob',   false,   true],   // assign unassigned to someone else
-      ['bob',    'alice', false,   true],   // take someone else's
-      ['alice',  'bob',   false,   true],   // hand own away
-      ['alice',  null,    false,   true],   // unassign own
-      ['bob',    null,    false,   true],   // unassign someone else's
-      ['bob',    'bob',   true,    true],   // unchanged: no-op
-      [null,     null,    true,    true],   // unchanged: no-op
-    ])('%s -> %s: analyst %s, admin %s', (owner, next, analyst, admin) => {
-      expect(canAssign(ALICE, inc(owner as string | null), next as string | null).allowed).toBe(analyst);
-      expect(canAssign(ADMIN, inc(owner as string | null), next as string | null).allowed).toBe(admin);
+    it.each([['bob'], [null]])('an unchanged assignee (%s) is a no-op, allowed even for an analyst', owner => {
+      expect(canAssign(ALICE, inc(owner), owner).allowed).toBe(true);
     });
   });
 
@@ -88,21 +68,11 @@ describe('permissions (mirror of backend/authz.py)', () => {
     });
   });
 
-  it('configuration (rules, behavioral settings): admin only', () => {
-    expect(canManageConfiguration(ADMIN).allowed).toBe(true);
-    expect(canManageConfiguration(ALICE)).toEqual({ allowed: false, reason: DENY_REASONS.admin });
-  });
-
-  it('user management: admin only', () => {
-    expect(canManageUsers(ADMIN).allowed).toBe(true);
-    expect(canManageUsers(ALICE)).toEqual({ allowed: false, reason: DENY_REASONS.admin });
-    expect(canManageUsers(null).allowed).toBe(false);
-  });
-
   it('no user: everything denied', () => {
     for (const d of [
       canWorkOnIncident(null, inc(null)), canAssign(null, inc(null), 'x'), canTakeIncident(null, inc(null)),
       canReassign(null), canPatchIncident(null, inc(null), {}), canManageConfiguration(null),
+      canManageUsers(null),
     ]) {
       expect(d).toEqual({ allowed: false, reason: DENY_REASONS.notAuthenticated });
     }
@@ -111,17 +81,8 @@ describe('permissions (mirror of backend/authz.py)', () => {
   describe('manager', () => {
     const MIRA: CurrentUser = { username: 'mira', display_name: 'Mira Cohen', role: 'manager' };
 
-    it('works on and assigns any incident, like an admin', () => {
-      expect(canWorkOnIncident(MIRA, inc('bob')).allowed).toBe(true);
-      expect(canWorkOnIncident(MIRA, inc(null)).allowed).toBe(true);
-      expect(canAssign(MIRA, inc('bob'), 'alice').allowed).toBe(true);
-      expect(canAssign(MIRA, inc('alice'), null).allowed).toBe(true);
+    it('gets the assign dropdown, like an admin', () => {
       expect(canReassign(MIRA).allowed).toBe(true);
-    });
-
-    it('does not manage configuration or users', () => {
-      expect(canManageConfiguration(MIRA)).toEqual({ allowed: false, reason: DENY_REASONS.admin });
-      expect(canManageUsers(MIRA)).toEqual({ allowed: false, reason: DENY_REASONS.admin });
     });
 
     it('may open the Users screen (analysts may not)', () => {

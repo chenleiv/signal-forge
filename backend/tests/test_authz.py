@@ -69,39 +69,9 @@ def _current(inc_id: str) -> dict:
     return next(i for i in store.incidents_store if i["id"] == inc_id)
 
 
-# ── Working on an incident: assignee or admin ─────────────────
-
-WORK_ACTIONS = {
-    "status": lambda c, i: c.patch(f"/api/incidents/{i}", json={"status": "investigating"}),
-    "note":   lambda c, i: c.post(f"/api/incidents/{i}/notes", json={"text": "looked at it"}),
-    "tasks":  lambda c, i: c.patch(f"/api/incidents/{i}/tasks", json={"completed_tasks": [0]}),
-}
-
-
-@pytest.mark.parametrize("action", WORK_ACTIONS)
-@pytest.mark.parametrize("owner,expected", [("alice", 200), ("bob", 403), (None, 403)])
-def test_analyst_works_only_on_own_incidents(alice, incident, action, owner, expected):
-    inc = incident(owner)
-    assert WORK_ACTIONS[action](alice, inc).status_code == expected
-
-
-@pytest.mark.parametrize("action", WORK_ACTIONS)
-@pytest.mark.parametrize("owner", ["alice", None])
-def test_admin_works_on_any_incident(admin, incident, action, owner):
-    assert WORK_ACTIONS[action](admin, incident(owner)).status_code == 200
-
-
-def test_denied_status_change_writes_nothing(alice, incident):
-    inc = incident("bob", status="open")
-    alice.patch(f"/api/incidents/{inc}", json={"status": "closed"})
-    assert _current(inc)["status"] == "open"
-
-
-def test_denied_note_writes_nothing(alice, incident):
-    inc = incident("bob")
-    alice.post(f"/api/incidents/{inc}/notes", json={"text": "x"})
-    assert _current(inc)["notes"] == []
-
+# ── Working on an incident ────────────────────────────────────
+# Who may work on which incident (and that a denial writes nothing) is the
+# shared permission matrix (test_permission_matrix.py); these are the edges.
 
 def test_denial_message_is_clear_and_not_leaky(alice, incident):
     r = alice.patch(f"/api/incidents/{incident('bob')}", json={"status": "closed"})
@@ -127,13 +97,6 @@ def test_analyst_cannot_assign(alice, incident, owner, new):
     inc = incident(owner)
     assert alice.patch(f"/api/incidents/{inc}", json={"assigned_to": new}).status_code == 403
     assert _current(inc)["assigned_to"] == owner
-
-
-@pytest.mark.parametrize("owner,new", [(None, "bob"), ("alice", "bob"), ("bob", None), (None, "admin")])
-def test_admin_assigns_anyone(admin, incident, owner, new):
-    inc = incident(owner)
-    assert admin.patch(f"/api/incidents/{inc}", json={"assigned_to": new}).status_code == 200
-    assert _current(inc)["assigned_to"] == new
 
 
 @pytest.mark.parametrize("new", ["mallory", "Alice Chen", 42, ["alice"]])
@@ -242,35 +205,7 @@ def test_analyst_cannot_change_configuration(alice, rule, method, path, body):
     assert ([dict(r) for r in store._rules], dict(store._behavioral_config)) == before
 
 
-@pytest.mark.parametrize("method,path,body", ADMIN_ONLY)
-def test_admin_can_change_configuration(admin, rule, method, path, body):
-    assert admin.request(method, path.format(rule=rule), json=body).status_code == 200
-
-
 # ── Everyone: reads, alerts, IP actions, console, hunts ───────
-
-def test_all_users_can_read(alice):
-    for path in ["/api/incidents", "/api/alerts", "/api/rules", "/api/behavioral/settings",
-                 "/api/users", "/api/hunts", "/api/stats"]:
-        assert alice.get(path).status_code == 200, path
-
-
-def test_analyst_can_use_shared_tools(alice):
-    assert alice.post(f"/api/ip/{PUBLIC_IP}/block").status_code == 200
-    assert alice.delete(f"/api/ip/{PUBLIC_IP}/block").status_code == 200
-    assert alice.post("/api/command", json={"command": "status"}).status_code == 200
-    hunt = alice.post("/api/hunts", json={"name": "h", "query": {}})
-    assert hunt.status_code == 200
-    assert alice.delete(f"/api/hunts/{hunt.json()['id']}").status_code == 200
-
-
-def test_analyst_can_acknowledge_alerts(alice):
-    store.alerts_store.clear()
-    store.alerts_store.appendleft({"id": "ALT-T1", "status": "new", "severity": "high",
-                                   "type": "SQLi", "ip": PUBLIC_IP,
-                                   "created_at": datetime.now(timezone.utc).isoformat()})
-    assert alice.patch("/api/alerts/ALT-T1", json={"status": "acknowledged"}).status_code == 200
-    assert alice.patch("/api/alerts/ALT-T1", json={"status": "dismissed"}).status_code == 200
 
 
 # ── Demo middleware still runs first ──────────────────────────
@@ -282,7 +217,6 @@ def test_demo_mode_blocks_even_admin_writes(admin, monkeypatch):
 
 
 # ── DB path: the take is a compare-and-set ────────────────────
-
 
 
 async def _db_incident(session, assigned_to):

@@ -265,51 +265,6 @@ $accent:    var(--c-accent);
   font-weight: 600;
 }
 
-// Timeline
-.timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.timeline-item {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--c-border);
-}
-
-.tl-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  margin-top: 3px;
-  flex-shrink: 0;
-}
-
-.tl-body {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.tl-type {
-  font-size: 13px;
-  color: $text;
-  font-family: monospace;
-}
-
-.tl-score {
-  font-size: 11px;
-  color: $secondary;
-}
-
-.tl-time {
-  font-size: 11px;
-  color: $muted;
-}
-
 // AbuseIPDB
 .enrichment-grid {
   display: grid;

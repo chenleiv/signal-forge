@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 import main
 import sessions
 import store
-from tests.conftest import ANALYST_PASSWORD
+from tests.conftest import login
 
 COOKIE = "sf_session"
 
@@ -28,12 +28,6 @@ def _clean_revocations():
     sessions._revoked.update(saved)
 
 
-def _login(username: str = "alice", password: str = ANALYST_PASSWORD) -> TestClient:
-    client = TestClient(main.app)
-    assert client.post("/auth/login", json={"username": username, "password": password}).status_code == 200
-    return client
-
-
 def _with_cookie(token: str) -> TestClient:
     client = TestClient(main.app)
     client.cookies.set(COOKIE, token)
@@ -41,7 +35,7 @@ def _with_cookie(token: str) -> TestClient:
 
 
 def test_a_copied_cookie_stops_working_after_logout():
-    browser = _login()
+    browser = login()
     stolen = browser.cookies.get(COOKIE)
     assert _with_cookie(stolen).get("/auth/me").status_code == 200
 
@@ -54,7 +48,7 @@ def test_a_copied_cookie_stops_working_after_logout():
 def test_logout_ends_only_this_session():
     """Another device of the same user, or another visitor of a shared demo
     account, stays signed in."""
-    phone, laptop = _login(), _login()
+    phone, laptop = login(), login()
     assert phone.cookies.get(COOKIE) != laptop.cookies.get(COOKIE)   # each login is its own session
 
     phone.post("/auth/logout")
@@ -63,13 +57,13 @@ def test_logout_ends_only_this_session():
 
 
 def test_logging_in_again_after_logout_works():
-    client = _login()
+    client = login()
     client.post("/auth/logout")
-    assert _login().get("/auth/me").status_code == 200
+    assert login().get("/auth/me").status_code == 200
 
 
 def test_every_login_gets_a_fresh_session_id():
-    a, b = _login(), _login()
+    a, b = login(), login()
     sid = lambda c: jwt.decode(c.cookies.get(COOKIE), store.SECRET_KEY, algorithms=["HS256"])["sid"]
     assert sid(a) != sid(b)
 
@@ -106,7 +100,7 @@ def test_expired_revocations_are_forgotten():
 
 
 def test_demo_mode_still_allows_logout(monkeypatch):
-    client = _login()
+    client = login()
     stolen = client.cookies.get(COOKIE)
     monkeypatch.setattr(main, "DEMO_MODE", True)
     assert client.post("/auth/logout").status_code == 200
@@ -114,7 +108,6 @@ def test_demo_mode_still_allows_logout(monkeypatch):
 
 
 # ── Survives a restart (with a database) ──────────────────────
-
 
 
 @pytest.mark.asyncio

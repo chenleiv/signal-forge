@@ -22,12 +22,8 @@ from users import (
 _PATCH_FIELDS = {"role", "password"}
 MAX_DISPLAY_NAME = 100
 
-# Race safety: every change checks its rules and applies them to the in-memory
-# store with NO await in between, and only then writes the database (undoing
-# the in-memory change if that write fails). Two concurrent requests therefore
-# never act on a state the other has already changed. One process only
-# (README: single worker). Which changes are allowed at all (e.g. the single
-# admin) is decided in authz.py before these run.
+# Race safety: check and apply in memory with no await in between, then write
+# the database (undone in memory if that fails). One process only.
 
 
 def _db(db: Optional[AsyncSession]) -> Optional[AsyncSession]:
@@ -148,15 +144,9 @@ _OWN_PASSWORD_FIELDS = {"current_password", "new_password"}
 
 
 async def change_own_password(db: Optional[AsyncSession], username: str, body: dict) -> dict:
-    """Self-service password change (PATCH /auth/me).
-
-    - The body is exactly {current_password, new_password}: anything else
-      (role, username, ...) is a 422, never silently ignored.
-    - The current password is verified like at login; wrong attempts are
-      rate limited per user (a stolen session cannot brute-force it).
-    - A new session key signs out every other session of the user; the
-      caller re-issues the cookie for the session that made the change.
-    """
+    """PATCH /auth/me. Exactly {current_password, new_password} (else 422);
+    wrong current passwords are rate limited per user; a new session key signs
+    out the user's other sessions (the caller re-issues this one's cookie)."""
     if set(body) != _OWN_PASSWORD_FIELDS:
         raise HTTPException(status_code=422, detail="Send exactly current_password and new_password")
     current, new = body["current_password"], body["new_password"]

@@ -37,6 +37,16 @@ def _reset_rate_limits():
     reset_limits()
 
 
+def login(username: str = "alice", password: str = ANALYST_PASSWORD):
+    """A TestClient logged in through the real /auth/login."""
+    from fastapi.testclient import TestClient
+    import main
+    client = TestClient(main.app)
+    r = client.post("/auth/login", json={"username": username, "password": password})
+    assert r.status_code == 200, r.text
+    return client
+
+
 def session_client(username: str, role: str):
     """A TestClient carrying a valid session for `username` (no login round trip)."""
     from datetime import datetime, timedelta, timezone

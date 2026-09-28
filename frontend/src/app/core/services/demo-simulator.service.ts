@@ -30,21 +30,10 @@ const ATTACK_TYPES: readonly AttackType[] = [
 ];
 
 /**
- * In-browser simulation of the core analyst actions for the public demo:
- * alert triage, incident handling and IP blocking. Other writes are not
- * simulated; the server rejects them and the UI shows a notice instead.
- *
- * Writes never reach the server. Instead this service keeps a local
- * "overlay" (created / updated / deleted items) and applies it to the
- * matching GET responses, so the UI stays consistent across polling and
- * navigation. Everything resets on page reload.
- *
- * Permissions: `authorize` applies the same matrix as the server (shared
- * helper in core/auth/permissions.ts), so the demo never "succeeds" at an
- * action the real system would deny.
- *
- * Security note: this is UX only. The server independently rejects writes
- * in demo mode, so bypassing this code gains an attacker nothing.
+ * Public demo: simulates alert, incident and IP actions in the browser and
+ * overlays them on later GETs (reset on reload). `authorize` applies the
+ * same permission matrix as the server. UX only: the server rejects every
+ * demo write regardless.
  */
 @Injectable({ providedIn: 'root' })
 export class DemoSimulatorService {

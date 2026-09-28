@@ -1,13 +1,5 @@
-"""Authorization rules: the single place that decides who may do what.
-
-Routers call these; no role checks anywhere else. The permission matrix
-(analyst / manager / admin) is testing/permission-matrix.json.
-
-- admin:   everything. There is exactly ONE admin: the account cannot be
-           deleted, and the admin role can never be granted or removed.
-- manager: works on and assigns any incident; resets analysts' passwords
-- analyst: works on own incidents, takes unassigned ones
-"""
+"""Authorization: the only place that decides who may do what (roles in
+README; cases in testing/permission-matrix.json). Routers call these."""
 from __future__ import annotations
 from typing import Optional
 
@@ -90,16 +82,9 @@ def check_incident_patch(user: CurrentUser, incident: dict, body: dict) -> dict:
 
 
 def check_user_update(actor: CurrentUser, target: Optional[dict], body: dict) -> dict:
-    """Who may change which user fields (PATCH /api/users/{username}).
-    Returns the target record.
-
-    - admin:   role and password of any user, except that the admin role is
-               never granted or removed
-    - manager: only the password of an analyst (a reset, nothing else)
-    - analyst: nothing
-
-    Analysts are refused before the lookup, so they learn nothing from it.
-    """
+    """PATCH /api/users/{username}: admins change anyone's role or password
+    (never the admin role, never their own password); managers only reset an
+    analyst's password; analysts nothing (refused before the lookup)."""
     if actor.role not in INCIDENT_LEADS:
         raise HTTPException(status_code=403, detail="Admin role required")
     if target is None or target.get("deleted_at"):
