@@ -31,12 +31,16 @@ USERNAME_RE = re.compile(r"^[a-z0-9-]{3,50}$")
 
 # Public demo accounts, shown on the login page. Seeded ONLY in demo mode.
 DEMO_USERS: list[tuple[str, str, Role, str]] = [
-    ("admin", "Sarah Kim",    "admin",   "admin-demo"),
-    ("alice", "Alice Chen",   "analyst", "alice-demo"),
-    ("bob",   "Bob Martinez", "manager", "bob-demo"),
+    ("admin", "Ad Min",    "admin",   "admin-demo"),
+    ("manny", "Manny Jer", "manager", "manny-demo"),
+    ("anna",  "Anna List", "analyst", "anna-demo"),
 ]
 _DEMO_PASSWORDS = {u: pw for u, _, _, pw in DEMO_USERS}
 DEMO_USERNAMES = frozenset(_DEMO_PASSWORDS)
+
+# Former demo accounts. Their passwords are public (old README, git history):
+# a stored row that still has one is never loaded, in any mode.
+RETIRED_DEMO_PASSWORDS = {"alice": "alice-demo", "bob": "bob-demo"}
 
 
 @dataclass(frozen=True)
@@ -170,7 +174,7 @@ def seed_users(demo_mode: bool, admin_password: str) -> None:
         for username, display_name, role, password in DEMO_USERS:
             add_user(username, display_name, role, password)
     elif admin_password:
-        add_user(ADMIN_USERNAME, "Sarah Kim", "admin", admin_password)
+        add_user(ADMIN_USERNAME, DEMO_USERS[0][1], "admin", admin_password)
 
 
 async def sync_users_with_db(session: AsyncSession, demo_mode: bool, admin_password: str) -> None:
@@ -178,7 +182,8 @@ async def sync_users_with_db(session: AsyncSession, demo_mode: bool, admin_passw
 
     A real admin password is never overwritten. Outside demo mode, public demo
     passwords never survive: the admin's is replaced with ADMIN_PASSWORD (or
-    startup fails), other demo accounts are not loaded.
+    startup fails), other demo accounts are not loaded. In demo mode the code
+    owns the demo accounts: their names and roles follow DEMO_USERS.
     """
     rows = {r["username"]: r for r in await db_get_users(session)}
     table_has_admin = any(r["role"] == "admin" and not r.get("deleted_at") for r in rows.values())
@@ -189,11 +194,13 @@ async def sync_users_with_db(session: AsyncSession, demo_mode: bool, admin_passw
             if seeded["role"] == "admin" and table_has_admin:
                 continue  # never a second admin
             rows[username] = await db_create_user(session, seeded)
-        elif demo_mode and username == ADMIN_USERNAME \
-                and not verify_password(_DEMO_PASSWORDS["admin"], row["password_hash"]):
-            fields = {"password_hash": seeded["password_hash"], "session_key": new_session_key()}
-            await db_update_user(session, username, fields)
-            row.update(fields)
+        elif demo_mode:
+            fields = {k: seeded[k] for k in ("display_name", "role") if row.get(k) != seeded[k]}
+            if username == ADMIN_USERNAME and not verify_password(_DEMO_PASSWORDS["admin"], row["password_hash"]):
+                fields.update(password_hash=seeded["password_hash"], session_key=new_session_key())
+            if fields:
+                await db_update_user(session, username, fields)
+                row.update(fields)
 
     admins = [u for u, r in rows.items() if r["role"] == "admin" and not r.get("deleted_at")]
 
@@ -224,12 +231,14 @@ async def sync_users_with_db(session: AsyncSession, demo_mode: bool, admin_passw
             row["session_key"] = new_session_key()
             await db_update_user(session, username, {"session_key": row["session_key"]})
 
-    if not demo_mode:
-        for username, demo_pw in _DEMO_PASSWORDS.items():
-            row = rows.get(username)
-            if username != "admin" and row and not row.get("deleted_at") and verify_password(demo_pw, row["password_hash"]):
-                print(f"[Users] Not loading '{username}': it still has the public demo password")
-                del rows[username]
+    # Accounts still holding a publicly known password cannot log in: retired
+    # demo accounts always, current ones outside demo mode (admin: see above).
+    public = dict(RETIRED_DEMO_PASSWORDS) if demo_mode else {**RETIRED_DEMO_PASSWORDS, **_DEMO_PASSWORDS}
+    for username, known_pw in public.items():
+        row = rows.get(username)
+        if username != "admin" and row and not row.get("deleted_at") and verify_password(known_pw, row["password_hash"]):
+            print(f"[Users] Not loading '{username}': it still has a public demo password")
+            del rows[username]
 
     _users.clear()
     _users.update(rows)

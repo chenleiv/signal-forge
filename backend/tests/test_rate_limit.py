@@ -110,14 +110,14 @@ def demo_mode(monkeypatch):
 def test_demo_accounts_cannot_be_locked_out_in_demo_mode(demo_mode):
     """Their passwords are public: anyone could otherwise lock visitors out."""
     client = TestClient(main.app)
-    for i in range(15):
-        assert _login(client, "alice", f"guess-{i}", xff=f"192.0.2.{i}").status_code == 401
-    assert _login(client, "alice", ANALYST_PASSWORD, xff="192.0.2.200").status_code == 200
+    for i in range(15):   # "admin" is a demo account (in the tests its password is not the demo one)
+        assert _login(client, "admin", f"guess-{i}", xff=f"192.0.2.{i}").status_code == 401
+    assert _login(client, "admin", "test-admin-password", xff="192.0.2.200").status_code == 200
 
 
 def test_demo_accounts_keep_the_ip_limit_in_demo_mode(demo_mode):
     client = TestClient(main.app)
-    codes = [_login(client, "alice", "guess", xff=PROXY_SEEN).status_code for _ in range(6)]
+    codes = [_login(client, "admin", "guess", xff=PROXY_SEEN).status_code for _ in range(6)]
     assert codes == [401] * 5 + [429]
 
 
