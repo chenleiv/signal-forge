@@ -5,7 +5,6 @@ import copy
 from datetime import datetime, timezone
 
 import pytest
-import pytest_asyncio
 from fastapi.testclient import TestClient
 
 import main
@@ -280,18 +279,6 @@ def test_token_without_session_key_is_rejected():
 
 # ── DB path ───────────────────────────────────────────────────
 
-@pytest_asyncio.fixture
-async def db_session():
-    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-    from sqlalchemy.orm import sessionmaker
-    from database import Base
-    import models  # noqa: F401
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    async with sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as session:
-        yield session
-    await engine.dispose()
 
 
 @pytest.mark.asyncio

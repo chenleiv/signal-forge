@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_db
 from db_ops import db_get_rules, db_create_rule, db_update_rule, db_delete_rule
 from authz import require_admin
-from store import _rules, verify_token, USE_DB
+from store import _rules, verify_token
 import store as _store
 
 router = APIRouter()
@@ -17,7 +17,7 @@ router = APIRouter()
 
 @router.get("/api/rules")
 async def get_rules(db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         return await db_get_rules(db)
     return _rules
 
@@ -34,7 +34,7 @@ async def create_rule(body: dict, db: Optional[AsyncSession] = Depends(get_db), 
         "created_at":  datetime.now(timezone.utc).isoformat(),
         "match_count": 0,
     }
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         saved = await db_create_rule(db, rule_data)
         _store._rules.append(saved)
         return saved
@@ -44,7 +44,7 @@ async def create_rule(body: dict, db: Optional[AsyncSession] = Depends(get_db), 
 
 @router.patch("/api/rules/{rule_id}")
 async def update_rule(rule_id: str, body: dict, db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)):
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         updated = await db_update_rule(db, rule_id, body)
         if updated is None:
             raise HTTPException(status_code=404, detail="Rule not found")
@@ -67,6 +67,6 @@ async def update_rule(rule_id: str, body: dict, db: Optional[AsyncSession] = Dep
 @router.delete("/api/rules/{rule_id}")
 async def delete_rule(rule_id: str, db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)):
     _store._rules[:] = [r for r in _store._rules if r["id"] != rule_id]
-    if USE_DB and db is not None:
+    if _store.USE_DB and db is not None:
         await db_delete_rule(db, rule_id)
     return {"ok": True}

@@ -7,6 +7,7 @@ from sqlalchemy import select, delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from constants import BEHAVIORAL_DEFAULTS
 from models import Incident, Note, IncidentTask, Rule, BehavioralSettings, User, RevokedSession
 
 
@@ -259,47 +260,29 @@ def _behavioral_settings_to_dict(bs: BehavioralSettings) -> dict:
     }
 
 
-async def db_get_behavioral_settings(session: AsyncSession) -> dict:
-    result = await session.execute(select(BehavioralSettings).limit(1))
-    bs = result.scalar_one_or_none()
+async def _behavioral_row(session: AsyncSession) -> BehavioralSettings:
+    """The single settings row, created with the defaults if missing."""
+    bs = (await session.execute(select(BehavioralSettings).limit(1))).scalar_one_or_none()
     if bs is None:
-        # Create defaults if not exists
         now = datetime.now(timezone.utc)
-        bs = BehavioralSettings(
-            repeated_threshold=8,
-            escalation_delta=20,
-            cooldown_min=30,
-            created_at=now,
-            updated_at=now,
-        )
+        bs = BehavioralSettings(**BEHAVIORAL_DEFAULTS, created_at=now, updated_at=now)
         session.add(bs)
-        await session.commit()
-        await session.refresh(bs)
+    return bs
+
+
+async def db_get_behavioral_settings(session: AsyncSession) -> dict:
+    bs = await _behavioral_row(session)
+    await session.commit()
+    await session.refresh(bs)
     return _behavioral_settings_to_dict(bs)
 
 
 async def db_update_behavioral_settings(session: AsyncSession, patch: dict) -> dict:
-    result = await session.execute(select(BehavioralSettings).limit(1))
-    bs = result.scalar_one_or_none()
-    if bs is None:
-        # Create with patches applied
-        now = datetime.now(timezone.utc)
-        bs = BehavioralSettings(
-            repeated_threshold=patch.get("repeated_threshold", 15),
-            escalation_delta=patch.get("escalation_delta", 20),
-            cooldown_min=patch.get("cooldown_min", 30),
-            created_at=now,
-            updated_at=now,
-        )
-        session.add(bs)
-    else:
-        if "repeated_threshold" in patch:
-            bs.repeated_threshold = patch["repeated_threshold"]
-        if "escalation_delta" in patch:
-            bs.escalation_delta = patch["escalation_delta"]
-        if "cooldown_min" in patch:
-            bs.cooldown_min = patch["cooldown_min"]
-        bs.updated_at = datetime.now(timezone.utc)
+    bs = await _behavioral_row(session)
+    for key in BEHAVIORAL_DEFAULTS:
+        if key in patch:
+            setattr(bs, key, patch[key])
+    bs.updated_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(bs)
     return _behavioral_settings_to_dict(bs)

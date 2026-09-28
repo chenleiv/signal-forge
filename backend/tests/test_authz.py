@@ -3,16 +3,12 @@
 Allowed -> 2xx, denied -> 403. "own" = incident.assigned_to == the caller.
 """
 from __future__ import annotations
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import pytest
-import pytest_asyncio
-from fastapi.testclient import TestClient
-import jwt
 
 import main
 import store
-from store import SECRET_KEY
 from tests.conftest import session_client
 
 PUBLIC_IP = "8.8.8.8"
@@ -287,18 +283,6 @@ def test_demo_mode_blocks_even_admin_writes(admin, monkeypatch):
 
 # ── DB path: the take is a compare-and-set ────────────────────
 
-@pytest_asyncio.fixture
-async def db_session():
-    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-    from sqlalchemy.orm import sessionmaker
-    from database import Base
-    import models  # noqa: F401
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    async with sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as session:
-        yield session
-    await engine.dispose()
 
 
 async def _db_incident(session, assigned_to):

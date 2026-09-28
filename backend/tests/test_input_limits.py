@@ -218,3 +218,30 @@ def test_case_limit_does_not_touch_the_login_lockout(alice):
     r = anon.post("/auth/login", json={"username": "alice", "password": ANALYST_PASSWORD},
                   headers={"X-Forwarded-For": "192.0.2.99"})
     assert r.status_code == 200
+
+
+# ── 4. Behavioral detection settings ──────────────────────────
+
+@pytest.fixture
+def admin_client():
+    saved = dict(store._behavioral_config)
+    yield session_client("admin", "admin")
+    store._behavioral_config.clear()
+    store._behavioral_config.update(saved)
+
+
+@pytest.mark.parametrize("body", [
+    {}, {"cooldown_min": "30"}, {"cooldown_min": True}, {"cooldown_min": 1.5}, {"cooldown_min": None},
+    {"cooldown_min": 0}, {"cooldown_min": 1441}, {"repeated_threshold": -1}, {"escalation_delta": 101},
+    {"unknown_setting": 5}, {"cooldown_min": 30, "extra": 1},
+])
+def test_invalid_behavioral_settings_are_422(admin_client, body):
+    before = dict(store._behavioral_config)
+    assert admin_client.patch("/api/behavioral/settings", json=body).status_code == 422
+    assert store._behavioral_config == before
+
+
+def test_valid_behavioral_settings_are_applied(admin_client):
+    r = admin_client.patch("/api/behavioral/settings", json={"cooldown_min": 1, "repeated_threshold": 1000})
+    assert r.status_code == 200
+    assert (store._behavioral_config["cooldown_min"], store._behavioral_config["repeated_threshold"]) == (1, 1000)

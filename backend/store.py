@@ -6,17 +6,16 @@ import os
 import random
 from collections import defaultdict, deque
 from datetime import datetime, timedelta, timezone
-from typing import Optional
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 import jwt
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import (
+    BEHAVIORAL_DEFAULTS,
     INCIDENT_TITLES, MITRE_MAP, GEO_DATA, COUNTRY_NAMES,
     ASSET_NAMES, ASSET_CRITICALITY, GEO_RISK_SCORES, DETECTION_SOURCES,
 )
-from database import AsyncSessionLocal, get_db
+from database import AsyncSessionLocal
 from db_ops import db_update_rule
 from users import ROLES, CurrentUser, analyst_usernames, is_session_current, password_problem
 from sessions import is_revoked
@@ -63,11 +62,7 @@ MAX_BLOCKED_IPS = 1000
 _ip_coords: dict[str, tuple[float, float]] = {}
 
 _behavioral_flagged: dict[str, dict] = {}
-_behavioral_config: dict = {
-    "cooldown_min": 30,
-    "repeated_threshold": 8,
-    "escalation_delta": 20,
-}
+_behavioral_config: dict = dict(BEHAVIORAL_DEFAULTS)
 
 _rules: list[dict] = []
 _saved_hunts: list[dict] = []

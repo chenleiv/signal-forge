@@ -10,7 +10,6 @@ import time
 
 import jwt
 import pytest
-import pytest_asyncio
 from fastapi.testclient import TestClient
 
 import main
@@ -116,18 +115,6 @@ def test_demo_mode_still_allows_logout(monkeypatch):
 
 # ── Survives a restart (with a database) ──────────────────────
 
-@pytest_asyncio.fixture
-async def db_session():
-    from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-    from sqlalchemy.orm import sessionmaker
-    from database import Base
-    import models  # noqa: F401
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    async with sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as session:
-        yield session
-    await engine.dispose()
 
 
 @pytest.mark.asyncio

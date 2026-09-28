@@ -9,8 +9,7 @@ from typing import Optional
 import httpx
 
 from constants import (
-    COUNTRY_NAMES, ATTACK_TYPES, REGIONS, MITRE_MAP,
-    _SEVERITY_BANDS, _SQLI_PAYLOADS, _MALWARE_FAMILIES,
+    COUNTRY_NAMES, ATTACK_TYPES, REGIONS, _SEVERITY_BANDS, _SQLI_PAYLOADS, _MALWARE_FAMILIES,
     _SERVICES, _PROTOCOLS, _SCAN_TYPES, _ENDPOINTS,
 )
 from store import _ip_coords
