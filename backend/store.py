@@ -19,6 +19,7 @@ from constants import (
 from database import AsyncSessionLocal, get_db
 from db_ops import db_update_rule
 from users import ROLES, CurrentUser, analyst_usernames, is_session_current, password_problem
+from sessions import is_revoked
 
 SECRET_KEY = os.environ.get("JWT_SECRET")
 if not SECRET_KEY:
@@ -107,6 +108,9 @@ def verify_token(request: Request) -> CurrentUser:
             raise ValueError("missing subject")
         if role not in ROLES:
             raise ValueError("missing or unknown role")
+        sid = payload.get("sid")
+        if not isinstance(sid, str) or not sid or is_revoked(sid):
+            raise ValueError("session logged out")   # or a pre-logout-revocation token
         if not is_session_current(username, role, payload.get("sk")):
             raise ValueError("session revoked")
     except Exception:

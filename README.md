@@ -164,7 +164,7 @@ All endpoints require a session except those marked *public*. Role requirements 
 | Method | Path | Description | Who |
 |--------|------|-------------|-----|
 | POST | `/auth/login` | Log in, sets the session cookie (rate-limited) | public |
-| POST | `/auth/logout` | Clear the session cookie | public |
+| POST | `/auth/logout` | End this session (revoked on the server) and clear the cookie | public |
 | GET | `/auth/me` | Current user: username, display name, role | any user |
 | PATCH | `/auth/me` | Change your own password: exactly `{current_password, new_password}` | any user (not in demo) |
 | GET | `/auth/ws-ticket` | Short-lived (5 min) ticket for the WebSocket | any user |
@@ -225,7 +225,12 @@ The server is the security boundary. Everything the frontend does with permissio
 ### Sessions and tokens
 
 - **Session:** a JWT in the `sf_session` cookie — `HttpOnly`, `SameSite=Lax`, `Secure` unless `ENV=development`, 8 hours.
-  Claims: `sub` (username), `role`, `sk` (the user's session key), `typ: "session"`, `exp`. Never stored in `localStorage`.
+  Claims: `sub` (username), `role`, `sk` (the user's session key), `sid` (this session's own id), `typ: "session"`,
+  `exp`. Never stored in `localStorage`.
+- **Logout ends the session on the server,** not only in the browser: the session's `sid` is revoked until the token
+  would have expired, so a copied cookie stops working at once. Only that session ends: other devices of the same
+  user, and other visitors of a shared demo account, stay signed in. Revocations are kept in memory and, with a
+  database, in `revoked_sessions` (reloaded at startup, expired rows dropped).
 - **WebSocket ticket:** a separate 5-minute JWT with `typ: "ws"`, fetched from `/auth/ws-ticket`.
 - Every decode site accepts only `HS256` and only its own `typ`, so a ticket cannot be used as a session and vice versa.
   `alg: none`, forged signatures, expired tokens, and tampered claims (e.g. `role` changed to `admin`) are rejected.

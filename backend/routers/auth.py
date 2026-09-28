@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
 from database import get_db
+from sessions import new_session_id, revoke_session
 from rate_limit import limiter, login_locked, record_login_failure
 from user_admin import change_own_password
 import store as _store
@@ -30,8 +31,11 @@ def _set_session_cookie(response: Response, user: CurrentUser) -> None:
         {
             "sub": user.username,
             "role": user.role,
-            # Revocation handle: must match the user's current key (store.verify_token).
+            # Revocation handles (store.verify_token): the user's current key
+            # (password/role changes sign out every session) and this
+            # session's own id (logout signs out just this one).
             "sk": get_user(user.username)["session_key"],
+            "sid": new_session_id(),
             "typ": "session",
             "exp": datetime.now(timezone.utc) + timedelta(hours=8),
         },
@@ -75,7 +79,18 @@ async def login(request: Request, body: dict, response: Response):
 
 
 @router.post("/auth/logout")
-async def logout(response: Response):
+async def logout(request: Request, response: Response, db: Optional[AsyncSession] = Depends(get_db)):
+    """Ends THIS session on the server too (a copied cookie stops working),
+    not just in this browser. Public and idempotent: no valid session, nothing
+    to revoke."""
+    token = request.cookies.get(_COOKIE)
+    if token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        except jwt.InvalidTokenError:
+            payload = None   # expired, tampered or not ours: nothing to revoke
+        if payload and payload.get("typ") == "session" and isinstance(payload.get("sid"), str):
+            await revoke_session(db if _store.USE_DB else None, payload["sid"], float(payload["exp"]))
     response.delete_cookie(
         key=_COOKIE, httponly=True, secure=_COOKIE_SECURE, samesite="lax"
     )

@@ -34,6 +34,7 @@ from store import (
 import store as _store
 from rate_limit import limiter
 from users import seed_users, sync_users_with_db
+from sessions import load_revoked_sessions
 
 from routers import auth, ip, incidents, alerts, hunting, rules, behavioral, users
 
@@ -104,6 +105,7 @@ async def lifespan(app: FastAPI):
 
             async with AsyncSessionLocal() as session:
                 await sync_users_with_db(session, DEMO_MODE, ADMIN_PASSWORD)
+                await load_revoked_sessions(session)
 
             async with AsyncSessionLocal() as session:
                 _store._rules.clear()
