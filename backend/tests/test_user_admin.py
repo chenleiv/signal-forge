@@ -449,7 +449,7 @@ async def test_real_mode_with_a_real_admin_needs_no_admin_password(db_session):
 async def test_demo_accounts_are_not_loaded_after_the_switch(db_session):
     await _run_demo_deployment(db_session)
     await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)
-    assert users.get_user("anna") is None and users.get_user("manny") is None
+    assert users.get_user("analyst") is None and users.get_user("manager") is None
 
 
 @pytest.mark.asyncio
@@ -458,15 +458,15 @@ async def test_demo_mode_restores_demo_account_names_and_roles(db_session):
     version (other names, bob still an analyst) are brought back in line."""
     from db_ops import db_get_users, db_update_user
     await _run_demo_deployment(db_session)
-    await db_update_user(db_session, "anna", {"display_name": "Old Name"})
-    await db_update_user(db_session, "manny", {"role": "analyst", "display_name": "Old Manager"})
+    await db_update_user(db_session, "analyst", {"display_name": "Old Name"})
+    await db_update_user(db_session, "manager", {"role": "analyst", "display_name": "Old Manager"})
 
     await _run_demo_deployment(db_session)   # next start
 
     stored = {r["username"]: (r["display_name"], r["role"]) for r in await db_get_users(db_session)}
     expected = {u: (name, role) for u, name, role, _ in users.DEMO_USERS}
     assert stored == expected
-    assert users.get_user("manny")["role"] == "manager"
+    assert users.get_user("manager")["role"] == "manager"
 
 
 @pytest.mark.asyncio

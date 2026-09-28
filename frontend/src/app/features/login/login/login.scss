@@ -16,6 +16,7 @@
 // ── Card ─────────────────────────────────────────────────────
 .login-card {
     width: 360px;
+    min-width: 0;
     background: $panel;
     border: 1px solid $border;
     border-radius: 10px;
@@ -214,6 +215,9 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    white-space: nowrap;
+    min-width: 0;
+    overflow: hidden;
 
     &:hover {
         border-color: rgba($accent, 0.4);
@@ -225,6 +229,9 @@
     font-size: 10px;
     color: $muted;
     letter-spacing: 0.03em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .slow-connection {
