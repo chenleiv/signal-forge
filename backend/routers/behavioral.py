@@ -4,12 +4,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from constants import BEHAVIORAL_DEFAULTS, BEHAVIORAL_LIMITS
+from constants import BEHAVIORAL_LIMITS
 from database import get_db
-from db_ops import db_get_behavioral_settings, db_update_behavioral_settings
 from authz import require_admin
-from store import _behavioral_config, verify_token
-import store as _store
+from repositories import behavioral
+from store import verify_token
 
 router = APIRouter()
 
@@ -18,9 +17,7 @@ router = APIRouter()
 async def get_behavioral_settings(
     db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
 ):
-    if _store.USE_DB and db is not None:
-        return await db_get_behavioral_settings(db)
-    return _behavioral_config
+    return await behavioral(db).get()
 
 
 def _validate(body: dict) -> dict:
@@ -40,10 +37,4 @@ async def update_behavioral_settings(
     body: dict,
     db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)
 ):
-    patch = _validate(body)
-    if _store.USE_DB and db is not None:
-        result = await db_update_behavioral_settings(db, patch)
-        _store._behavioral_config.update({k: result[k] for k in BEHAVIORAL_DEFAULTS})
-        return result
-    _store._behavioral_config.update(patch)
-    return _store._behavioral_config
+    return await behavioral(db).update(_validate(body))
