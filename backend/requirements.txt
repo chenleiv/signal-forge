@@ -4,14 +4,11 @@ uvicorn[standard]
 httpx
 PyJWT>=2.10
 bcrypt>=4.1
-anthropic
 groq
 slowapi
 sqlalchemy[asyncio]>=2.0
 asyncpg
 alembic
-pytest>=9.0.3
-pytest-asyncio
 aiosqlite
 
 # Security floors for transitive dependencies (pip-audit, 2026-09-27).

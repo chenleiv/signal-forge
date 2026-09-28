@@ -112,7 +112,7 @@
           <div class="alert-card status-{{ alert.status }}"
                [class.selected]="selectedAlert()?.id === alert.id"
                [style.--sev-color]="severityColor(alert.severity)"
-               (click)="selectAlert(alert)">
+               tabindex="0" (click)="selectAlert(alert)" (keydown.enter)="selectAlert(alert)">
             <div class="card-top">
               <span class="sev-dot"></span>
               <span class="source-chip chip-{{ alert.detection_source }}">{{ detectionSourceLabel(alert.detection_source) }}</span>

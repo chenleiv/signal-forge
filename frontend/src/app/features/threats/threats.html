@@ -1,7 +1,8 @@
 <div class="threats-page">
   <app-threat-table (ipSelected)="openDrawer($event)" [selectedIp]="selectedIp()" />
 
-  <div class="drawer-backdrop" [class.active]="selectedIp()" (click)="closeDrawer()"></div>
+  <!-- Mouse shortcut only: keyboard users close the drawer with its close button. -->
+  <div class="drawer-backdrop" [class.active]="selectedIp()" (click)="closeDrawer()" aria-hidden="true"></div>
   <div class="drawer-overlay" [class.open]="selectedIp()" [style.width.px]="drawerWidth()">
     <div class="resize-handle" (mousedown)="startResize($event)">
       <div class="handle-bar"></div>

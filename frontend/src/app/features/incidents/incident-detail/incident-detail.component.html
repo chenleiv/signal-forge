@@ -94,7 +94,9 @@
       <span class="section-title">RESPONSE TASKS ({{ completedTasks().size }}/{{ tasks().length }})</span>
       <div class="tasks-list">
         @for (task of tasks(); track $index) {
-          <div class="task-item" (click)="toggleTask($index)" [class.done]="completedTasks().has($index)"
+          <div class="task-item" role="checkbox" tabindex="0" [attr.aria-checked]="completedTasks().has($index)"
+               (click)="toggleTask($index)" (keydown.space)="$event.preventDefault(); toggleTask($index)"
+               [class.done]="completedTasks().has($index)"
                [class.is-disabled]="!work().allowed"
                [attr.aria-disabled]="!work().allowed || null"
                [attr.title]="reason(work())">

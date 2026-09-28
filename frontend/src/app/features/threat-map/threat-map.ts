@@ -12,6 +12,9 @@ import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { SEVERITY_COLORS, ThreatEvent } from '../../shared/models/threat.models';
 import * as d3 from 'd3';
 import * as topojson from 'topojson-client';
+import type { GeometryCollection, Topology } from 'topojson-specification';
+
+type WorldAtlas = Topology<{ countries: GeometryCollection }>;
 
 @Component({
   selector: 'app-threat-map',
@@ -54,10 +57,13 @@ export class ThreatMap {
   }
 
   private async initMap() {
-    let world: any;
+    let world: WorldAtlas | undefined;
     try {
-      world = await d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+      world = await d3.json<WorldAtlas>('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
     } catch {
+      world = undefined;
+    }
+    if (!world) {
       console.error('Failed to load world map data');
       return;
     }
@@ -82,7 +88,7 @@ export class ThreatMap {
     zoomGroup
       .append('g')
       .selectAll('path')
-      .data((topojson.feature(world, world.objects.countries) as any).features)
+      .data(topojson.feature(world, world.objects.countries).features)
       .join('path')
       .attr('d', path as unknown as string)
       .attr('fill', '#1a2540')

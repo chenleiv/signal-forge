@@ -111,7 +111,8 @@ export class RulesComponent {
   toggleAction(action: RuleAction) {
     this.editActions.update(set => {
       const next = new Set(set);
-      next.has(action) ? next.delete(action) : next.add(action);
+      if (next.has(action)) next.delete(action);
+      else next.add(action);
       return next;
     });
   }

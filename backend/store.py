@@ -104,7 +104,7 @@ def verify_token(request: Request) -> CurrentUser:
         if not is_session_current(username, role, payload.get("sk")):
             raise ValueError("session revoked")
     except Exception:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise HTTPException(status_code=401, detail="Invalid or expired token") from None
     return CurrentUser(username=username, role=role)
 
 
@@ -112,7 +112,7 @@ def validate_ip(ip: str) -> str:
     try:
         parsed = ipaddress.ip_address(ip)
     except ValueError:
-        raise HTTPException(status_code=422, detail="Invalid IP address format")
+        raise HTTPException(status_code=422, detail="Invalid IP address format") from None
     if parsed.is_private or parsed.is_loopback or parsed.is_link_local or parsed.is_reserved or parsed.is_multicast:
         raise HTTPException(status_code=422, detail="Private or reserved IP not allowed")
     return str(parsed)

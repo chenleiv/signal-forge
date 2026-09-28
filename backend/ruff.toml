@@ -1,0 +1,11 @@
+# Lint rules enforced in CI (ruff check .). Style is not enforced here.
+target-version = "py313"
+extend-exclude = ["venv", "alembic"]
+
+[lint]
+# F: pyflakes (unused/undefined names); B: likely bugs; E9: syntax errors
+select = ["F", "B", "E9"]
+
+[lint.flake8-bugbear]
+# FastAPI's dependency injection idiom, not a mutable default.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query"]

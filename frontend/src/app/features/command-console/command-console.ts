@@ -71,9 +71,13 @@ export class CommandConsole {
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      this.historyIndex > 0
-        ? this.inputValue.set(this.cmdHistory[this.cmdHistory.length - 1 - --this.historyIndex])
-        : ((this.historyIndex = -1), this.inputValue.set(''));
+      if (this.historyIndex > 0) {
+        this.historyIndex--;
+        this.inputValue.set(this.cmdHistory[this.cmdHistory.length - 1 - this.historyIndex]);
+      } else {
+        this.historyIndex = -1;
+        this.inputValue.set('');
+      }
     }
   }
 

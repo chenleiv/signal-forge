@@ -64,7 +64,8 @@ $accent:    var(--c-accent);
   flex-direction: column;
   gap: 4px;
 
-  label {
+  label,
+  .field-heading {
     font-size: 9px;
     color: $muted;
     text-transform: uppercase;

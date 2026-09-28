@@ -20,12 +20,12 @@
             <div class="field-grid">
                 <!-- Read-only: identity and role come from the server session. -->
                 <div class="field">
-                    <label>Name</label>
-                    <input [value]="auth.currentUser()?.display_name ?? ''" readonly />
+                    <label for="profile-name">Name</label>
+                    <input id="profile-name" [value]="auth.currentUser()?.display_name ?? ''" readonly />
                 </div>
                 <div class="field">
-                    <label>Role</label>
-                    <input [value]="auth.currentUser()?.role ?? ''" readonly />
+                    <label for="profile-role">Role</label>
+                    <input id="profile-role" [value]="auth.currentUser()?.role ?? ''" readonly />
                 </div>
             </div>
         </section>
@@ -87,8 +87,8 @@
             </div>
             <div class="field-grid">
                 <div class="field full">
-                    <label>Theme</label>
-                    <div class="theme-toggle">
+                    <span class="field-heading" id="theme-label">Theme</span>
+                    <div class="theme-toggle" role="group" aria-labelledby="theme-label">
                         <button class="theme-btn"
                             [class.active]="themeService.theme() === 'dark'"
                             [disabled]="themeService.theme() === 'dark'"
@@ -120,20 +120,20 @@
             </div>
             <div class="field-grid">
                 <div class="field full">
-                    <label>WebSocket URL</label>
-                    <input [value]="form().wsUrl"
+                    <label for="ws-url">WebSocket URL</label>
+                    <input id="ws-url" [value]="form().wsUrl"
                         (input)="form.update(s => ({...s, wsUrl: $any($event.target).value}))"
                         placeholder="ws://127.0.0.1:8000/ws/threats" />
                 </div>
                 <div class="field">
-                    <label>Reconnect Delay (sec)</label>
-                    <input type="number" [value]="form().reconnectDelay"
+                    <label for="reconnect-delay">Reconnect Delay (sec)</label>
+                    <input id="reconnect-delay" type="number" [value]="form().reconnectDelay"
                         (input)="form.update(s => ({...s, reconnectDelay: +$any($event.target).value}))"
                         min="1" max="30" />
                 </div>
                 <div class="field">
-                    <label>Event Buffer Size</label>
-                    <input type="number" [value]="form().bufferSize"
+                    <label for="buffer-size">Event Buffer Size</label>
+                    <input id="buffer-size" type="number" [value]="form().bufferSize"
                         (input)="form.update(s => ({...s, bufferSize: +$any($event.target).value}))"
                         min="10" max="500" />
                 </div>
@@ -154,30 +154,30 @@
                 <div class="threshold-field">
                     <div class="threshold-label">
                         <span class="sev-dot critical"></span>
-                        <label class="label-critical">Critical</label>
+                        <label class="label-critical" for="threshold-critical">Critical</label>
                         <span class="threshold-op">≥</span>
                     </div>
-                    <input type="number" [value]="form().criticalThreshold"
+                    <input id="threshold-critical" type="number" [value]="form().criticalThreshold"
                         (input)="form.update(s => ({...s, criticalThreshold: +$any($event.target).value}))"
                         min="1" max="100" />
                 </div>
                 <div class="threshold-field">
                     <div class="threshold-label">
                         <span class="sev-dot high"></span>
-                        <label class="label-high">High</label>
+                        <label class="label-high" for="threshold-high">High</label>
                         <span class="threshold-op">≥</span>
                     </div>
-                    <input type="number" [value]="form().highThreshold"
+                    <input id="threshold-high" type="number" [value]="form().highThreshold"
                         (input)="form.update(s => ({...s, highThreshold: +$any($event.target).value}))"
                         min="1" max="100" />
                 </div>
                 <div class="threshold-field">
                     <div class="threshold-label">
                         <span class="sev-dot medium"></span>
-                        <label class="label-medium">Medium</label>
+                        <label class="label-medium" for="threshold-medium">Medium</label>
                         <span class="threshold-op">≥</span>
                     </div>
-                    <input type="number" [value]="form().mediumThreshold"
+                    <input id="threshold-medium" type="number" [value]="form().mediumThreshold"
                         (input)="form.update(s => ({...s, mediumThreshold: +$any($event.target).value}))"
                         min="1" max="100" />
                 </div>

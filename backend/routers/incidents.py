@@ -132,7 +132,7 @@ async def patch_incident(
                 db, incident_id, patch, expected_assignee=inc["assigned_to"]
             )
         except StaleIncident:
-            raise HTTPException(status_code=409, detail="Incident was reassigned meanwhile, reload and retry")
+            raise HTTPException(status_code=409, detail="Incident was reassigned meanwhile, reload and retry") from None
         if result is None:
             raise HTTPException(status_code=404, detail="Incident not found")
         return result

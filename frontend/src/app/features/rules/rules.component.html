@@ -30,7 +30,8 @@
 
     <div class="rules-list">
       @for (rule of rules(); track rule.id) {
-        <div class="rule-item" [class.active]="selected()?.id === rule.id" (click)="selectRule(rule)">
+        <div class="rule-item" [class.active]="selected()?.id === rule.id" tabindex="0"
+             (click)="selectRule(rule)" (keydown.enter)="selectRule(rule)">
           <button class="rule-toggle" [class.on]="rule.enabled"
                   [class.is-disabled]="!manage().allowed"
                   [attr.aria-disabled]="!manage().allowed || null"
@@ -69,15 +70,15 @@
         <fieldset class="editor-fieldset" [disabled]="!manage().allowed">
 
         <div class="editor-section">
-          <label class="field-label">RULE NAME</label>
-          <input class="field-input" [value]="editName()"
+          <label class="field-label" for="rule-name">RULE NAME</label>
+          <input id="rule-name" class="field-input" [value]="editName()"
                  (input)="editName.set($any($event.target).value)"
                  placeholder="e.g. High Score Russia" />
         </div>
 
         <div class="editor-section">
           <div class="conditions-header">
-            <label class="field-label">CONDITIONS</label>
+            <span class="field-label">CONDITIONS</span>
             <div class="logic-toggle">
               <button [class.active]="editLogic() === 'AND'" (click)="editLogic.set('AND')">AND</button>
               <button [class.active]="editLogic() === 'OR'"  (click)="editLogic.set('OR')">OR</button>
@@ -125,7 +126,7 @@
         </div>
 
         <div class="editor-section">
-          <label class="field-label">ACTIONS</label>
+          <span class="field-label">ACTIONS</span>
           <div class="actions-row">
             @for (action of allActions; track action) {
               <label class="action-chip" [class.checked]="editActions().has(action)">
@@ -138,7 +139,7 @@
         </div>
 
         <div class="editor-section">
-          <label class="field-label">QUERY PREVIEW</label>
+          <span class="field-label">QUERY PREVIEW</span>
           <div class="query-preview">{{ queryPreview() }}</div>
         </div>
 

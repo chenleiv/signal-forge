@@ -113,19 +113,19 @@ export class ThreatDetailDrawerComponent {
 
       this.store.fetchIpGeo(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({ next: g => this.geoData.set(g), error: () => {} });
+        .subscribe({ next: g => this.geoData.set(g), error: () => { /* optional enrichment: the panel shows without it */ } });
 
       this.store.fetchRelatedIps(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({ next: r => this.relatedIps.set(r.related), error: () => {} });
+        .subscribe({ next: r => this.relatedIps.set(r.related), error: () => { /* optional enrichment: the panel shows without it */ } });
 
       this.store.getBlockStatus(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({ next: r => this.isBlocked.set(r.blocked), error: () => {} });
+        .subscribe({ next: r => this.isBlocked.set(r.blocked), error: () => { /* optional enrichment: the panel shows without it */ } });
 
       this.store.getIpCase(ip)
         .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({ next: r => this.existingCaseId.set(r.case_id), error: () => {} });
+        .subscribe({ next: r => this.existingCaseId.set(r.case_id), error: () => { /* optional enrichment: the panel shows without it */ } });
     });
   }
 

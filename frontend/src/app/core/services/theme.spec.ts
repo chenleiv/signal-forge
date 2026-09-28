@@ -1,17 +1,14 @@
 import { TestBed } from '@angular/core/testing';
-import { DOCUMENT } from '@angular/common';
 import { ThemeService } from './theme';
 
 describe('ThemeService', () => {
   let service: ThemeService;
-  let doc: Document;
 
   beforeEach(() => {
     localStorage.clear();
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({});
     service = TestBed.inject(ThemeService);
-    doc = TestBed.inject(DOCUMENT);
   });
 
   afterEach(() => localStorage.clear());
