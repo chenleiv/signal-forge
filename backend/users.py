@@ -31,16 +31,16 @@ USERNAME_RE = re.compile(r"^[a-z0-9-]{3,50}$")
 
 # Public demo accounts, shown on the login page. Seeded ONLY in demo mode.
 DEMO_USERS: list[tuple[str, str, Role, str]] = [
-    ("admin", "Ad Min",    "admin",   "admin-demo"),
-    ("manny", "Manny Jer", "manager", "manny-demo"),
-    ("anna",  "Anna List", "analyst", "anna-demo"),
+    ("admin",   "SOC Admin",      "admin",   "admin-demo"),
+    ("manager", "SOC Manager",    "manager", "manager-demo"),
+    ("analyst", "Tier 1 Analyst", "analyst", "analyst-demo"),
 ]
 _DEMO_PASSWORDS = {u: pw for u, _, _, pw in DEMO_USERS}
 DEMO_USERNAMES = frozenset(_DEMO_PASSWORDS)
 
 # Former demo accounts. Their passwords are public (old README, git history):
 # a stored row that still has one is never loaded, in any mode.
-RETIRED_DEMO_PASSWORDS = {"alice": "alice-demo", "bob": "bob-demo"}
+RETIRED_DEMO_PASSWORDS = {"alice": "alice-demo", "bob": "bob-demo", "manny": "manny-demo", "anna": "anna-demo"}
 
 
 @dataclass(frozen=True)

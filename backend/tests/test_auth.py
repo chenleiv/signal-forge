@@ -30,7 +30,7 @@ def test_login_puts_username_and_role_in_session(client):
 def test_admin_logs_in_with_admin_password(client):
     assert _login(client, "admin", "test-admin-password").status_code == 200
     assert client.get("/auth/me").json() == {
-        "username": "admin", "display_name": "Ad Min", "role": "admin",
+        "username": "admin", "display_name": "SOC Admin", "role": "admin",
     }
 
 
