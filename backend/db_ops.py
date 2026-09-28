@@ -323,11 +323,11 @@ async def db_create_user(session: AsyncSession, data: dict) -> dict:
 
 
 async def db_update_user(session: AsyncSession, username: str, fields: dict) -> None:
-    """Set any of: password_hash, role, session_key, deleted_at (ISO string)."""
+    """Set any of: password_hash, role, display_name, session_key, deleted_at (ISO string)."""
     user = await session.get(User, username)
     if user is None:
         return
-    for key in ("password_hash", "role", "session_key"):
+    for key in ("password_hash", "role", "display_name", "session_key"):
         if key in fields:
             setattr(user, key, fields[key])
     if "deleted_at" in fields:

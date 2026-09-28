@@ -8,7 +8,7 @@ import { DemoModeService } from '../../../core/services/demo-mode.service';
 /** Public demo accounts (seeded only in demo mode; shown on this page). */
 export const DEMO_ACCOUNTS = [
   { label: 'Try as Admin',   username: 'admin', password: 'admin-demo' },
-  { label: 'Try as Analyst', username: 'alice', password: 'alice-demo' },
+  { label: 'Try as Analyst', username: 'anna', password: 'anna-demo' },
 ] as const;
 
 @Component({

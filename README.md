@@ -130,9 +130,12 @@ In demo mode (the default) these public accounts exist, and the login page has
 
 | Username | Password | Role |
 |----------|----------|------|
-| `admin` | `admin-demo` | admin |
-| `alice` | `alice-demo` | analyst |
-| `bob` | `bob-demo` | manager |
+| `admin` | `admin-demo` | admin ("Ad Min") |
+| `manny` | `manny-demo` | manager ("Manny Jer") |
+| `anna` | `anna-demo` | analyst ("Anna List") |
+
+The former demo accounts `alice` and `bob` are retired: a stored row that still has its old public password is
+never loaded, in any mode.
 
 They are **never created when `DEMO_MODE=false`**. Outside demo mode the only seeded account is `admin`,
 with the password from `ADMIN_PASSWORD`.

@@ -449,4 +449,49 @@ async def test_real_mode_with_a_real_admin_needs_no_admin_password(db_session):
 async def test_demo_accounts_are_not_loaded_after_the_switch(db_session):
     await _run_demo_deployment(db_session)
     await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)
-    assert users.get_user("alice") is None and users.get_user("bob") is None
+    assert users.get_user("anna") is None and users.get_user("manny") is None
+
+
+@pytest.mark.asyncio
+async def test_demo_mode_restores_demo_account_names_and_roles(db_session):
+    """In demo mode the code owns the demo accounts: rows saved by an older
+    version (other names, bob still an analyst) are brought back in line."""
+    from db_ops import db_get_users, db_update_user
+    await _run_demo_deployment(db_session)
+    await db_update_user(db_session, "anna", {"display_name": "Old Name"})
+    await db_update_user(db_session, "manny", {"role": "analyst", "display_name": "Old Manager"})
+
+    await _run_demo_deployment(db_session)   # next start
+
+    stored = {r["username"]: (r["display_name"], r["role"]) for r in await db_get_users(db_session)}
+    expected = {u: (name, role) for u, name, role, _ in users.DEMO_USERS}
+    assert stored == expected
+    assert users.get_user("manny")["role"] == "manager"
+
+
+@pytest.mark.asyncio
+async def test_real_mode_does_not_rename_accounts(db_session):
+    """Outside demo mode nothing is forced: names stay as stored."""
+    from db_ops import db_get_users, db_update_user
+    await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)
+    await db_update_user(db_session, "admin", {"display_name": "Chen Leiv"})
+    await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)
+    assert {r["username"]: r["display_name"] for r in await db_get_users(db_session)}["admin"] == "Chen Leiv"
+
+
+@pytest.mark.parametrize("demo_mode", [True, False])
+@pytest.mark.asyncio
+async def test_retired_demo_accounts_with_their_public_password_never_load(db_session, demo_mode):
+    """alice/bob were demo accounts: their passwords are public. Rows left in
+    a database (e.g. on Render) must not be usable in either mode."""
+    from db_ops import db_create_user
+    for name, pw in users.RETIRED_DEMO_PASSWORDS.items():
+        await db_create_user(db_session, {"username": name, "display_name": name, "role": "analyst",
+                                          "password_hash": users.hash_password(pw), "session_key": "k"})
+    if demo_mode:
+        await _run_demo_deployment(db_session)
+    else:
+        await _switch_to_real_mode(db_session, REAL_ADMIN_PASSWORD)
+    for name, pw in users.RETIRED_DEMO_PASSWORDS.items():
+        assert users.get_user(name) is None
+        assert users.authenticate(name, pw) is None
