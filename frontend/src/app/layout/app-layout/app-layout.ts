@@ -9,6 +9,7 @@ import { canOpenUserAdmin } from '../../core/auth/permissions';
 import { ThemeService } from '../../core/services/theme';
 import { CommandConsole } from '../../features/command-console/command-console';
 import { DemoModeService } from '../../core/services/demo-mode.service';
+import { ThreatFeedService } from '../../core/services/threat-feed.service';
 
 const PAGE_TITLES: Record<string, string> = {
   '/dashboard': 'Live Operations',
@@ -38,6 +39,7 @@ export class AppLayout {
   // Injected to eagerly trigger the effect() that sets data-theme on <body>.
   readonly themeService    = inject(ThemeService);
   readonly demo            = inject(DemoModeService);
+  readonly feed            = inject(ThreatFeedService);
   readonly auth            = inject(AuthService);
   readonly canOpenUsers    = computed(() => canOpenUserAdmin(this.auth.currentUser()).allowed);
   readonly initials        = computed(() =>
@@ -69,6 +71,7 @@ export class AppLayout {
     });
     this.ws.connect();
     this.demo.load();
+    this.feed.watch(this.destroyRef);
     // Any navigation closes the mobile menu.
     this.router.events
       .pipe(filter(e => e instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))

@@ -22,7 +22,7 @@ import store  # noqa: E402
 N = 20
 
 
-async def _fake_refresh() -> None:
+async def _fake_refresh(allow_sample: bool = False) -> None:
     simulation.THREAT_IPS = {"8.8.8.8": 90, "1.1.1.1": 70, "9.9.9.9": 50}
 
 

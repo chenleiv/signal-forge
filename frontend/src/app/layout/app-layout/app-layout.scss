@@ -421,6 +421,11 @@
   border: 1px solid $accent;
 }
 
+.feed-badge {
+  color: $yellow;
+  border-color: $yellow;
+}
+
 .demo-toast {
   position: fixed;
   right: 20px;

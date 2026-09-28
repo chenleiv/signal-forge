@@ -169,6 +169,14 @@
       </div>
     }
 
+    @if (feed.notice(); as notice) {
+      <div class="demo-banner feed-banner" role="status">
+        <span class="demo-badge feed-badge">FEED</span>
+        <span class="demo-text-long">{{ notice.long }}</span>
+        <span class="demo-text-short">{{ notice.short }}</span>
+      </div>
+    }
+
     <section class="content">
       <router-outlet></router-outlet>
     </section>
