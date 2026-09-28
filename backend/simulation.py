@@ -19,7 +19,8 @@ IPINFO_TOKEN      = os.environ.get("IPINFO_TOKEN", "")
 
 THREAT_IPS: dict[str, int] = {}
 
-_CACHE_FILE = pathlib.Path(__file__).parent / "threat_ips_cache.json"
+# THREAT_IPS_CACHE: another cache file (e2e tests use a fixed one).
+_CACHE_FILE = pathlib.Path(os.environ.get("THREAT_IPS_CACHE") or pathlib.Path(__file__).parent / "threat_ips_cache.json")
 
 
 def _load_cache() -> dict[str, int]:
