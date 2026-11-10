@@ -71,27 +71,26 @@ async def _stream_loop() -> None:
         await asyncio.sleep(random.uniform(*STREAM_INTERVAL))
 
 
+def _run_migrations() -> None:
+    """Bring the schema up to date, or refuse to start: running on an unknown
+    schema risks failed requests and bad writes."""
+    result = subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        capture_output=True, text=True, cwd=pathlib.Path(__file__).parent
+    )
+    if result.returncode != 0:
+        print(f"[Alembic] Migration failed:\n{result.stderr}")
+        raise RuntimeError("Database migration failed, refusing to start")
+    print("[Alembic] Migrations up to date")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if USE_DB:
-        result = subprocess.run(
-            [sys.executable, "-m", "alembic", "upgrade", "head"],
-            capture_output=True, text=True, cwd=pathlib.Path(__file__).parent
-        )
-        if result.returncode != 0:
-            print(f"[Alembic] Migration failed:\n{result.stderr}")
-        else:
-            print("[Alembic] Migrations up to date")
+        _run_migrations()
 
         if AsyncSessionLocal is not None:
             async with AsyncSessionLocal() as session:
-                _count_row = await session.execute(_sa_text("SELECT COUNT(*) FROM incidents"))
-                _count = _count_row.scalar() or 0
-                if _count > 50:
-                    await session.execute(_sa_text("DELETE FROM incidents"))
-                    await session.commit()
-                    print(f"[DB] Cleared {_count} auto-generated incidents from DB")
-
                 _row = await session.execute(
                     _sa_text("SELECT COALESCE(MAX(CAST(SUBSTR(id, 5) AS INTEGER)), 0) FROM incidents")
                 )

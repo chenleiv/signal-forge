@@ -7,13 +7,27 @@ Compact project context loaded by all agents.
 ## Paths
 
 ```
-frontend/src/app/         Angular features
-backend/                  FastAPI backend
-backend/routers/          API routes
-backend/services/         Business logic
-backend/models/           DB models / schemas
-.claude/memory/           Project context
-.claude/skills/           Review skills
+frontend/src/app/core/      Auth permissions, guards, interceptors, services, utils
+frontend/src/app/features/  Feature pages
+frontend/src/app/layout/    App shell
+frontend/src/app/shared/    Shared models and UI
+backend/main.py             App setup, startup, demo-mode middleware, WebSocket stream
+backend/routers/            HTTP routes
+backend/authz.py            Authorization rules (single source for the server)
+backend/repositories.py     Storage interface: database or in-memory
+backend/db_ops.py           SQLAlchemy data access
+backend/models.py           SQLAlchemy models
+backend/store.py            In-memory state, token verification, input and IP checks
+backend/simulation.py       Threat feed and event generation
+backend/users.py            Users, password hashing, seeding, session checks
+backend/user_admin.py       User management operations
+backend/sessions.py         Logout revocation
+backend/rate_limit.py       Per-IP and per-key rate limits
+backend/alembic/            Database migrations
+backend/tests/              pytest suites
+testing/permission-matrix.json  RBAC cases shared by backend and frontend tests
+.claude/memory/             Project context
+.claude/skills/             Review skills
 ```
 
 ---
@@ -50,8 +64,9 @@ SCSS
 Backend:
 
 FastAPI
-Python
+Python 3.13
 JWT HttpOnly authentication
+SQLAlchemy (async) and Alembic with DATABASE_URL, in-memory without it
 
 ---
 
@@ -77,23 +92,50 @@ Avoid:
 
 ## Backend Rules
 
-Use:
+Request flow:
 
 router
 ↓
-service
+authz.py
 ↓
-model/schema
+repositories.py
+↓
+db_ops.py / models.py
 
 
 Routers:
 
-HTTP only.
+HTTP handling and request validation. Never branch on the storage type.
 
 
-Services:
+authz.py:
 
-Business logic.
+Every permission decision. The frontend mirrors it in core/auth/permissions.ts.
+Change both together and keep testing/permission-matrix.json in step.
+
+
+repositories.py:
+
+Incidents, rules and behavioral settings, with a database and an in-memory
+implementation that must behave the same.
+
+
+Exceptions to this flow:
+
+- users: routers/users.py -> authz.py -> user_admin.py
+- alerts, hunting and IP routes use the in-memory state in store.py directly
+
+
+Startup:
+
+Migrations run on startup when DATABASE_URL is set. A failed migration stops
+the server. Startup must never delete stored data.
+
+
+Demo mode:
+
+On unless DEMO_MODE=false. Middleware in main.py rejects every write except
+login and logout. Frontend actions are simulated in the browser.
 
 
 Avoid:
@@ -107,7 +149,8 @@ Avoid:
 
 Authentication:
 
-JWT only inside HttpOnly cookies.
+Session JWT only inside HttpOnly cookies. The one JWT outside a cookie is the
+short-lived WebSocket ticket from /auth/ws-ticket.
 
 
 Never:

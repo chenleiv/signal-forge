@@ -111,7 +111,7 @@ python3 -m uvicorn main:app --reload
 ```
 
 Backend runs on `http://localhost:8000`. API docs at `http://localhost:8000/docs`.
-Without `DATABASE_URL` everything is kept in memory; with it, migrations run on startup.
+Without `DATABASE_URL` everything is kept in memory; with it, migrations run on startup and a failed migration stops the server.
 
 ### Frontend
 
