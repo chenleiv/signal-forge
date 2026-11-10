@@ -1,6 +1,12 @@
 # SignalForge
 
-A real-time Security Operations Center (SOC) dashboard built with Angular 21 and FastAPI. Simulates live threat intelligence with animated attack maps, analytics charts, incident management with role-based access control, and AI-powered threat analysis.
+**[Live demo](https://signalforge-api-ah1q.onrender.com)**: no sign-up, use the [demo accounts](#demo-accounts). The first load can be slow while the server wakes up.
+
+<!-- Screenshot placeholder: add docs/dashboard.png (or .gif), taken in demo mode, and show it here. -->
+
+SignalForge is a Security Operations Center (SOC) dashboard for security analysts: watch threats in real time, triage alerts and investigate incidents, with role-based access control and AI-assisted IP analysis. Built with Angular 21 and FastAPI.
+
+The attacking IPs come from the AbuseIPDB blacklist (or a bundled sample in demo mode when no list is available). The events around them are generated, so no real network is being monitored.
 
 ---
 
@@ -182,7 +188,7 @@ All endpoints require a session except those marked *public*. Role requirements 
 | GET | `/api/users` | Active users (no password hashes) | any user |
 | GET | `/api/users/directory` | Every name ever used, incl. deleted users (for history) | any user |
 | POST | `/api/users` | Create a user | admin |
-| PATCH | `/api/users/{username}` | Change role and/or reset password (signs the user out) | admin |
+| PATCH | `/api/users/{username}` | Change role and/or reset password (signs the user out) | admin, or manager for an analyst's password only |
 | DELETE | `/api/users/{username}` | Delete a user (soft delete; not yourself, not the last admin) | admin |
 | GET | `/api/stats` | Aggregated chart data | any user |
 | GET | `/api/incidents` | Incident list | any user |
@@ -421,3 +427,9 @@ Before release, changes pass through:
 - TypeScript checks (`npx tsc --noEmit`)
 - Backend and frontend test suites
 - Production build (`ng build`)
+
+---
+
+## License
+
+[MIT](LICENSE)
