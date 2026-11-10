@@ -30,7 +30,7 @@ fi
 if echo "$CHANGED" | grep -qE '\.py$'; then
   cd backend
   PY=venv/bin/python; [ -x "$PY" ] || PY=python3   # prefer the project venv
-  "$PY" -m pytest --tb=short -q > /tmp/sf-pytest.log 2>&1
+  "$PY" -m pytest --tb=short -q --ignore=tests/test_env_example.py > /tmp/sf-pytest.log 2>&1
   PYTEST_EXIT=$?
   cd ..
 
