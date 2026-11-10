@@ -267,3 +267,25 @@
     flex-direction: column;
     gap: 8px;
 }
+
+.demo-intro {
+    font-size: 11px;
+    color: $muted;
+    margin: 0;
+}
+
+.login-or {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: $muted;
+
+    &::before,
+    &::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background: $border;
+    }
+}

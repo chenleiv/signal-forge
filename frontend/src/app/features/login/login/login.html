@@ -21,8 +21,20 @@
     <!-- Heading -->
     <div class="login-heading">
       <h1 class="login-title">Sign In</h1>
-      <p class="login-sub">Access the SOC control panel</p>
+      <p class="login-sub">Monitor live threats, triage alerts and investigate incidents from one SOC dashboard.</p>
     </div>
+
+    @if (demo.enabled()) {
+      <div class="demo-accounts">
+        <p class="demo-intro">Public demo: pick a role to explore. Actions are simulated and nothing is saved.</p>
+        @for (acc of demoAccounts; track acc.username) {
+          <button class="demo-btn" type="button" (click)="demoLogin(acc)" [disabled]="loading()">
+            ▶ {{ acc.label }}  <span class="demo-hint">{{ acc.username }} / {{ acc.password }}</span>
+          </button>
+        }
+      </div>
+      <div class="login-or">or sign in with your account</div>
+    }
 
     <!-- Form -->
     <form class="login-form" (ngSubmit)="submit()">
@@ -53,7 +65,7 @@
       </div>
 
       @if (error()) {
-        <div class="login-error">
+        <div class="login-error" role="alert">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
@@ -77,16 +89,6 @@
       }
 
     </form>
-
-    @if (demo.enabled()) {
-      <div class="demo-accounts">
-        @for (acc of demoAccounts; track acc.username) {
-          <button class="demo-btn" type="button" (click)="demoLogin(acc)" [disabled]="loading()">
-            ▶ {{ acc.label }}  <span class="demo-hint">{{ acc.username }} / {{ acc.password }}</span>
-          </button>
-        }
-      </div>
-    }
 
   </div>
 

@@ -11,6 +11,20 @@ export const DEMO_ACCOUNTS = [
   { label: 'Try as Analyst', username: 'analyst', password: 'analyst-demo' },
 ] as const;
 
+const GATEWAY_ERRORS = [502, 503, 504];
+
+/** What to tell the user about a failed sign-in. */
+export function loginErrorMessage(err: HttpErrorResponse): string {
+  if (err.status === 429) return 'Too many attempts. Please wait and try again.';
+  if (err.status === 0 || GATEWAY_ERRORS.includes(err.status)) {
+    return 'The server is waking up or unreachable. Please try again shortly.';
+  }
+  // Only the login call can reject credentials: a 401 from the /auth/me call
+  // that follows it means the password was right but the session did not stick.
+  if (err.status === 401 && err.url?.endsWith('/auth/login')) return 'Invalid username or password';
+  return 'Something went wrong. Please try again.';
+}
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -63,7 +77,7 @@ export class Login {
       next:  () => { clearTimer(); this.router.navigate(['/dashboard']); },
       error: (err: HttpErrorResponse) => {
         clearTimer();
-        this.error.set(err.status === 429 ? 'Too many attempts, try again in a minute' : 'Invalid credentials');
+        this.error.set(loginErrorMessage(err));
         this.loading.set(false);
       },
     });
