@@ -49,6 +49,22 @@ These apply to every task and every session.
 
 ---
 
+## Finishing a task
+
+A standing rule. At the end of every task, after the commits, do these steps without being asked:
+
+1. Run a read-only pre-push check. Run `git status` and `git log --oneline master..HEAD`, check every commit
+   message for AI attribution lines (Co-Authored-By, "Generated with", session links), and list the files changed
+   against master. Flag anything unrelated to the task and any env file. Exclude env files with `':!*.env*'` and
+   never open one.
+2. End the final report with a ready-to-paste PR title (one line, imperative, no prefix) and description (a short
+   "What" section and a short "Checks" section with the lint, test and build results). No AI attribution lines
+   and no "Generated with" footer.
+3. State in one line whether it is safe to push, and the owner's next steps: Publish Branch, Create PR, wait for
+   green checks, merge.
+
+---
+
 ## Commands
 
 /feature — plan then build
