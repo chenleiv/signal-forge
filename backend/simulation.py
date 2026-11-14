@@ -3,7 +3,7 @@ import json
 import os
 import pathlib
 import random
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import parsedate_to_datetime
 from typing import Callable, Optional
 
@@ -14,7 +14,7 @@ from constants import (
     _SERVICES, _PROTOCOLS, _SCAN_TYPES, _ENDPOINTS,
 )
 from db_ops import db_get_threat_feed_snapshot, db_save_threat_feed_snapshot
-from store import _ip_coords, is_public_ip
+from store import _ip_coords, is_public_ip, record_backfill
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 IPINFO_TOKEN      = os.environ.get("IPINFO_TOKEN", "")
@@ -297,3 +297,34 @@ def generate_threat() -> dict:
         event["lat"] = lat
         event["lng"] = lng
     return event
+
+
+# ── Demo backfill ─────────────────────────────────────────────
+# A fresh demo process has no history, so the stats charts start at zero.
+# In demo mode on sample data only, record the last few minutes of
+# simulated events at startup. The minute buckets keep 15 minutes.
+BACKFILL_MINUTES = 15
+BACKFILL_PER_MINUTE = 40
+MAX_BACKFILL_EVENTS = BACKFILL_MINUTES * BACKFILL_PER_MINUTE
+
+
+def backfill_demo_events(demo_mode: bool) -> int:
+    """Record past simulated events for the demo; returns how many. Runs only
+    when demo mode is on and the feed is the bundled sample, never on live or
+    cached threat data."""
+    if not demo_mode or FEED_STATUS["state"] != "sample" or not THREAT_IPS:
+        return 0
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    count = 0
+    for back in range(BACKFILL_MINUTES, 0, -1):
+        start = now - timedelta(minutes=back)
+        offsets = sorted(random.uniform(0, 59.999) for _ in range(BACKFILL_PER_MINUTE))
+        for offset in offsets:
+            if count >= MAX_BACKFILL_EVENTS:
+                return count
+            event = generate_threat()
+            event["timestamp"] = (start + timedelta(seconds=offset)).isoformat()
+            record_backfill(event, start.strftime("%H:%M"))
+            count += 1
+    print(f"[Demo] Backfilled {count} sample events over {BACKFILL_MINUTES} min")
+    return count

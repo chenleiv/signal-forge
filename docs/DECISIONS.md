@@ -16,6 +16,43 @@ to anything listed here.
 
 ---
 
+## 2026-11-14 · Demo backfill at startup
+
+**Decision.** In demo mode, when the threat feed falls back to the bundled
+sample (`FEED_STATUS.state == "sample"`), startup records the last 15 minutes
+of simulated events (40 per minute, at most `MAX_BACKFILL_EVENTS` = 600) into
+the in-memory stores, so `/api/stats` and the charts built from it are
+populated for the first visitor. The backfill never runs on live or cached
+data, never outside demo mode, and never evaluates alert rules. The sample
+keeps its public Censys scanner IPs.
+
+**Reason.** A fresh demo process had no history: the stats charts started at
+zero and filled over minutes. Generating the backfill at startup keeps the
+timestamps relative to now, so it cannot go stale, and reuses the same event
+generator as the live stream. Skipping rule evaluation keeps startup from
+raising a burst of alerts.
+
+**Alternatives rejected.**
+- A committed JSON file of synthetic events: its timestamps go stale, it
+  duplicates the generator's event shape, and it grows the repo.
+- IPs from the documentation ranges (192.0.2.0/24, 198.51.100.0/24,
+  203.0.113.0/24): `store.validate_ip` rejects them as non-public, so every
+  IP action in the UI (lookup, block, case from IP) would fail with 422 for
+  every demo event, and `_clean_ips` would drop them. Allowing them would
+  loosen a security control.
+
+Limits: the region chart, the summary cards and the map are built from the
+WebSocket events in the browser, which the backfill does not replay; they
+fill from the live sample stream within seconds. The behavioral loop treats
+backfilled events like live ones, so it may raise RepeatedIP alerts about a
+minute after startup, as the live stream would within ten minutes.
+
+Files: `backend/simulation.py` (`backfill_demo_events`), `backend/store.py`
+(`record_backfill`), `backend/main.py` (lifespan),
+`backend/tests/test_demo_seed.py`.
+
+---
+
 ## 2026-11-14 · WebSocket session revocation
 
 **Decision.** A WebSocket stream ends when its session does. The ticket from
