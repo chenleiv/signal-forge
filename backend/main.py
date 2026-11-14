@@ -262,7 +262,7 @@ app.include_router(users.router)
 # "signed out" and does not reconnect on it.
 WS_SESSION_ENDED = 4001
 # An idle stream re-checks its session at least this often (seconds).
-WS_RECHECK_SECONDS = 10.0
+WS_RECHECK_SECONDS = 2.0
 
 
 @app.websocket("/ws/threats")

@@ -21,7 +21,7 @@ to anything listed here.
 **Decision.** A WebSocket stream ends when its session does. The ticket from
 `/auth/ws-ticket` carries the session's role, session key (`sk`) and session id
 (`sid`). `threats_ws` checks them at the handshake and again before every
-message, and at least every `WS_RECHECK_SECONDS` (10 s) while the stream is
+message, and at least every `WS_RECHECK_SECONDS` (2 s) while the stream is
 idle, using the same checks as HTTP requests (`store.session_claims_valid`).
 When they fail the server closes the stream with code 4001. Logout, user
 deletion, role change and password resets therefore end an open stream, and a
@@ -34,8 +34,10 @@ shows "signed out" without retrying.
 signature, expiry and type, and the stream never re-checked anything, so an
 open connection kept receiving events after logout, deletion or a reset until
 the client closed it. The checks are in-memory lookups, so running them per
-message costs almost nothing, and with events every 0.5 to 1.5 s a revocation
-takes effect within about a second.
+message costs almost nothing: a busy stream (events every 0.5 to 1.5 s) closes
+within about 1 s of a revocation, an idle one within about 2 s
+(`WS_RECHECK_SECONDS`). The interval was first 10 s and was lowered to 2 s
+after a manual test where an idle stream took about 10 s to close.
 
 **Alternatives rejected.**
 - A connection registry keyed by session or user, closed from logout and the
@@ -46,7 +48,10 @@ takes effect within about a second.
 - Re-checking on a timer only: simpler loop, but up to a full interval of
   events after revocation while the stream is busy.
 
-Limits: revocations live in each process's memory, so this holds for a single
+Limits: when no events flow (for example, the simulation is paused because
+there is no AbuseIPDB key and no cache), revocation is caught only by the
+idle re-check, so within `WS_RECHECK_SECONDS`. Revocations live in each
+process's memory, so this holds for a single
 uvicorn worker (the documented setup, `build.sh` and README). The stream does
 not end when the 8-hour session token itself expires; that is not covered by
 this decision.

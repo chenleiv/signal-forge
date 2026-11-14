@@ -126,6 +126,26 @@ def test_admin_action_closes_the_users_stream(app_client, action):
         assert _close_code(ws) == main.WS_SESSION_ENDED
 
 
+@pytest.mark.parametrize("action", ["delete", "password_reset"])
+def test_busy_stream_is_closed_by_the_per_message_check(app_client, monkeypatch, action):
+    """Events flowing and an idle re-check far beyond the frame cap's time
+    (about 3 s): only the check before each send can close the stream. If it
+    regresses, the cap is reached and the test fails instead of hanging."""
+    monkeypatch.setattr(main, "WS_RECHECK_SECONDS", 30.0)
+    bob = login("bob")
+    admin = session_client("admin", "admin")
+    with app_client.websocket_connect(f"/ws/threats?ticket={_ticket(bob)}") as ws:
+        ws.receive_json()
+        started = time.monotonic()
+        if action == "delete":
+            r = admin.delete("/api/users/bob")
+        else:
+            r = admin.patch("/api/users/bob", json={"password": NEW_PASSWORD})
+        assert r.status_code == 200, r.text
+        assert _close_code(ws) == main.WS_SESSION_ENDED
+        assert time.monotonic() - started < 5.0
+
+
 def test_own_password_change_closes_other_sessions_streams(app_client):
     streaming, changer = login("alice"), login("alice")
     with app_client.websocket_connect(f"/ws/threats?ticket={_ticket(streaming)}") as ws:
