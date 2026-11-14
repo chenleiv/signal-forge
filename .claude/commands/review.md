@@ -110,6 +110,8 @@ No code changes.
 
 Max 200 tokens.
 
+The token cap excludes the "Finishing a task" block and the closing summary.
+
 Return:
 
 REVIEW:

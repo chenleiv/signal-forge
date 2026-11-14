@@ -117,6 +117,13 @@ Fix build errors before marking COMPLETE.
 
 Never return COMPLETE with failing build.
 
+Backend changes:
+
+Run:
+pytest with --ignore=tests/test_env_example.py
+
+Never return COMPLETE with failing tests.
+
 # Finish
 
 Recommend:
@@ -128,6 +135,8 @@ Recommend:
 # Output
 
 Max 200 tokens.
+
+The token cap excludes the "Finishing a task" block and the closing summary.
 
 FEATURE:
 PLANNED / COMPLETE
