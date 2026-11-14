@@ -111,11 +111,13 @@ Run validation for changed areas.
 Frontend changes:
 
 Run:
+npm run lint
+npm test -- --watch=false
 npm run build
 
-Fix build errors before marking COMPLETE.
+Fix lint, test and build errors before marking COMPLETE.
 
-Never return COMPLETE with failing build.
+Never return COMPLETE with failing lint, tests or build.
 
 Backend changes:
 

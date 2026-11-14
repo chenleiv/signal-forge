@@ -29,9 +29,6 @@
       "Bash(alembic history*)",
       "Bash(alembic current*)",
       "Bash(alembic heads*)",
-      "Bash(find frontend*)",
-      "Bash(find backend*)",
-      "Bash(ls *)",
       "Bash(git show*)",
       "Bash(git blame*)"
     ]
