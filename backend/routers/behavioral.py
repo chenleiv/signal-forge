@@ -1,11 +1,13 @@
 from __future__ import annotations
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import BEHAVIORAL_LIMITS
 from database import get_db
+from rate_limit import ADMIN_WRITE_LIMIT, limiter
+from schemas import BehavioralPatch
 from authz import require_admin
 from repositories import behavioral
 from store import verify_token
@@ -33,8 +35,9 @@ def _validate(body: dict) -> dict:
 
 
 @router.patch("/api/behavioral/settings")
+@limiter.limit(ADMIN_WRITE_LIMIT)
 async def update_behavioral_settings(
-    body: dict,
+    request: Request, body: BehavioralPatch,
     db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)
 ):
-    return await behavioral(db).update(_validate(body))
+    return await behavioral(db).update(_validate(body.changes()))

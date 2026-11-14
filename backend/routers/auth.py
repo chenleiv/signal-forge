@@ -10,7 +10,8 @@ from starlette.concurrency import run_in_threadpool
 
 from database import get_db
 from sessions import new_session_id, revoke_session
-from rate_limit import limiter, login_locked, record_login_failure
+from rate_limit import WRITE_LIMIT, limiter, login_locked, record_login_failure
+from schemas import LoginBody, OwnPasswordBody
 from user_admin import change_own_password
 import store as _store
 from store import SECRET_KEY, verify_token
@@ -54,11 +55,8 @@ def _set_session_cookie(response: Response, user: CurrentUser) -> None:
 
 @router.post("/auth/login")
 @limiter.limit("5/minute")  # per client IP (see rate_limit.client_ip)
-async def login(request: Request, body: dict, response: Response):
-    username = body.get("username")
-    password = body.get("password")
-    if not isinstance(username, str) or not isinstance(password, str):
-        username, password = "", ""
+async def login(request: Request, body: LoginBody, response: Response):
+    username, password = body.credentials()
     # Per account, across all IPs. Checked before the password, so a correct
     # guess during the lockout does not get in either. The public demo
     # accounts are exempt in demo mode: their passwords are on the login page,
@@ -79,6 +77,7 @@ async def login(request: Request, body: dict, response: Response):
 
 
 @router.post("/auth/logout")
+@limiter.limit(WRITE_LIMIT)
 async def logout(request: Request, response: Response, db: Optional[AsyncSession] = Depends(get_db)):
     """Ends THIS session on the server too (a copied cookie stops working),
     not just in this browser. Public and idempotent: no valid session, nothing
@@ -106,19 +105,23 @@ async def me(user: CurrentUser = Depends(verify_token)):
 
 
 @router.patch("/auth/me")
-async def patch_me(body: dict, response: Response,
+@limiter.limit(WRITE_LIMIT)
+async def patch_me(request: Request, body: OwnPasswordBody, response: Response,
                    db: Optional[AsyncSession] = Depends(get_db),
                    user: CurrentUser = Depends(verify_token)):
     """Change your own password. Every other session is signed out; this one
     gets a new cookie. Demo mode blocks it (middleware): the demo accounts'
     passwords are public and must stay usable for everyone."""
-    updated = await change_own_password(db, user.username, body)
+    updated = await change_own_password(db, user.username, body.model_dump())
     _set_session_cookie(response, user)  # signed with the new session key
     return updated
 
 
 @router.get("/auth/ws-ticket")
-async def ws_ticket(user: CurrentUser = Depends(verify_token)):
+# One per page load or reconnect. Generous: several tabs, or a team behind
+# one NAT address, must keep their live stream; minting needs a session anyway.
+@limiter.limit("60/minute")
+async def ws_ticket(request: Request, user: CurrentUser = Depends(verify_token)):
     ticket = jwt.encode(
         {
             "sub": user.username,

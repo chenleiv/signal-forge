@@ -3,7 +3,7 @@ from collections import deque
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import INCIDENT_TITLES, MITRE_MAP, RESPONSE_TASKS, MAX_NOTE_LENGTH
@@ -12,7 +12,8 @@ from db_ops import StaleIncident
 from repositories import incidents
 from store import ip_store, _score_to_level, validate_ip, verify_token
 import store as _store
-from rate_limit import CASES_PER_USER
+from rate_limit import CASES_PER_USER, WRITE_LIMIT, limiter
+from schemas import IncidentFromIp, IncidentPatch, NoteBody, TasksBody
 from authz import check_incident_patch, check_work_on_incident
 from users import CurrentUser
 
@@ -103,12 +104,13 @@ async def get_incidents(db: Optional[AsyncSession] = Depends(get_db), _=Depends(
 
 
 @router.patch("/api/incidents/{incident_id}")
+@limiter.limit(WRITE_LIMIT)
 async def patch_incident(
-    incident_id: str, body: dict,
+    request: Request, incident_id: str, body: IncidentPatch,
     db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
     inc = await _load_incident(incident_id, db)
-    patch = check_incident_patch(user, inc, body)
+    patch = check_incident_patch(user, inc, body.changes())
     try:
         # Written only if the assignee is still the one the check saw.
         result = await incidents(db).patch(incident_id, patch, expected_assignee=inc["assigned_to"])
@@ -129,24 +131,23 @@ async def get_ip_case(
 
 
 @router.post("/api/incidents/from-ip")
+@limiter.limit(WRITE_LIMIT)
 async def create_incident_from_ip(
-    body: dict,
+    request: Request, body: IncidentFromIp,
     db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
-    ip = body.get("ip")
-    if not isinstance(ip, str):  # ipaddress would also accept an int
-        raise HTTPException(status_code=422, detail="Invalid IP address format")
-    return await build_incident_for_ip(validate_ip(ip), db, user)
+    return await build_incident_for_ip(validate_ip(body.ip), db, user)
 
 
 @router.patch("/api/incidents/{incident_id}/tasks")
+@limiter.limit(WRITE_LIMIT)
 async def update_tasks(
-    incident_id: str, body: dict,
+    request: Request, incident_id: str, body: TasksBody,
     db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
     inc = await _load_incident(incident_id, db)
     check_work_on_incident(user, inc)
-    completed = _validate_completed_tasks(body, inc)
+    completed = _validate_completed_tasks(body.model_dump(), inc)
     result = await incidents(db).set_tasks(incident_id, completed)
     if result is None:
         raise HTTPException(status_code=404, detail="Incident not found")
@@ -154,11 +155,12 @@ async def update_tasks(
 
 
 @router.post("/api/incidents/{incident_id}/notes")
+@limiter.limit(WRITE_LIMIT)
 async def add_note(
-    incident_id: str, body: dict,
+    request: Request, incident_id: str, body: NoteBody,
     db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
-    text   = _validate_note_text(body)
+    text   = _validate_note_text(body.model_dump())
     author = user.username  # from the verified session, never from the request body
     inc = await _load_incident(incident_id, db)
     check_work_on_incident(user, inc)

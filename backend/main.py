@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import asyncio
 import json
+import os
 import pathlib
 import random
 import subprocess
@@ -30,6 +31,8 @@ from store import (
 )
 import store as _store
 from rate_limit import limiter
+from request_limits import BodySizeLimitMiddleware
+from security_headers import SecurityHeadersMiddleware
 from users import seed_users, sync_users_with_db
 from sessions import load_revoked_sessions
 
@@ -195,7 +198,13 @@ async def lifespan(app: FastAPI):
             pass
 
 
-app = FastAPI(title="SignalForge API", lifespan=lifespan)
+# Swagger UI, ReDoc and the OpenAPI schema list every route and field,
+# admin ones included: off unless ENABLE_API_DOCS=true (local development).
+# When off, those paths fall through to the SPA like any unknown path.
+ENABLE_API_DOCS = os.environ.get("ENABLE_API_DOCS", "").strip().lower() == "true"
+_docs = {} if ENABLE_API_DOCS else {"docs_url": None, "redoc_url": None, "openapi_url": None}
+
+app = FastAPI(title="SignalForge API", lifespan=lifespan, **_docs)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
@@ -224,6 +233,9 @@ async def demo_read_only(request: Request, call_next):
     return await call_next(request)
 
 
+# Inside CORS, so a 413 still carries CORS headers.
+app.add_middleware(BodySizeLimitMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://signal-forge-tane.onrender.com", "http://localhost:4200"],
@@ -231,6 +243,10 @@ app.add_middleware(
     allow_headers=["*"],
     allow_credentials=True,
 )
+
+# Added last, so it is the outermost layer: every response gets the headers,
+# including CORS preflights, demo-mode 403s and rate-limit 429s.
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(auth.router)
 app.include_router(ip.router)

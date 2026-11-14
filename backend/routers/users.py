@@ -1,11 +1,13 @@
 from __future__ import annotations
 from typing import Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from authz import check_user_create, check_user_delete, check_user_update, require_admin
 from database import get_db
+from rate_limit import ADMIN_WRITE_LIMIT, limiter
+from schemas import UserCreate, UserPatch
 from store import verify_token
 from user_admin import create_user, delete_user, update_user
 from users import CurrentUser, get_user_record, list_users, user_directory
@@ -26,21 +28,28 @@ async def get_user_directory(_=Depends(verify_token)):
 
 
 @router.post("/api/users", status_code=201)
-async def post_user(body: dict, db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)):
-    check_user_create(body)
-    return await create_user(db, body)
+@limiter.limit(ADMIN_WRITE_LIMIT)
+async def post_user(request: Request, body: UserCreate,
+                    db: Optional[AsyncSession] = Depends(get_db), _=Depends(require_admin)):
+    fields = body.model_dump()
+    check_user_create(fields)
+    return await create_user(db, fields)
 
 
 @router.patch("/api/users/{username}")
-async def patch_user(username: str, body: dict, db: Optional[AsyncSession] = Depends(get_db),
+@limiter.limit(ADMIN_WRITE_LIMIT)
+async def patch_user(request: Request, username: str, body: UserPatch,
+                     db: Optional[AsyncSession] = Depends(get_db),
                      actor: CurrentUser = Depends(verify_token)):
     # Admins change role/password of anyone; managers only reset analysts' passwords.
-    check_user_update(actor, get_user_record(username), body)
-    return await update_user(db, username, body)
+    changes = body.changes()
+    check_user_update(actor, get_user_record(username), changes)
+    return await update_user(db, username, changes)
 
 
 @router.delete("/api/users/{username}")
-async def remove_user(username: str, db: Optional[AsyncSession] = Depends(get_db),
+@limiter.limit(ADMIN_WRITE_LIMIT)
+async def remove_user(request: Request, username: str, db: Optional[AsyncSession] = Depends(get_db),
                       admin: CurrentUser = Depends(require_admin)):
     check_user_delete(get_user_record(username))
     await delete_user(db, admin, username)
