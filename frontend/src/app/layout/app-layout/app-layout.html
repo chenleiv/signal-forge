@@ -145,8 +145,9 @@
 
 
         <div class="topbar-chip" [class.chip-reconnecting]="ws.status() === 'reconnecting'">
-          <span class="chip-dot" [class.dot-reconnecting]="ws.status() === 'reconnecting'"></span>
-          {{ ws.status() === 'connected' ? 'LIVE FEED' : 'RECONNECTING...' }}
+          <span class="chip-dot" [class.dot-reconnecting]="ws.status() === 'reconnecting'"
+                [class.dot-signed-out]="ws.status() === 'signed-out'"></span>
+          {{ ws.status() === 'connected' ? 'LIVE FEED' : ws.status() === 'signed-out' ? 'SIGNED OUT' : 'RECONNECTING...' }}
         </div>
         @if (ws.slowConnection()) {
           <div class="topbar-wakeup">

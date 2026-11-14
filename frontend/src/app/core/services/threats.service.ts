@@ -5,6 +5,11 @@ import { ThreatEvent } from '../../shared/models/threat.models';
 import { SettingsService } from './settings.service';
 import { AuthService } from './auth';
 
+/** Close code the server sends when the stream's session has ended. */
+export const WS_SESSION_ENDED = 4001;
+
+export type StreamStatus = 'connected' | 'reconnecting' | 'disconnected' | 'signed-out';
+
 @Injectable({ providedIn: 'root' })
 export class ThreatsService {
   private socket!: WebSocket;
@@ -16,8 +21,11 @@ export class ThreatsService {
 
   private destroyed = false;
   private slowTimer: ReturnType<typeof setTimeout> | null = null;
+  // Set after a 4001 until a socket opens again: a second 4001 in a row
+  // means signed out, with no further ticket request.
+  private sessionChecked = false;
 
-  readonly status         = signal<'connected' | 'reconnecting' | 'disconnected'>('disconnected');
+  readonly status         = signal<StreamStatus>('disconnected');
   readonly slowConnection = signal(false);
 
   private startSlowTimer() {
@@ -50,6 +58,7 @@ export class ThreatsService {
 
     this.socket.onopen = () => {
       this.clearSlowTimer();
+      this.sessionChecked = false;
       this.status.set('connected');
     };
 
@@ -64,7 +73,11 @@ export class ThreatsService {
       this.status.set('reconnecting');
     };
 
-    this.socket.onclose = () => {
+    this.socket.onclose = (event: CloseEvent) => {
+      if (event.code === WS_SESSION_ENDED && !this.destroyed) {
+        this.onSessionEnded();
+        return;
+      }
       this.status.set('reconnecting');
       if (!this.destroyed) {
         setTimeout(() => this.connect(), this.settingsService.settings().reconnectDelay * 1000);
@@ -78,6 +91,25 @@ export class ThreatsService {
     this.alertSub = timer(0, 15_000).pipe(
       switchMap(() => this.store.fetchAlerts().pipe(catchError(() => EMPTY))),
     ).subscribe(alerts => this.store.alerts.set(alerts));
+  }
+
+  /** The server ended the stream's session. One ticket request tells why:
+   *  a valid session (e.g. this tab changed its own password, which rotates
+   *  the session key) reconnects at once; otherwise the user is signed out
+   *  and nothing retries. */
+  private onSessionEnded() {
+    this.statsSub?.unsubscribe();
+    this.alertSub?.unsubscribe();
+    if (this.sessionChecked) {
+      this.status.set('signed-out');
+      return;
+    }
+    this.sessionChecked = true;
+    this.status.set('reconnecting');
+    this.authService.getWsTicket().subscribe({
+      next: ticket => { if (!this.destroyed) this.openSocket(ticket); },
+      error: () => { this.clearSlowTimer(); this.status.set('signed-out'); },
+    });
   }
 
   disconnect() {
