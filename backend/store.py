@@ -81,10 +81,26 @@ def block_ip(ip: str) -> bool:
 
 # ── Auth helpers ──────────────────────────────────────────────
 
-def verify_token(request: Request) -> CurrentUser:
-    """The authenticated user: the only source of "who is acting". Besides the
-    signature, checks the token against the current user record and the logout
-    list, so deletions, role changes, resets and logouts apply immediately."""
+def session_claims_valid(claims: dict) -> bool:
+    """The revocation checks shared by HTTP sessions and the WebSocket stream:
+    the user is active and still has the role and session key in the claims
+    (deletion, role change and password resets rotate it), and this session's
+    id ("sid") has not been logged out."""
+    username = claims.get("sub")
+    role = claims.get("role")
+    sid = claims.get("sid")
+    return (
+        isinstance(username, str) and bool(username)
+        and role in ROLES
+        and isinstance(sid, str) and bool(sid) and not is_revoked(sid)
+        and is_session_current(username, role, claims.get("sk"))
+    )
+
+
+def verify_session(request: Request) -> dict:
+    """The verified session token's claims. Besides the signature, checks the
+    token against the current user record and the logout list, so deletions,
+    role changes, resets and logouts apply immediately."""
     token = request.cookies.get(_COOKIE)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -92,20 +108,17 @@ def verify_token(request: Request) -> CurrentUser:
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         if payload.get("typ") != "session":
             raise ValueError("wrong token type")
-        username = payload.get("sub")
-        role = payload.get("role")
-        if not isinstance(username, str) or not username:
-            raise ValueError("missing subject")
-        if role not in ROLES:
-            raise ValueError("missing or unknown role")
-        sid = payload.get("sid")
-        if not isinstance(sid, str) or not sid or is_revoked(sid):
-            raise ValueError("session logged out")   # or a pre-logout-revocation token
-        if not is_session_current(username, role, payload.get("sk")):
-            raise ValueError("session revoked")
+        if not session_claims_valid(payload):
+            raise ValueError("session logged out or revoked")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid or expired token") from None
-    return CurrentUser(username=username, role=role)
+    return payload
+
+
+def verify_token(request: Request) -> CurrentUser:
+    """The authenticated user: the only source of "who is acting"."""
+    payload = verify_session(request)
+    return CurrentUser(username=payload["sub"], role=payload["role"])
 
 
 def _is_non_public(parsed: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:

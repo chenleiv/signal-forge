@@ -258,14 +258,23 @@ app.include_router(behavioral.router)
 app.include_router(users.router)
 
 
+# Close code for a missing, invalid or ended session. The frontend shows
+# "signed out" and does not reconnect on it.
+WS_SESSION_ENDED = 4001
+# An idle stream re-checks its session at least this often (seconds).
+WS_RECHECK_SECONDS = 10.0
+
+
 @app.websocket("/ws/threats")
 async def threats_ws(ws: WebSocket, ticket: str = ""):
     try:
-        payload = jwt.decode(ticket, SECRET_KEY, algorithms=["HS256"])
-        if payload.get("typ") != "ws":
+        claims = jwt.decode(ticket, SECRET_KEY, algorithms=["HS256"])
+        if claims.get("typ") != "ws":
             raise ValueError("not a ws ticket")
+        if not _store.session_claims_valid(claims):
+            raise ValueError("session logged out or revoked")
     except Exception:
-        await ws.close(code=4001)
+        await ws.close(code=WS_SESSION_ENDED)
         return
 
     await ws.accept()
@@ -273,7 +282,17 @@ async def threats_ws(ws: WebSocket, ticket: str = ""):
     _clients.add(queue)
     try:
         while True:
-            await ws.send_text(await queue.get())
+            try:
+                message: str | None = await asyncio.wait_for(queue.get(), timeout=WS_RECHECK_SECONDS)
+            except TimeoutError:
+                message = None
+            # Same checks as every HTTP request: logout, deletion, role change
+            # and password resets end an open stream too.
+            if not _store.session_claims_valid(claims):
+                await ws.close(code=WS_SESSION_ENDED)
+                break
+            if message is not None:
+                await ws.send_text(message)
     except (WebSocketDisconnect, RuntimeError):
         pass
     finally:

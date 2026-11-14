@@ -14,7 +14,7 @@ from rate_limit import WRITE_LIMIT, limiter, login_locked, record_login_failure
 from schemas import LoginBody, OwnPasswordBody
 from user_admin import change_own_password
 import store as _store
-from store import SECRET_KEY, verify_token
+from store import SECRET_KEY, verify_session, verify_token
 from users import DEMO_USERNAMES, CurrentUser, authenticate, get_user, public_user
 
 router = APIRouter()
@@ -121,10 +121,16 @@ async def patch_me(request: Request, body: OwnPasswordBody, response: Response,
 # One per page load or reconnect. Generous: several tabs, or a team behind
 # one NAT address, must keep their live stream; minting needs a session anyway.
 @limiter.limit("60/minute")
-async def ws_ticket(request: Request, user: CurrentUser = Depends(verify_token)):
+async def ws_ticket(request: Request, session: dict = Depends(verify_session)):
     ticket = jwt.encode(
         {
-            "sub": user.username,
+            "sub": session["sub"],
+            # The session's revocation handles: the stream re-checks them at
+            # the handshake and while it runs (main.threats_ws), so logout,
+            # deletion, role change and password resets end it too.
+            "role": session["role"],
+            "sk": session["sk"],
+            "sid": session["sid"],
             "typ": "ws",
             "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
         },
