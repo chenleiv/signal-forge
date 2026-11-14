@@ -51,7 +51,13 @@ def _token(claims: dict | None = None, key: str = SECRET_KEY, drop: tuple = ()) 
 
 def _ws_ticket(claims: dict | None = None, key: str = SECRET_KEY, drop: tuple = ()) -> str:
     """A WebSocket ticket valid in every respect except what the test changes."""
-    base = {"sub": "alice", "typ": "ws", "exp": datetime.now(timezone.utc) + timedelta(minutes=5)}
+    import users
+    base = {
+        "sub": "alice", "role": "analyst", "typ": "ws",
+        "sk": users.get_user("alice")["session_key"],
+        "sid": "crafted-test-session-id",
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+    }
     payload = {k: v for k, v in {**base, **(claims or {})}.items() if k not in drop}
     return jwt.encode(payload, key, algorithm="HS256")
 
