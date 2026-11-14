@@ -22,6 +22,8 @@ body {
   --c-muted:  #4b5563;
   --c-accent: #3b82f6;
   --c-input:  #0d1220;
+  --c-success: #4ade80;
+  --c-warning: #f59e0b;
 }
 
 :root[data-theme="light"] {
@@ -33,6 +35,8 @@ body {
   --c-muted:  #64748b;
   --c-accent: #4f72de;
   --c-input:  #ffffff;
+  --c-success: #166534;
+  --c-warning: #854d0e;
 }
 
 /* ── Skeleton shimmer ─────────────────────────────────────────── */

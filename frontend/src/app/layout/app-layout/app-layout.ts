@@ -36,6 +36,13 @@ export class AppLayout {
   readonly ws              = inject(ThreatsService);
   private store            = inject(ThreatStoreService);
   readonly alertBadge      = computed(() => this.store.newAlertCount());
+  /** Live-feed chip: green only while connected; a dropped stream reads as reconnecting. */
+  readonly chipState       = computed<'live' | 'reconnecting' | 'signed-out'>(() => {
+    const status = this.ws.status();
+    if (status === 'connected') return 'live';
+    if (status === 'signed-out') return 'signed-out';
+    return 'reconnecting';
+  });
   // Injected to eagerly trigger the effect() that sets data-theme on <body>.
   readonly themeService    = inject(ThemeService);
   readonly demo            = inject(DemoModeService);
