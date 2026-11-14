@@ -45,6 +45,11 @@ def client_ip(request: Request) -> str:
 # imported by routers without a circular import).
 limiter = Limiter(key_func=client_ip)
 
+# Per-IP limits for state-changing routes. Far above what a person clicking
+# in the UI sends; they cap scripted floods of writes.
+WRITE_LIMIT = "30/minute"
+ADMIN_WRITE_LIMIT = "20/minute"
+
 
 class KeyedLimit:
     """A rate limit on an application key (username, ...) rather than on the

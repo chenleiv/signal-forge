@@ -11,6 +11,7 @@ from starlette.requests import Request
 
 from constants import GEO_DATA, MITRE_MAP
 from rate_limit import limiter
+from schemas import CommandBody
 from store import (
     ip_store, _blocked_ips, _ip_coords, _score_to_level, block_ip as _block_ip,
     validate_ip, verify_token, MAX_BLOCKED_IPS,
@@ -222,9 +223,9 @@ async def unblock_ip(request: Request, ip: str = Depends(validate_ip), _=Depends
 
 @router.post("/api/command")
 @limiter.limit("20/minute")
-async def run_command(request: Request, body: dict, _=Depends(verify_token)):
+async def run_command(request: Request, body: CommandBody, _=Depends(verify_token)):
     from collections import deque
-    cmd = body.get("command", "").strip().lower()
+    cmd = body.command.strip().lower()
     if len(cmd) > 100:
         return {"output": "Error: command too long"}
     ALLOWED_COMMANDS = {"help", "status", "clear"}

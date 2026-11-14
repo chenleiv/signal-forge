@@ -3,10 +3,12 @@ from collections import Counter
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
+from rate_limit import WRITE_LIMIT, limiter
+from schemas import AlertPatch
 from store import alerts_store, _blocked_ips, _find_alert, verify_token
 from routers.incidents import build_incident_for_ip
 from users import CurrentUser
@@ -22,13 +24,12 @@ async def get_alerts(include_dismissed: bool = False, _=Depends(verify_token)):
 
 
 @router.patch("/api/alerts/{alert_id}")
-async def patch_alert(alert_id: str, body: dict, _=Depends(verify_token)):
+@limiter.limit(WRITE_LIMIT)
+async def patch_alert(request: Request, alert_id: str, body: AlertPatch, _=Depends(verify_token)):
     alert = _find_alert(alert_id)
     if alert is None:
         raise HTTPException(status_code=404, detail="Alert not found")
-    new_status = body.get("status")
-    if new_status not in ("acknowledged", "dismissed"):
-        raise HTTPException(status_code=422, detail="status must be 'acknowledged' or 'dismissed'")
+    new_status = body.status
     alert["status"] = new_status
     if new_status == "acknowledged":
         alert["acknowledged_at"] = datetime.now(timezone.utc).isoformat()
@@ -67,8 +68,9 @@ async def get_alerts_summary(_=Depends(verify_token)):
 
 
 @router.post("/api/alerts/{alert_id}/case")
+@limiter.limit(WRITE_LIMIT)
 async def create_case_from_alert(
-    alert_id: str,
+    request: Request, alert_id: str,
     db: Optional[AsyncSession] = Depends(get_db), user: CurrentUser = Depends(verify_token)
 ):
     alert = _find_alert(alert_id)

@@ -31,6 +31,7 @@ from store import (
 )
 import store as _store
 from rate_limit import limiter
+from request_limits import BodySizeLimitMiddleware
 from security_headers import SecurityHeadersMiddleware
 from users import seed_users, sync_users_with_db
 from sessions import load_revoked_sessions
@@ -231,6 +232,9 @@ async def demo_read_only(request: Request, call_next):
         return JSONResponse({"detail": "Read-only demo"}, status_code=403)
     return await call_next(request)
 
+
+# Inside CORS, so a 413 still carries CORS headers.
+app.add_middleware(BodySizeLimitMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
