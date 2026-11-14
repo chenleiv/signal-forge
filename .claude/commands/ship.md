@@ -107,6 +107,8 @@ BLOCK when:
 
 Max 250 tokens.
 
+The token cap excludes the "Finishing a task" block and the closing summary.
+
 Return:
 
 

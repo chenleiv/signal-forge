@@ -139,6 +139,8 @@ Keep changes minimal.
 
 Max 150 tokens.
 
+The token cap excludes the "Finishing a task" block and the closing summary.
+
 Return:
 
 CLEANUP:

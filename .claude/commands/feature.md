@@ -111,11 +111,20 @@ Run validation for changed areas.
 Frontend changes:
 
 Run:
+npm run lint
+npm test -- --watch=false
 npm run build
 
-Fix build errors before marking COMPLETE.
+Fix lint, test and build errors before marking COMPLETE.
 
-Never return COMPLETE with failing build.
+Never return COMPLETE with failing lint, tests or build.
+
+Backend changes:
+
+Run:
+pytest with --ignore=tests/test_env_example.py
+
+Never return COMPLETE with failing tests.
 
 # Finish
 
@@ -128,6 +137,8 @@ Recommend:
 # Output
 
 Max 200 tokens.
+
+The token cap excludes the "Finishing a task" block and the closing summary.
 
 FEATURE:
 PLANNED / COMPLETE

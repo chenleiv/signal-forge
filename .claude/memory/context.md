@@ -23,6 +23,11 @@ backend/users.py            Users, password hashing, seeding, session checks
 backend/user_admin.py       User management operations
 backend/sessions.py         Logout revocation
 backend/rate_limit.py       Per-IP and per-key rate limits
+backend/schemas.py          Typed Pydantic request bodies: shape and size checks, 422 before a route runs
+backend/security_headers.py Security headers middleware: SPA and API CSP, HSTS over HTTPS, no-store on API
+backend/request_limits.py   Request body size limit middleware: 413 over 64 KB, chunked bodies included
+backend/database.py         Async SQLAlchemy engine and session from DATABASE_URL, None without it
+backend/constants.py        Simulation data, MITRE map, response playbooks, behavioral defaults and limits
 backend/alembic/            Database migrations
 backend/tests/              pytest suites
 testing/permission-matrix.json  RBAC cases shared by backend and frontend tests

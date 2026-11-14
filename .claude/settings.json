@@ -19,7 +19,6 @@
       "Bash(git diff*)",
       "Bash(git log*)",
       "Bash(npm run lint*)",
-      "Bash(npm run typecheck*)",
       "Bash(npm run build*)",
       "Bash(npm run test*)",
       "Bash(npm test*)",
@@ -30,9 +29,6 @@
       "Bash(alembic history*)",
       "Bash(alembic current*)",
       "Bash(alembic heads*)",
-      "Bash(find frontend*)",
-      "Bash(find backend*)",
-      "Bash(ls *)",
       "Bash(git show*)",
       "Bash(git blame*)"
     ]
