@@ -352,6 +352,17 @@ def _evaluate_rules(event: dict) -> None:
 
 # ── Event recording ───────────────────────────────────────────
 
+def record_backfill(event: dict, minute: str) -> None:
+    """A past event, counted in its own minute. No rule evaluation: a startup
+    backfill must not raise alerts. Call before the live stream starts, with
+    minutes in ascending order."""
+    ip_store[event["ip"]].append(event)
+    if minute_buckets and minute_buckets[-1]["minute"] == minute:
+        minute_buckets[-1]["count"] += 1
+    else:
+        minute_buckets.append({"minute": minute, "count": 1})
+
+
 def _record_event(event: dict) -> None:
     global _current_minute, _current_bucket_count
     ip_store[event["ip"]].append(event)
