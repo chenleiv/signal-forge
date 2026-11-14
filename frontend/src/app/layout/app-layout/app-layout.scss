@@ -225,7 +225,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: $green;
+  background: $success;
   animation: pulse-g 2.5s ease-in-out infinite;
 }
 
@@ -233,11 +233,11 @@
 
   0%,
   100% {
-    box-shadow: 0 0 3px rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 3px color-mix(in srgb, var(--c-success) 30%, transparent);
   }
 
   50% {
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--c-success) 60%, transparent);
   }
 }
 
@@ -293,22 +293,32 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: color-mix(in srgb, var(--c-muted) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-muted) 30%, transparent);
   border-radius: 4px;
   padding: 3px 8px;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.8px;
-  color: $green;
+  color: $secondary;
 }
 
 .chip-dot {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: $green;
-  animation: pulse-g 2.5s ease-in-out infinite;
+  background: $muted;
+}
+
+.chip-live {
+  border-color: color-mix(in srgb, var(--c-success) 40%, transparent);
+  background: color-mix(in srgb, var(--c-success) 10%, transparent);
+  color: $success;
+
+  .chip-dot {
+    background: $success;
+    animation: pulse-g 2.5s ease-in-out infinite;
+  }
 }
 
 .topbar-time {
@@ -328,18 +338,19 @@
 }
 
 .chip-reconnecting {
-  border-color: rgba(255, 204, 0, 0.4);
-  background: rgba(255, 204, 0, 0.08);
-  color: #ffcc00;
+  border-color: color-mix(in srgb, var(--c-warning) 40%, transparent);
+  background: color-mix(in srgb, var(--c-warning) 10%, transparent);
+  color: $warning;
 }
 
 .dot-reconnecting {
-  background: #ffcc00;
+  background: $warning;
   animation: pulse 1s infinite;
 }
 
+// Signed out: neutral chip and dot (the base styles), no animation.
 .dot-signed-out {
-  background: rgba(255, 255, 255, 0.4);
+  background: $muted;
   animation: none;
 }
 
