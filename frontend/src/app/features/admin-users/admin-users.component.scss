@@ -53,8 +53,8 @@
     border: 1px solid $border;
     color: $text;
 
-    &.msg-error { border-color: #ef4444; }
-    &.msg-ok    { border-color: #22c55e; }
+    &.msg-error { border-color: $sev-critical-fill; }
+    &.msg-ok    { border-color: $success; }
 }
 
 .table-wrap {
@@ -138,12 +138,12 @@ input {
     margin-left: 4px;
 }
 
-.btn-del { color: #ef4444; }
+.btn-del { color: $sev-critical; }
 
 .btn-danger {
-    background: #ef4444;
-    border: 1px solid #ef4444;
-    color: #fff;
+    background: $sev-critical;
+    border: 1px solid $sev-critical;
+    color: $on-sev;
 }
 
 .btn-save {

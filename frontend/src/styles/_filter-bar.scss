@@ -23,6 +23,6 @@
     width: $input-width;
 
     &::placeholder { color: $muted; }
-    &:focus { border-color: rgba(59,130,246,0.4); }
+    &:focus { border-color: color-mix(in srgb, var(--c-accent) 40%, transparent); }
   }
 }

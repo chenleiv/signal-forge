@@ -18,14 +18,14 @@
     &:hover .handle-bar,
     &:active .handle-bar {
       background: $accent;
-      box-shadow: 0 0 6px rgba(59, 130, 246, 0.6);
+      box-shadow: 0 0 6px color-mix(in srgb, var(--c-accent) 60%, transparent);
     }
   }
 
   .handle-bar {
     width: 1px;
     height: $bar-height;
-    background: #2a3347;
+    background: $border;
     border-radius: 2px;
     transition: all 0.15s;
   }
