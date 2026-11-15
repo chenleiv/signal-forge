@@ -82,33 +82,33 @@
   }
 
   &.events {
-    background: rgba($accent, 0.1);
+    background: color-mix(in srgb, var(--c-accent) 10%, transparent);
     color: $accent;
-    border: 1px solid rgba($accent, 0.2);
+    border: 1px solid color-mix(in srgb, var(--c-accent) 20%, transparent);
   }
 
   &.epm {
-    background: rgba($purple, 0.1);
+    background: color-mix(in srgb, var(--c-purple) 10%, transparent);
     color: $purple;
-    border: 1px solid rgba($purple, 0.2);
+    border: 1px solid color-mix(in srgb, var(--c-purple) 20%, transparent);
   }
 
   &.regions {
-    background: rgba($sev-low, 0.1);
+    background: color-mix(in srgb, var(--c-sev-low) 10%, transparent);
     color: $sev-low;
-    border: 1px solid rgba($sev-low, 0.2);
+    border: 1px solid color-mix(in srgb, var(--c-sev-low) 20%, transparent);
   }
 
   &.high {
-    background: rgba($sev-high, 0.1);
+    background: color-mix(in srgb, var(--c-sev-high) 10%, transparent);
     color: $sev-high;
-    border: 1px solid rgba($sev-high, 0.2);
+    border: 1px solid color-mix(in srgb, var(--c-sev-high) 20%, transparent);
   }
 
   &.critical {
-    background: rgba($sev-critical, 0.1);
+    background: color-mix(in srgb, var(--c-sev-critical) 10%, transparent);
     color: $sev-critical;
-    border: 1px solid rgba($sev-critical, 0.2);
+    border: 1px solid color-mix(in srgb, var(--c-sev-critical) 20%, transparent);
   }
 }
 
@@ -308,7 +308,7 @@
 
   td {
     padding: 6px 12px;
-    border-bottom: 1px solid rgba($border, 0.6);
+    border-bottom: 1px solid color-mix(in srgb, var(--c-border) 60%, transparent);
     color: $text;
     white-space: nowrap;
   }
@@ -348,7 +348,7 @@
   font-size: 10px;
   font-weight: 800;
   border-radius: 3px;
-  color: #fff;
+  color: $on-sev;
 
   &.sev-critical {
     background: $sev-critical;

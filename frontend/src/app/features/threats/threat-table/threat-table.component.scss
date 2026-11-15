@@ -62,7 +62,7 @@ thead th {
   }
 
   &:hover td        { background: var(--c-border); }
-  &.row-selected td { background: rgba($accent, 0.06); }
+  &.row-selected td { background: color-mix(in srgb, var(--c-accent) 6%, transparent); }
   &.row-selected    { border-left: 2px solid $accent; }
 }
 
@@ -96,10 +96,10 @@ thead th {
   border-radius: 50%;
   flex-shrink: 0;
 
-  &.score-critical { background: $sev-critical; }
-  &.score-high     { background: $sev-high;     }
-  &.score-medium   { background: $sev-medium;   }
-  &.score-low      { background: $sev-low;      }
+  &.score-critical { background: $sev-critical-fill; }
+  &.score-high     { background: $sev-high-fill;     }
+  &.score-medium   { background: $sev-medium-fill;   }
+  &.score-low      { background: $sev-low-fill;      }
 }
 
 .sev-label {

@@ -16,6 +16,53 @@ to anything listed here.
 
 ---
 
+## 2026-11-14 · Themed palette with separate text and fill tiers
+
+**Decision.** Both themes are defined only as CSS variables in
+`frontend/src/styles.scss`. The severity colors (`--c-sev-critical`, `-high`,
+`-medium`, `-low`) and `--c-purple` are themed. Each has two tiers: the plain
+name is for text and must reach 4.5:1 on `--c-bg` and `--c-panel`. The
+`-fill` name is for dots, bars and other non-text marks and must reach 3:1.
+`--c-on-sev` is the text color on a severity background and must reach 4.5:1
+on each one. Filled accent buttons use `--c-accent` with `--c-accent-hover`
+on hover, and `--c-on-accent` as their text color, which must reach 4.5:1 on
+both fills (dark theme: dark text on a lighter hover; light theme: white text
+on a darker hover). In the dark theme the two tiers are the same color; in the light
+theme only the text tier is darker, so dots stay bright. `_tokens.scss` exposes
+them as `$sev-*`, `$sev-*-fill`, `$purple`, `$purple-fill`, `$on-sev`,
+`$accent-hover` and `$on-accent`.
+Because the tokens are CSS variables, transparency uses `color-mix()`, not
+Sass `rgba()`. `src/styles.contrast.spec.ts` checks every ratio and fails if
+any SCSS file applies a Sass color function (`rgba()`, `mix()`, `lighten()`
+and similar) to a `var()`-based token.
+
+**Reason.** The fixed severity hex values passed on the dark panel but failed
+as text in the light theme (1.9 to 3.7:1), dark muted text was 2.4:1, purple
+was 4.37:1 on the new dark panel, and white text on the severity badges was
+2.2 to 3.8:1. White text on the filled accent buttons was 3.68:1 in the
+dark theme and would have dropped to 3.20:1 with the lighter dark accent; its
+hard-coded `#2563eb` hover could not serve both themes. One value per severity cannot be both a readable text color and
+a bright dot in the light theme. Sass `rgba($accent, x)` compiled to
+`rgba(var(--c-accent), x)`, which is invalid CSS, so those rules were silently
+dropped.
+
+**Alternatives rejected.**
+- One darker value per severity for both text and dots: passes, but makes the
+  light theme dots dull for no contrast gain.
+- Keeping severity colors as fixed Sass hex values: cannot differ by theme.
+
+Limits: hard-coded severity hex values in component SCSS and in
+`threat.models.ts` / `dashboard.ts` do not use these tokens yet (follow-up
+PR). Panel borders are decorative and stay below 3:1. The `rgba($green, x)`
+uses (a literal white overlay, so valid CSS) are left for the follow-up PR,
+as is the settings `.btn-save.saved` state (white overlay background, green
+`#15803d` hover).
+
+Files: `frontend/src/styles.scss`, `frontend/src/styles/_tokens.scss`,
+`frontend/src/styles.contrast.spec.ts`; buttons in `login.scss`,
+`settings.scss`, `admin-users.component.scss`,
+`incident-detail.component.scss`.
+
 ## 2026-11-14 · Demo backfill at startup
 
 **Decision.** In demo mode, when the threat feed falls back to the bundled
