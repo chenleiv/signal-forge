@@ -14,17 +14,19 @@
   transition: all 0.15s;
   text-transform: capitalize;
 
-  &:hover { color: $secondary; border-color: rgba(255,255,255,0.15); }
+  &:hover { color: $secondary; border-color: color-mix(in srgb, var(--c-text) 15%, transparent); }
 
+  // Pills sit on the page background ($bg). The tints keep the text at 4.5:1
+  // there: pill-all uses $accent-hover text, pill-high a lighter 7% tint.
   &.active {
-    &.pill-all           { background: rgba(59,130,246,0.15);  color: $accent;    border-color: rgba(59,130,246,0.4); }
+    &.pill-all           { background: color-mix(in srgb, var(--c-accent) 10%, transparent);            color: $accent-hover; border-color: color-mix(in srgb, var(--c-accent) 40%, transparent); }
     &.pill-open,
-    &.pill-critical      { background: rgba(239,68,68,0.12);   color: #ef4444;    border-color: rgba(239,68,68,0.35); }
+    &.pill-critical      { background: color-mix(in srgb, var(--c-sev-critical-fill) 12%, transparent); color: $sev-critical; border-color: color-mix(in srgb, var(--c-sev-critical-fill) 35%, transparent); }
     &.pill-investigating,
-    &.pill-high          { background: rgba(249,115,22,0.12);  color: #f97316;    border-color: rgba(249,115,22,0.35); }
+    &.pill-high          { background: color-mix(in srgb, var(--c-sev-high-fill) 7%, transparent);      color: $sev-high;     border-color: color-mix(in srgb, var(--c-sev-high-fill) 35%, transparent); }
     &.pill-contained,
-    &.pill-medium        { background: rgba(245,158,11,0.12);  color: #f59e0b;    border-color: rgba(245,158,11,0.35); }
-    &.pill-closed        { background: rgba(107,114,128,0.15); color: $secondary; border-color: rgba(107,114,128,0.35); }
-    &.pill-low           { background: rgba(96,165,250,0.12);  color: #60a5fa;    border-color: rgba(96,165,250,0.35); }
+    &.pill-medium        { background: color-mix(in srgb, var(--c-sev-medium-fill) 12%, transparent);   color: $sev-medium;   border-color: color-mix(in srgb, var(--c-sev-medium-fill) 35%, transparent); }
+    &.pill-closed        { background: color-mix(in srgb, var(--c-muted) 15%, transparent);             color: $secondary;    border-color: color-mix(in srgb, var(--c-muted) 35%, transparent); }
+    &.pill-low           { background: color-mix(in srgb, var(--c-sev-low-fill) 12%, transparent);      color: $sev-low;      border-color: color-mix(in srgb, var(--c-sev-low-fill) 35%, transparent); }
   }
 }

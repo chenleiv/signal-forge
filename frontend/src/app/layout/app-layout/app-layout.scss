@@ -41,9 +41,10 @@
 .logo-icon {
   width: 32px;
   height: 32px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: color-mix(in srgb, var(--c-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
   border-radius: 6px;
+  color: $accent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -112,13 +113,13 @@
 
   &:hover {
     color: $text;
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--c-text) 4%, transparent);
   }
 
   &.active {
     color: $text;
     font-weight: 500;
-    background: rgba(59, 130, 246, 0.08);
+    background: color-mix(in srgb, var(--c-accent) 8%, transparent);
     border-left-color: $accent;
   }
 }
@@ -166,8 +167,8 @@
 
   &:hover,
   &:focus-visible {
-    color: #f87171;
-    border-color: #7f1d1d;
+    color: $sev-critical;
+    border-color: color-mix(in srgb, var(--c-sev-critical-fill) 40%, transparent);
   }
 }
 
@@ -182,7 +183,7 @@
   transition: background 0.12s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--c-text) 4%, transparent);
   }
 }
 
@@ -190,8 +191,8 @@
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  background: rgba(59, 130, 246, 0.15);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  background: color-mix(in srgb, var(--c-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
   color: $accent;
   font-size: 10px;
   font-weight: 700;
@@ -371,7 +372,7 @@
   align-items: center;
   gap: 6px;
   font-size: 10px;
-  color: rgba(255, 204, 0, 0.7);
+  color: $warning;
   letter-spacing: 0.04em;
   animation: fadeInDown 0.4s ease;
 }
@@ -380,7 +381,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #ffcc00;
+  background: $warning;
   animation: pulse 1.4s ease-in-out infinite;
 }
 
@@ -394,16 +395,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--c-text) 3%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-text) 10%, transparent);
   border-radius: 5px;
   padding: 3px 10px;
   cursor: pointer;
   transition: all 0.15s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.07);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: color-mix(in srgb, var(--c-text) 7%, transparent);
+    border-color: color-mix(in srgb, var(--c-text) 20%, transparent);
   }
 }
 

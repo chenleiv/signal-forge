@@ -16,6 +16,47 @@ to anything listed here.
 
 ---
 
+## 2026-11-15 · Component colors map to theme tokens, no new tokens
+
+**Decision.** Hard-coded colors in components are replaced with the existing
+theme tokens; no token is added for them. A translucent tint is
+`color-mix(in srgb, var(--c-<token>) N%, transparent)` with the alpha the old
+`rgba()` had: blue `rgb(59,130,246)` maps to `--c-accent`, severity hues to the
+`-fill` tier, white overlays (hovers, faint borders) to `--c-text`. Text uses
+the text tier (`$sev-*`, `$accent`, `$secondary`), `#fff` on a filled button
+uses `$on-sev` or `$on-accent`, and inline SVG icons use `currentColor` with a
+token on the parent. Black shadows and the mobile navigation backdrop stay as
+literal `rgba(0, 0, 0, x)`: a dark shadow or scrim reads correctly in both
+themes and has no token. Where a tint pushed text below 4.5:1, the text color
+or the tint was adjusted within the existing tokens:
+- Accent text on accent tints that sit on `--c-bg` (filter pill "All", export
+  button) uses `$accent-hover`: `$accent` measured 4.40:1 in the light theme.
+- The user avatar and the "All" pill tint drops from 15% to 10%.
+- The "high" filter pill tint drops from 12% to 7%: `$sev-high` on a 12% tint
+  over the light `--c-bg` measured 4.29:1 (now 4.57:1).
+
+**Reason.** The fixed values were tuned for the dark theme only. In the light
+theme white overlays were invisible (about 1.0:1), and severity text on its
+tint measured 1.7 to 3.0:1. `color-mix()` of a token keeps the same look in
+dark and follows the light theme without new variables to keep in step.
+
+**Alternatives rejected.**
+- New overlay or tint tokens (`--c-hover`, `--c-accent-tint`, ...): more
+  variables to keep in sync for values `color-mix()` already gives.
+- Themed shadow tokens: shadows are near-invisible on the light background
+  either way, and nothing depends on them for contrast.
+
+Limits: this entry covers the app shell, shared drawer and filter bar, filter
+pills, export menu, login and admin users (PR 3a). Dashboard, rules,
+incidents, settings and threat hunting (3b) and alerts, threats, threat map,
+command console and the TypeScript colors (3c) follow. The `$green` token is
+still used in 3b areas.
+
+Files: `app-layout.scss`, `app-layout.html`, `styles/_drawer.scss`,
+`styles/_filter-bar.scss`, `filter-pills.component.scss`,
+`export-menu.component.scss`, `login.scss`, `login.html`,
+`admin-users.component.scss`.
+
 ## 2026-11-14 · Themed palette with separate text and fill tiers
 
 **Decision.** Both themes are defined only as CSS variables in
