@@ -76,9 +76,9 @@
   }
 
   &.tracked {
-    background: rgba($green, 0.1);
-    color: $green;
-    border: 1px solid rgba($green, 0.2);
+    background: color-mix(in srgb, var(--c-text-2) 10%, transparent);
+    color: $secondary;
+    border: 1px solid color-mix(in srgb, var(--c-text-2) 20%, transparent);
   }
 
   &.events {
@@ -317,7 +317,7 @@
     transition: background 0.1s;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.02);
+      background: color-mix(in srgb, var(--c-text) 2%, transparent);
     }
   }
 }
@@ -368,11 +368,11 @@
 }
 
 tr.row-critical td {
-  background: rgba(239, 68, 68, 0.04);
+  background: color-mix(in srgb, var(--c-sev-critical-fill) 4%, transparent);
 }
 
 tr.row-high td {
-  background: rgba(249, 115, 22, 0.03);
+  background: color-mix(in srgb, var(--c-sev-high-fill) 3%, transparent);
 }
 
 .empty-row {
@@ -384,7 +384,7 @@ tr.row-high td {
 
 @keyframes rowFlash {
   0% {
-    background: rgba(239, 68, 68, 0.18);
+    background: color-mix(in srgb, var(--c-sev-critical-fill) 18%, transparent);
   }
 
   100% {
