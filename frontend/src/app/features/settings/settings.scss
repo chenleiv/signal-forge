@@ -302,8 +302,8 @@
     }
 }
 
-// ── Change password card ─────────────────────────────────────
-.pw-summary {
+// ── Collapsible cards (details/summary) ──────────────────────
+.card-summary {
     cursor: pointer;
     list-style: none;           // hide the native marker; the chevron replaces it
     border-radius: 4px;
@@ -317,12 +317,12 @@
         outline-offset: 4px;
     }
 
-    &:hover .pw-chevron {
+    &:hover .card-chevron {
         color: $text;
     }
 }
 
-.pw-chevron {
+.card-chevron {
     width: 14px;
     height: 14px;
     margin-left: auto;
@@ -330,15 +330,16 @@
     flex-shrink: 0;
     transition: transform 0.15s, color 0.15s;
 
-    .pw-details[open] & {
+    .card-details[open] & {
         transform: rotate(90deg);
     }
 }
 
-.pw-form {
+.card-body {
     margin-top: 16px;
 }
 
+// ── Change password card ─────────────────────────────────────
 .card-note {
     margin: 0;
     font-size: 12px;

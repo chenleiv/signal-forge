@@ -5,74 +5,83 @@
         <p class="page-sub">Configure analyst profile, connection parameters, and alert thresholds.</p>
     </div>
 
+    <!-- Every card is a native details/summary: Enter, Space and the expanded state come from
+         the browser, and the fields stay in the DOM while a card is closed. Only the password
+         card starts closed and clears on close; closing the others keeps unsaved edits. -->
     <div class="sections">
 
         <!-- User Profile -->
         <section class="card">
-            <div class="card-header">
-                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.2" />
-                    <path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" stroke-width="1.2"
-                        stroke-linecap="round" />
-                </svg>
-                <h2 class="card-title">User Profile</h2>
-            </div>
-            <div class="field-grid">
-                <!-- Read-only: identity and role come from the server session. -->
-                <div class="field">
-                    <label for="profile-name">Name</label>
-                    <input id="profile-name" [value]="auth.currentUser()?.display_name ?? ''" readonly />
+            <details class="card-details" open>
+                <summary class="card-header card-summary">
+                    <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.2" />
+                        <path d="M2 14c0-3.314 2.686-5 6-5s6 1.686 6 5" stroke="currentColor" stroke-width="1.2"
+                            stroke-linecap="round" />
+                    </svg>
+                    <h2 class="card-title">User Profile</h2>
+                    <svg class="card-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </summary>
+                <div class="field-grid card-body">
+                    <!-- Read-only: identity and role come from the server session. -->
+                    <div class="field">
+                        <label for="profile-name">Name</label>
+                        <input id="profile-name" [value]="auth.currentUser()?.display_name ?? ''" readonly />
+                    </div>
+                    <div class="field">
+                        <label for="profile-role">Role</label>
+                        <input id="profile-role" [value]="auth.currentUser()?.role ?? ''" readonly />
+                    </div>
                 </div>
-                <div class="field">
-                    <label for="profile-role">Role</label>
-                    <input id="profile-role" [value]="auth.currentUser()?.role ?? ''" readonly />
-                </div>
-            </div>
+            </details>
         </section>
 
-        <!-- Change password: collapsed by default (native details/summary). The form stays
-             in the DOM when closed; the element owns the open state and pwOpen follows its toggle event. -->
+        <!-- Change password: closed by default. The element owns the open state and pwOpen
+             follows its toggle event (see settings.ts). -->
         <section class="card">
-            <details #pwDetails class="pw-details" (toggle)="onPwToggle()">
-            <summary #pwSummary class="card-header pw-summary">
-                <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2" />
-                    <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.2" />
-                </svg>
-                <h2 class="card-title">Change Password</h2>
-                <svg class="pw-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                    <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
-                        stroke-linejoin="round" />
-                </svg>
-            </summary>
-            <form class="field-grid pw-form" (submit)="$event.preventDefault(); changePassword()">
-                <div class="field full">
-                    <label for="current-password">Current password</label>
-                    <input #currentPwInput id="current-password" type="password" autocomplete="current-password"
-                        [disabled]="pwLocked()" [value]="currentPw()"
-                        (input)="currentPw.set($any($event.target).value)" />
-                </div>
-                <div class="field">
-                    <label for="new-password">New password</label>
-                    <input id="new-password" type="password" autocomplete="new-password" placeholder="12-72 characters"
-                        [disabled]="pwLocked()" [value]="newPw()"
-                        (input)="newPw.set($any($event.target).value)" />
-                </div>
-                <div class="field">
-                    <label for="confirm-password">Repeat new password</label>
-                    <input id="confirm-password" type="password" autocomplete="new-password"
-                        [disabled]="pwLocked()" [value]="confirmPw()"
-                        (input)="confirmPw.set($any($event.target).value)" />
-                </div>
-                @if (pwProblem() ?? pwError(); as msg) {
-                    <p class="field full pw-msg pw-error" role="alert">{{ msg }}</p>
-                }
-                <div class="field full">
-                    <button type="submit" class="btn-save" [disabled]="!canSubmitPw()">
-                        {{ pwBusy() ? 'Changing…' : 'Change password' }}
-                    </button>
-                </div>
-            </form>
+            <details #pwDetails class="card-details pw-details" (toggle)="onPwToggle()">
+                <summary #pwSummary class="card-header card-summary">
+                    <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2" />
+                        <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.2" />
+                    </svg>
+                    <h2 class="card-title">Change Password</h2>
+                    <svg class="card-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </summary>
+                <form class="field-grid card-body" (submit)="$event.preventDefault(); changePassword()">
+                    <div class="field full">
+                        <label for="current-password">Current password</label>
+                        <input #currentPwInput id="current-password" type="password" autocomplete="current-password"
+                            [disabled]="pwLocked()" [value]="currentPw()"
+                            (input)="currentPw.set($any($event.target).value)" />
+                    </div>
+                    <div class="field">
+                        <label for="new-password">New password</label>
+                        <input id="new-password" type="password" autocomplete="new-password" placeholder="12-72 characters"
+                            [disabled]="pwLocked()" [value]="newPw()"
+                            (input)="newPw.set($any($event.target).value)" />
+                    </div>
+                    <div class="field">
+                        <label for="confirm-password">Repeat new password</label>
+                        <input id="confirm-password" type="password" autocomplete="new-password"
+                            [disabled]="pwLocked()" [value]="confirmPw()"
+                            (input)="confirmPw.set($any($event.target).value)" />
+                    </div>
+                    @if (pwProblem() ?? pwError(); as msg) {
+                        <p class="field full pw-msg pw-error" role="alert">{{ msg }}</p>
+                    }
+                    <div class="field full">
+                        <button type="submit" class="btn-save" [disabled]="!canSubmitPw()">
+                            {{ pwBusy() ? 'Changing…' : 'Change password' }}
+                        </button>
+                    </div>
+                </form>
             </details>
             <!-- Outside the details element so they stay visible while it is closed. -->
             @if (pwLocked()) {
@@ -85,111 +94,129 @@
 
         <!-- Appearance -->
         <section class="card">
-            <div class="card-header">
-                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.2"/>
-                    <path d="M8 2.5v1M8 12.5v1M2.5 8h1M12.5 8h1M4.4 4.4l.7.7M10.9 10.9l.7.7M4.4 11.6l.7-.7M10.9 5.1l.7-.7"
-                        stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-                </svg>
-                <h2 class="card-title">Appearance</h2>
-            </div>
-            <div class="field-grid">
-                <div class="field full">
-                    <span class="field-heading" id="theme-label">Theme</span>
-                    <div class="theme-toggle" role="group" aria-labelledby="theme-label">
-                        <button class="theme-btn"
-                            [class.active]="themeService.theme() === 'dark'"
-                            [disabled]="themeService.theme() === 'dark'"
-                            (click)="themeService.toggle()">
-                            🌙 Dark
-                        </button>
-                        <button class="theme-btn"
-                            [class.active]="themeService.theme() === 'light'"
-                            [disabled]="themeService.theme() === 'light'"
-                            (click)="themeService.toggle()">
-                            ☀️ Light
-                        </button>
+            <details class="card-details" open>
+                <summary class="card-header card-summary">
+                    <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.2"/>
+                        <path d="M8 2.5v1M8 12.5v1M2.5 8h1M12.5 8h1M4.4 4.4l.7.7M10.9 10.9l.7.7M4.4 11.6l.7-.7M10.9 5.1l.7-.7"
+                            stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                    </svg>
+                    <h2 class="card-title">Appearance</h2>
+                    <svg class="card-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </summary>
+                <div class="field-grid card-body">
+                    <div class="field full">
+                        <span class="field-heading" id="theme-label">Theme</span>
+                        <div class="theme-toggle" role="group" aria-labelledby="theme-label">
+                            <button class="theme-btn"
+                                [class.active]="themeService.theme() === 'dark'"
+                                [disabled]="themeService.theme() === 'dark'"
+                                (click)="themeService.toggle()">
+                                🌙 Dark
+                            </button>
+                            <button class="theme-btn"
+                                [class.active]="themeService.theme() === 'light'"
+                                [disabled]="themeService.theme() === 'light'"
+                                (click)="themeService.toggle()">
+                                ☀️ Light
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </details>
         </section>
 
         <!-- Connection -->
         <section class="card">
-            <div class="card-header">
-                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
-                    <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2" />
-                    <path d="M4.5 11.5a5 5 0 0 1 0-7M11.5 4.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="1.2"
-                        stroke-linecap="round" />
-                    <path d="M2 13.5a8 8 0 0 1 0-11M14 2.5a8 8 0 0 1 0 11" stroke="currentColor" stroke-width="1.2"
-                        stroke-linecap="round" />
-                </svg>
-                <h2 class="card-title">Connection</h2>
-            </div>
-            <div class="field-grid">
-                <div class="field full">
-                    <label for="ws-url">WebSocket URL</label>
-                    <input id="ws-url" [value]="form().wsUrl"
-                        (input)="form.update(s => ({...s, wsUrl: $any($event.target).value}))"
-                        placeholder="ws://127.0.0.1:8000/ws/threats" />
+            <details class="card-details" open>
+                <summary class="card-header card-summary">
+                    <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2" />
+                        <path d="M4.5 11.5a5 5 0 0 1 0-7M11.5 4.5a5 5 0 0 1 0 7" stroke="currentColor" stroke-width="1.2"
+                            stroke-linecap="round" />
+                        <path d="M2 13.5a8 8 0 0 1 0-11M14 2.5a8 8 0 0 1 0 11" stroke="currentColor" stroke-width="1.2"
+                            stroke-linecap="round" />
+                    </svg>
+                    <h2 class="card-title">Connection</h2>
+                    <svg class="card-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                </summary>
+                <div class="field-grid card-body">
+                    <div class="field full">
+                        <label for="ws-url">WebSocket URL</label>
+                        <input id="ws-url" [value]="form().wsUrl"
+                            (input)="form.update(s => ({...s, wsUrl: $any($event.target).value}))"
+                            placeholder="ws://127.0.0.1:8000/ws/threats" />
+                    </div>
+                    <div class="field">
+                        <label for="reconnect-delay">Reconnect Delay (sec)</label>
+                        <input id="reconnect-delay" type="number" [value]="form().reconnectDelay"
+                            (input)="form.update(s => ({...s, reconnectDelay: +$any($event.target).value}))"
+                            min="1" max="30" />
+                    </div>
+                    <div class="field">
+                        <label for="buffer-size">Event Buffer Size</label>
+                        <input id="buffer-size" type="number" [value]="form().bufferSize"
+                            (input)="form.update(s => ({...s, bufferSize: +$any($event.target).value}))"
+                            min="10" max="500" />
+                    </div>
                 </div>
-                <div class="field">
-                    <label for="reconnect-delay">Reconnect Delay (sec)</label>
-                    <input id="reconnect-delay" type="number" [value]="form().reconnectDelay"
-                        (input)="form.update(s => ({...s, reconnectDelay: +$any($event.target).value}))"
-                        min="1" max="30" />
-                </div>
-                <div class="field">
-                    <label for="buffer-size">Event Buffer Size</label>
-                    <input id="buffer-size" type="number" [value]="form().bufferSize"
-                        (input)="form.update(s => ({...s, bufferSize: +$any($event.target).value}))"
-                        min="10" max="500" />
-                </div>
-            </div>
+            </details>
         </section>
 
         <!-- Alert Thresholds -->
         <section class="card">
-            <div class="card-header">
-                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
-                    <path d="M8 2l5.5 10H2.5L8 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
-                    <path d="M8 7v2.5M8 11v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-                </svg>
-                <h2 class="card-title">Alert Thresholds</h2>
-                <span class="card-sub">Minimum score to classify an event at each severity level.</span>
-            </div>
-            <div class="threshold-grid">
-                <div class="threshold-field">
-                    <div class="threshold-label">
-                        <span class="sev-dot critical"></span>
-                        <label class="label-critical" for="threshold-critical">Critical</label>
-                        <span class="threshold-op">≥</span>
+            <details class="card-details" open>
+                <summary class="card-header card-summary">
+                    <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M8 2l5.5 10H2.5L8 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                        <path d="M8 7v2.5M8 11v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                    </svg>
+                    <h2 class="card-title">Alert Thresholds</h2>
+                    <svg class="card-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                        <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                            stroke-linejoin="round" />
+                    </svg>
+                    <span class="card-sub">Minimum score to classify an event at each severity level.</span>
+                </summary>
+                <div class="threshold-grid card-body">
+                    <div class="threshold-field">
+                        <div class="threshold-label">
+                            <span class="sev-dot critical"></span>
+                            <label class="label-critical" for="threshold-critical">Critical</label>
+                            <span class="threshold-op">≥</span>
+                        </div>
+                        <input id="threshold-critical" type="number" [value]="form().criticalThreshold"
+                            (input)="form.update(s => ({...s, criticalThreshold: +$any($event.target).value}))"
+                            min="1" max="100" />
                     </div>
-                    <input id="threshold-critical" type="number" [value]="form().criticalThreshold"
-                        (input)="form.update(s => ({...s, criticalThreshold: +$any($event.target).value}))"
-                        min="1" max="100" />
-                </div>
-                <div class="threshold-field">
-                    <div class="threshold-label">
-                        <span class="sev-dot high"></span>
-                        <label class="label-high" for="threshold-high">High</label>
-                        <span class="threshold-op">≥</span>
+                    <div class="threshold-field">
+                        <div class="threshold-label">
+                            <span class="sev-dot high"></span>
+                            <label class="label-high" for="threshold-high">High</label>
+                            <span class="threshold-op">≥</span>
+                        </div>
+                        <input id="threshold-high" type="number" [value]="form().highThreshold"
+                            (input)="form.update(s => ({...s, highThreshold: +$any($event.target).value}))"
+                            min="1" max="100" />
                     </div>
-                    <input id="threshold-high" type="number" [value]="form().highThreshold"
-                        (input)="form.update(s => ({...s, highThreshold: +$any($event.target).value}))"
-                        min="1" max="100" />
-                </div>
-                <div class="threshold-field">
-                    <div class="threshold-label">
-                        <span class="sev-dot medium"></span>
-                        <label class="label-medium" for="threshold-medium">Medium</label>
-                        <span class="threshold-op">≥</span>
+                    <div class="threshold-field">
+                        <div class="threshold-label">
+                            <span class="sev-dot medium"></span>
+                            <label class="label-medium" for="threshold-medium">Medium</label>
+                            <span class="threshold-op">≥</span>
+                        </div>
+                        <input id="threshold-medium" type="number" [value]="form().mediumThreshold"
+                            (input)="form.update(s => ({...s, mediumThreshold: +$any($event.target).value}))"
+                            min="1" max="100" />
                     </div>
-                    <input id="threshold-medium" type="number" [value]="form().mediumThreshold"
-                        (input)="form.update(s => ({...s, mediumThreshold: +$any($event.target).value}))"
-                        min="1" max="100" />
                 </div>
-            </div>
+            </details>
         </section>
 
     </div>

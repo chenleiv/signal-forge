@@ -16,10 +16,18 @@ to anything listed here.
 
 ---
 
-## 2026-11-15 · Settings change-password form is collapsed (native details/summary)
+## 2026-11-15 · Settings cards are collapsible; the password form starts closed
 
-**Decision.** The change-password form on the Settings page sits in a native
-`<details>` element and is closed by default. The `<summary>` is the control,
+**Decision.** Every Settings card (User Profile, Change Password, Appearance,
+Connection, Alert Thresholds) sits in a native `<details>` element with shared
+`.card-summary`, `.card-chevron` and `.card-body` styles. Only the password
+card starts closed; the others start open so everyday settings are not hidden
+behind a click. Closing a settings card keeps unsaved edits (Save and Reset sit
+below all cards and act on them); only the password card clears on close, and
+only it moves focus into a field on open. The other cards have no component
+state: the browser owns their open state.
+
+The change-password form is closed by default. The `<summary>` is the control,
 so Enter, Space and the expanded state come from the browser. The element owns
 the open state: the `pwOpen` signal only mirrors its `toggle` event, and code
 changes it through `setPwOpen()`, never through an `[open]` binding. Opening
@@ -43,6 +51,9 @@ element; one owner (the element) avoids that.
 - Removing the form from the DOM with `@if` while closed: breaks existing tests
   that query the fields and messages.
 - Binding `[open]` to the signal: the two can disagree (see Reason).
+- All cards closed by default: the page would open as a list of headers and
+  Save/Reset would act on values the user cannot see.
+- Clearing every card on close: would silently drop unsaved settings edits.
 
 ## 2026-11-15 · Alerts, threats, map, console and TypeScript colors use theme tokens
 

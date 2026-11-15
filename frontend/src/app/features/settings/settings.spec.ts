@@ -5,6 +5,7 @@ import { of, throwError } from 'rxjs';
 import { Settings } from './settings';
 import { AuthService } from '../../core/services/auth';
 import { DemoModeService } from '../../core/services/demo-mode.service';
+import { SettingsService } from '../../core/services/settings.service';
 
 const ALICE = { username: 'alice', display_name: 'Alice Chen', role: 'analyst' as const };
 const CURRENT = 'my-current-password';
@@ -220,6 +221,50 @@ describe('Settings: change password', () => {
       await toggled;
       expect(f.componentInstance.pwOpen()).toBe(true);
       expect(document.activeElement).not.toBe(currentInput(f));
+    });
+  });
+
+  describe('every card is collapsible', () => {
+    const cards = (f: ReturnType<typeof create>) =>
+      [...(f.nativeElement as HTMLElement).querySelectorAll('section.card')] as HTMLElement[];
+    const detailsOf = (card: HTMLElement) => card.querySelector('details.card-details') as HTMLDetailsElement;
+
+    it('each card is a details element with its summary first, and only the password card starts closed', () => {
+      const f = create();
+      const state = cards(f).map(card => {
+        const details = detailsOf(card);
+        const summary = details.firstElementChild as HTMLElement;
+        expect(summary.tagName).toBe('SUMMARY');
+        return [summary.querySelector('.card-title')?.textContent?.trim(), details.open];
+      });
+      expect(state).toEqual([
+        ['User Profile', true],
+        ['Change Password', false],
+        ['Appearance', true],
+        ['Connection', true],
+        ['Alert Thresholds', true],
+      ]);
+    });
+
+    it('closing a settings card keeps unsaved edits, and Save still stores them', async () => {
+      const f = create();
+      const c = f.componentInstance;
+      const save = vi.spyOn(TestBed.inject(SettingsService), 'save').mockImplementation(() => undefined);
+      const el = f.nativeElement as HTMLElement;
+      const url = el.querySelector('#ws-url') as HTMLInputElement;
+      url.value = 'wss://soc.example/ws/threats';
+      url.dispatchEvent(new Event('input'));
+
+      const connection = detailsOf(url.closest('section.card') as HTMLElement);
+      connection.open = false;
+      connection.dispatchEvent(new Event('toggle'));
+      f.detectChanges();
+      expect(connection.open).toBe(false);
+      expect(c.form().wsUrl).toBe('wss://soc.example/ws/threats');
+      expect(url.value).toBe('wss://soc.example/ws/threats');
+
+      c.save();
+      expect(save).toHaveBeenCalledWith(expect.objectContaining({ wsUrl: 'wss://soc.example/ws/threats' }));
     });
   });
 
