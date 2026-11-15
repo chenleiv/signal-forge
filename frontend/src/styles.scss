@@ -19,7 +19,13 @@ body {
 // --c-on-accent is the text color on --c-accent and --c-accent-hover fills
 // (buttons) and reaches 4.5:1 on both.
 // src/styles.contrast.spec.ts checks these ratios.
+//
+// .theme-dark gives an element and its children the dark tokens in either
+// theme: the threat map canvas and the command console are always dark.
+// Keep ":root[data-theme=...]" last before the brace; the contrast spec
+// reads the block by that selector.
 
+.theme-dark,
 :root[data-theme="dark"] {
   --c-bg:     #0d1117;
   --c-panel:  #151b24;

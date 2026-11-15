@@ -18,7 +18,9 @@ import {
   DetectionSource,
   DETECTION_SOURCE_LABELS,
   SEVERITY_COLORS,
+  SEVERITY_TEXT_COLORS,
   ThreatAlert,
+  tint,
 } from '../../shared/models/threat.models';
 import { AlertDetailDrawerComponent } from './alert-detail-drawer/alert-detail-drawer.component';
 
@@ -85,6 +87,9 @@ export class Alerts implements OnInit {
   });
 
   readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? SEVERITY_COLORS['low'];
+  readonly severityTextColor = (sev: string) => SEVERITY_TEXT_COLORS[sev] ?? SEVERITY_TEXT_COLORS['low'];
+  // 13% matches the old '22' hex alpha suffix.
+  readonly severityTint = (sev: string) => tint(this.severityColor(sev), 13);
 
   ngOnInit() {
     this.store.fetchAlerts()

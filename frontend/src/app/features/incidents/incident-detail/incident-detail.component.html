@@ -10,9 +10,9 @@
   <div class="detail-header">
     <div class="header-left">
       <span class="inc-id">{{ incident()!.id }}</span>
-      <span class="sev-badge" [style.background]="severityColor(incident()!.severity) + '18'"
-            [style.color]="severityColor(incident()!.severity)"
-            [style.borderColor]="severityColor(incident()!.severity) + '40'">
+      <span class="sev-badge" [style.background]="severityTint(incident()!.severity, 9)"
+            [style.color]="severityTextColor(incident()!.severity)"
+            [style.borderColor]="severityTint(incident()!.severity, 25)">
         {{ incident()!.severity.toUpperCase() }}
       </span>
     </div>

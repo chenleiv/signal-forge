@@ -2,6 +2,14 @@
 // text tokens 4.5:1 on the page background and the panel, non-text
 // (-fill) tokens 3:1, --c-on-sev 4.5:1 on each severity background, and
 // --c-on-accent 4.5:1 on --c-accent and --c-accent-hover.
+// Also checks the ECharts palette mirror in chart-palette.ts.
+
+import {
+  CHART_DECOR_TOKENS,
+  CHART_FILL_TOKENS,
+  CHART_PALETTE,
+  CHART_TEXT_TOKENS,
+} from './app/features/dashboard/chart-palette';
 
 interface NodeFs {
   readFileSync(path: string, encoding: string): string;
@@ -128,4 +136,47 @@ describe('Sass color functions on CSS-variable tokens', () => {
     }
     expect(offenders).toEqual([]);
   });
+});
+
+// ECharts cannot read CSS variables, so chart-palette.ts keeps a copy of the
+// tokens per theme. It must match styles.scss exactly and meet the same ratios.
+describe('ECharts palette mirror (chart-palette.ts)', () => {
+  const css = readStyles();
+
+  for (const theme of ['dark', 'light'] as const) {
+    describe(theme, () => {
+      const vars = themeVars(css, theme);
+      const pal = CHART_PALETTE[theme];
+      const surfaces = ['c-bg', 'c-panel'];
+
+      it('lists every mirrored token in exactly one role', () => {
+        const roles = [...CHART_TEXT_TOKENS, ...CHART_FILL_TOKENS, ...CHART_DECOR_TOKENS];
+        expect(new Set(roles).size).toBe(roles.length);
+        expect(Object.keys(pal).sort()).toEqual([...roles].sort());
+      });
+
+      it('matches the CSS tokens in styles.scss', () => {
+        for (const [name, value] of Object.entries(pal)) {
+          expect(vars[name], `--${name} missing from styles.scss`).toBeDefined();
+          expect(value.toLowerCase(), `chart ${name} drifted from --${name}`).toBe(vars[name]);
+        }
+      });
+
+      for (const name of CHART_TEXT_TOKENS) {
+        it(`chart text ${name} reaches 4.5:1`, () => {
+          for (const bg of surfaces) {
+            expect(ratio(pal[name], vars[bg]), `${name} on --${bg}`).toBeGreaterThanOrEqual(4.5);
+          }
+        });
+      }
+
+      for (const name of CHART_FILL_TOKENS) {
+        it(`chart mark ${name} reaches 3:1`, () => {
+          for (const bg of surfaces) {
+            expect(ratio(pal[name], vars[bg]), `${name} on --${bg}`).toBeGreaterThanOrEqual(3);
+          }
+        });
+      }
+    });
+  }
 });

@@ -12,7 +12,14 @@ import {
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
-import { Incident, IncidentNote, IncidentStatus, SEVERITY_COLORS } from '../../../shared/models/threat.models';
+import {
+  Incident,
+  IncidentNote,
+  IncidentStatus,
+  SEVERITY_COLORS,
+  SEVERITY_TEXT_COLORS,
+  tint,
+} from '../../../shared/models/threat.models';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
 import { AuthService } from '../../../core/services/auth';
 import {
@@ -151,7 +158,10 @@ export class IncidentDetailComponent {
 
   investigateIp(ip: string) { this.router.navigate(['/threats'], { queryParams: { ip } }); }
 
-  readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? '#9ca3af';
+  readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? 'var(--c-muted)';
+  readonly severityTextColor = (sev: string) => SEVERITY_TEXT_COLORS[sev] ?? 'var(--c-muted)';
+  // 9% and 25% match the old '18' and '40' hex alpha suffixes.
+  readonly severityTint = (sev: string, pct: number) => tint(this.severityColor(sev), pct);
 
   displayName(username: string | null): string {
     if (!username) return 'Unassigned';

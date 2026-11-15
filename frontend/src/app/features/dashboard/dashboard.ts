@@ -13,6 +13,7 @@ import { EChartsOption } from 'echarts';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { ThemeService } from '../../core/services/theme';
 import { ThreatStats } from '../../shared/models/threat.models';
+import { CHART_PALETTE } from './chart-palette';
 
 @Component({
   selector: 'app-dashboard',
@@ -61,10 +62,10 @@ export class Dashboard {
         this.buildDonut(
           'THREATS BY SEVERITY',
           [
-            { name: 'Critical', value: stats.severity_counts['critical'] ?? 0, color: '#ef4444' },
-            { name: 'High', value: stats.severity_counts['high'] ?? 0, color: '#f97316' },
-            { name: 'Medium', value: stats.severity_counts['medium'] ?? 0, color: '#f59e0b' },
-            { name: 'Low', value: stats.severity_counts['low'] ?? 0, color: '#60a5fa' },
+            { name: 'Critical', value: stats.severity_counts['critical'] ?? 0, color: pal.critical },
+            { name: 'High', value: stats.severity_counts['high'] ?? 0, color: pal.high },
+            { name: 'Medium', value: stats.severity_counts['medium'] ?? 0, color: pal.medium },
+            { name: 'Low', value: stats.severity_counts['low'] ?? 0, color: pal.low },
           ],
           sevTotal,
           'Events',
@@ -72,7 +73,7 @@ export class Dashboard {
         ),
       );
 
-      const atkColors = ['#ef4444', '#f97316', '#f59e0b', '#60a5fa', '#a855f7'];
+      const atkColors = [pal.critical, pal.high, pal.medium, pal.low, pal.purple];
       const atkData = Object.entries(stats.attack_types).map(([k, v], i) => ({
         name: k,
         value: v as number,
@@ -89,12 +90,12 @@ export class Dashboard {
       );
 
       const regionMap: Record<string, string> = {
-        US: '#60a5fa',
-        EU: '#22c55e',
-        RU: '#ef4444',
-        CN: '#f97316',
-        IL: '#a855f7',
-        BR: '#f59e0b',
+        US: pal.low,
+        EU: pal.success,
+        RU: pal.critical,
+        CN: pal.high,
+        IL: pal.purple,
+        BR: pal.medium,
       };
       const regionCounts = events.reduce(
         (acc, e) => {
@@ -106,7 +107,7 @@ export class Dashboard {
       const regData = Object.entries(regionCounts).map(([k, v]) => ({
         name: k,
         value: v,
-        color: regionMap[k] ?? '#9ca3af',
+        color: regionMap[k] ?? pal.muted,
       }));
       this.regionChart.set(
         this.buildDonut(
@@ -122,13 +123,22 @@ export class Dashboard {
     });
   }
 
+  /** Chart colors by role, from the token mirror in chart-palette.ts. */
   private palette(isLight: boolean) {
+    const t = CHART_PALETTE[isLight ? 'light' : 'dark'];
     return {
-      text:     isLight ? '#475569' : '#6b7280',
-      text2:    isLight ? '#64748b' : '#9ca3af',
-      textMain: isLight ? '#1e293b' : '#e5e7eb',
-      muted:    isLight ? '#94a3b8' : '#4b5563',
-      gridLine: isLight ? '#e2e8f0' : '#151c2b',
+      text:     t['c-muted'],
+      text2:    t['c-text-2'],
+      textMain: t['c-text'],
+      muted:    t['c-muted'],
+      gridLine: t['c-border'],
+      critical: t['c-sev-critical-fill'],
+      high:     t['c-sev-high-fill'],
+      medium:   t['c-sev-medium-fill'],
+      low:      t['c-sev-low-fill'],
+      purple:   t['c-purple-fill'],
+      success:  t['c-success'],
+      bar:      t['c-accent'],
     };
   }
 
@@ -215,7 +225,7 @@ export class Dashboard {
           type: 'bar',
           data: top.map(x => ({
             value: x.count,
-            itemStyle: { color: '#3b82f6', borderRadius: [0, 3, 3, 0] },
+            itemStyle: { color: pal.bar, borderRadius: [0, 3, 3, 0] },
           })),
           barMaxWidth: 14,
           label: { show: true, position: 'right', color: pal.text2, fontSize: 9 },

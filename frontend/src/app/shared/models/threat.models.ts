@@ -12,18 +12,45 @@ export const DETECTION_SOURCE_LABELS: Record<string, string> = {
   yara_detection:       'YARA',
 };
 
+// Severity colors are theme CSS variables (see src/styles.scss), so they follow
+// the light and dark theme. Use them in style bindings or D3 .style(), never in
+// SVG presentation attributes, which cannot resolve var().
+// SEVERITY_COLORS is the fill tier, for dots, stripes and strokes (3:1).
+// SEVERITY_TEXT_COLORS is the text tier, for readable labels (4.5:1).
 export const SEVERITY_COLORS: Record<string, string> = {
-  critical: '#ef4444',
-  high:     '#f97316',
-  medium:   '#f59e0b',
-  low:      '#60a5fa',
+  critical: 'var(--c-sev-critical-fill)',
+  high:     'var(--c-sev-high-fill)',
+  medium:   'var(--c-sev-medium-fill)',
+  low:      'var(--c-sev-low-fill)',
 };
 
+export const SEVERITY_TEXT_COLORS: Record<string, string> = {
+  critical: 'var(--c-sev-critical)',
+  high:     'var(--c-sev-high)',
+  medium:   'var(--c-sev-medium)',
+  low:      'var(--c-sev-low)',
+};
+
+/** A translucent tint of a color, including a var() color: `pct` is 0 to 100. */
+export function tint(color: string, pct: number): string {
+  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
+}
+
+function scoreToLevel(score: number): ThreatLevel {
+  if (score >= 80) return 'critical';
+  if (score >= 60) return 'high';
+  if (score >= 40) return 'medium';
+  return 'low';
+}
+
+/** Fill tier color for a risk score, for gauges and bars. */
 export function scoreToColor(score: number): string {
-  if (score >= 80) return SEVERITY_COLORS['critical'];
-  if (score >= 60) return SEVERITY_COLORS['high'];
-  if (score >= 40) return SEVERITY_COLORS['medium'];
-  return SEVERITY_COLORS['low'];
+  return SEVERITY_COLORS[scoreToLevel(score)];
+}
+
+/** Text tier color for a risk score, for labels. */
+export function scoreToTextColor(score: number): string {
+  return SEVERITY_TEXT_COLORS[scoreToLevel(score)];
 }
 
 export interface ThreatEvent {

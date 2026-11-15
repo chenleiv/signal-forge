@@ -1,8 +1,8 @@
 @if (!alert()) {
   <div class="detail-empty">
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="#4b5563" stroke-width="1.2" stroke-linejoin="round"/>
-      <path d="M12 7l4 2.5v5L12 17l-4-2.5v-5L12 7z" fill="#4b5563" opacity="0.3"/>
+    <svg class="empty-icon" width="36" height="36" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>
+      <path d="M12 7l4 2.5v5L12 17l-4-2.5v-5L12 7z" fill="currentColor" opacity="0.3"/>
     </svg>
     <p>Select an alert to investigate</p>
   </div>
@@ -89,8 +89,8 @@
       <div class="risk-row">
         <div class="risk-gauge" [style.--risk-color]="riskColor(alert()!.risk_score)">
           <svg viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="32" stroke="#1f2937" stroke-width="8" fill="none"/>
-            <circle cx="40" cy="40" r="32" stroke="var(--risk-color)" stroke-width="8" fill="none"
+            <circle class="risk-track" cx="40" cy="40" r="32" stroke-width="8" fill="none"/>
+            <circle class="risk-arc" cx="40" cy="40" r="32" stroke-width="8" fill="none"
                     [attr.stroke-dasharray]="(alert()!.risk_score / 100) * 201 + ' 201'"
                     stroke-dashoffset="50"
                     stroke-linecap="round"
@@ -102,7 +102,7 @@
           </div>
         </div>
         <div class="risk-meta">
-          <span class="risk-level" [style.color]="riskColor(alert()!.risk_score)">{{ riskLabel(alert()!.risk_score) }} Risk</span>
+          <span class="risk-level" [style.color]="riskTextColor(alert()!.risk_score)">{{ riskLabel(alert()!.risk_score) }} Risk</span>
           <div class="risk-factors">
             <div class="factor-row">
               <span class="factor-name">Geo Risk</span>
