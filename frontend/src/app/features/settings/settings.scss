@@ -302,6 +302,43 @@
     }
 }
 
+// ── Collapsible cards (details/summary) ──────────────────────
+.card-summary {
+    cursor: pointer;
+    list-style: none;           // hide the native marker; the chevron replaces it
+    border-radius: 4px;
+
+    &::-webkit-details-marker {
+        display: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $accent;
+        outline-offset: 4px;
+    }
+
+    &:hover .card-chevron {
+        color: $text;
+    }
+}
+
+.card-chevron {
+    width: 14px;
+    height: 14px;
+    margin-left: auto;
+    color: $secondary;
+    flex-shrink: 0;
+    transition: transform 0.15s, color 0.15s;
+
+    .card-details[open] & {
+        transform: rotate(90deg);
+    }
+}
+
+.card-body {
+    margin-top: 16px;
+}
+
 // ── Change password card ─────────────────────────────────────
 .card-note {
     margin: 0;
