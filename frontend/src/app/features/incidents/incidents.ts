@@ -133,7 +133,7 @@ export class Incidents {
     );
   }
 
-  readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? '#9ca3af';
+  readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? 'var(--c-muted)';
 
   private refreshList() {
     this.store

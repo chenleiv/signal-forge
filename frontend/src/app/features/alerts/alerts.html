@@ -118,7 +118,7 @@
               <span class="source-chip chip-{{ alert.detection_source }}">{{ detectionSourceLabel(alert.detection_source) }}</span>
               <span class="alert-type">{{ alert.type }}</span>
               @if (alert.ip) { <span class="alert-ip">{{ alert.ip }}</span> }
-              <span class="risk-score-badge" [style.background]="severityColor(alert.severity) + '22'" [style.color]="severityColor(alert.severity)">
+              <span class="risk-score-badge" [style.background]="severityTint(alert.severity)" [style.color]="severityTextColor(alert.severity)">
                 {{ alert.risk_score }}
               </span>
               <span class="alert-time">{{ timeAgo(alert.created_at) }}</span>

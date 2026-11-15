@@ -81,7 +81,10 @@ export class ThreatMap {
 
     this.svg = d3.select(container).append('svg').attr('width', width).attr('height', height);
 
-    this.svg.append('rect').attr('width', width).attr('height', height).attr('fill', '#0a0f1a');
+    // Colors are theme CSS variables set with .style(): SVG presentation
+    // attributes cannot resolve var(). The container has .theme-dark, so the
+    // map stays dark in both themes.
+    this.svg.append('rect').attr('width', width).attr('height', height).style('fill', 'var(--c-bg)');
 
     const zoomGroup = this.svg.append('g').attr('class', 'zoom-group');
 
@@ -91,8 +94,8 @@ export class ThreatMap {
       .data(topojson.feature(world, world.objects.countries).features)
       .join('path')
       .attr('d', path as unknown as string)
-      .attr('fill', '#1a2540')
-      .attr('stroke', '#2a3a60')
+      .style('fill', 'color-mix(in srgb, var(--c-accent) 12%, var(--c-panel))')
+      .style('stroke', 'color-mix(in srgb, var(--c-accent) 25%, var(--c-panel))')
       .attr('stroke-width', 0.5);
 
     zoomGroup.append('g').attr('class', 'attacks');
@@ -135,7 +138,7 @@ export class ThreatMap {
       .attr('y1', sy)
       .attr('x2', sx)
       .attr('y2', sy)
-      .attr('stroke', color)
+      .style('stroke', color)
       .attr('stroke-width', 1.5)
       .attr('opacity', 0.8);
 
@@ -156,7 +159,7 @@ export class ThreatMap {
       .attr('cy', ty)
       .attr('r', 0)
       .attr('fill', 'none')
-      .attr('stroke', color)
+      .style('stroke', color)
       .attr('stroke-width', 1.5)
       .attr('opacity', 0.9)
       .transition()

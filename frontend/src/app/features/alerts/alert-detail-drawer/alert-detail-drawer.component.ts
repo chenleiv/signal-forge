@@ -11,7 +11,13 @@ import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
-import { ThreatAlert, DETECTION_SOURCE_LABELS, SEVERITY_COLORS, scoreToColor } from '../../../shared/models/threat.models';
+import {
+  ThreatAlert,
+  DETECTION_SOURCE_LABELS,
+  SEVERITY_COLORS,
+  scoreToColor,
+  scoreToTextColor,
+} from '../../../shared/models/threat.models';
 
 @Component({
   selector: 'app-alert-detail-drawer',
@@ -59,7 +65,8 @@ export class AlertDetailDrawerComponent {
       });
   }
 
-  readonly riskColor = scoreToColor;
+  readonly riskColor     = scoreToColor;
+  readonly riskTextColor = scoreToTextColor;
 
   riskLabel(score: number): string {
     if (score >= 80) return 'Critical';

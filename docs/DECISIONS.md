@@ -16,6 +16,75 @@ to anything listed here.
 
 ---
 
+## 2026-11-15 · Alerts, threats, map, console and TypeScript colors use theme tokens
+
+**Decision.** The last hard-coded colors (alerts page, alert and threat
+drawers, threat map, command console, dashboard charts) follow the token
+mapping below (PR 3a). Choices specific to these areas:
+- `SEVERITY_COLORS` in `threat.models.ts` holds `var(--c-sev-*-fill)` for
+  dots, stripes and strokes; a new `SEVERITY_TEXT_COLORS` holds
+  `var(--c-sev-*)` for labels. `scoreToColor` returns the fill tier and the
+  new `scoreToTextColor` the text tier. Template bindings that appended a hex
+  alpha (`+ '22'`, `'18'`, `'40'`) use the `tint()` helper, which returns
+  `color-mix(in srgb, <color> N%, transparent)` with the same alpha (13%, 9%,
+  25%).
+- The threat map canvas and the command console are always dark. A
+  `.theme-dark` class in `styles.scss` shares the dark token block, so those
+  subtrees get the dark tokens in both themes without a copy of the values.
+  The console uses `--c-accent` for the title, prompt and typed commands
+  (was cyan `#00d4ff`), `--c-success` for output, `--c-muted` for the hint and
+  placeholder (were `#2a4a6a` and `#1a3a5a`, about 2:1), `--c-text` for input.
+- D3 sets map colors with `.style('fill' | 'stroke', 'var(--token)')`: SVG
+  presentation attributes cannot resolve `var()`. Land is
+  `color-mix(--c-accent 12%, --c-panel)` and borders 25%, which keeps the old
+  navy look (`#1c293e` and `#23385b` against `#1a2540` and `#2a3a60`). The
+  map hint is `--c-muted` (was white 40%, about 3.3:1). The alert drawer risk
+  gauge stroke moved from an SVG attribute to CSS for the same reason.
+- ECharts draws on a canvas and cannot read CSS variables, so
+  `chart-palette.ts` keeps a copy of the tokens per theme, keyed by variable
+  name. Chart roles: axis and legend text `--c-muted` (dark was `#6b7280`,
+  about 3.6:1), titles `--c-text-2`, the donut total `--c-text`, grid lines
+  `--c-border`, severity and attack type slices the severity fills plus
+  `--c-purple-fill`, regions US low, EU `--c-success`, RU critical, CN high,
+  IL purple, BR medium, other `--c-muted`, top IP bars `--c-accent`.
+  `styles.contrast.spec.ts` fails if any value differs from `styles.scss`,
+  and checks text entries for 4.5:1 and marks for 3:1.
+- Filled badges (alerts unread count, AbuseIPDB score) use `$sev-*` with
+  `$on-sev`; in the dark theme their text is now dark instead of white
+  (white on the old blue and orange was 2.2 to 3.8:1).
+- Tints that pushed text below 4.5:1: accent text on a 15% accent tint
+  measured 4.37:1 (dark, on `--c-panel`), so the "Correlation" source chip
+  (alert list and drawer) and the detection timeline icon use
+  `$accent-hover` (5.56:1 dark, 6.14:1 light). No tint had to be lowered;
+  every other severity, purple and white tint measured 4.53:1 or more on
+  `--c-panel` (lowest: `$sev-high` on a 15% tint, light).
+
+**Reason.** Same as the entries below: the fixed values were tuned for the
+dark theme and failed in the light theme, and several dark values were
+already below 4.5:1.
+
+**Alternatives rejected.**
+- Copying the dark values into a separate block for the map and console:
+  two sets of values to keep in step; the shared selector has none.
+- Reading the CSS variables at runtime with `getComputedStyle` for ECharts:
+  depends on render timing after a theme switch and cannot be checked by a
+  unit test; the mirror plus the spec can.
+- Keeping the console's cyan as a literal exception: the owner chose full
+  tokens.
+
+Limits: the 15% severity tints are measured on `--c-panel` and `--c-input`,
+where the chips sit; on `--c-bg` the light `$sev-high` chip would be 4.14:1.
+The logo gradient in `app.html` is brand artwork and keeps its literal colors.
+Black shadows and the mobile backdrop stay literal, as in PR 3a.
+
+Files: `threat.models.ts`, `alerts.scss`, `alerts.html`, `alerts.ts`,
+`alert-detail-drawer.component.{scss,html,ts}`,
+`threat-detail-drawer.component.{scss,html,ts}`,
+`incidents.ts`, `incident-detail.component.{html,ts}`, `threat-map.ts`,
+`threat-map.html`, `threat-map.scss`, `command-console.scss`,
+`command-console.html`, `dashboard.ts`, `chart-palette.ts`,
+`styles.scss`, `styles.contrast.spec.ts`.
+
 ## 2026-11-15 · Page colors map to theme tokens; `$green` removed
 
 **Decision.** The dashboard, rules, incidents (list and detail), settings and

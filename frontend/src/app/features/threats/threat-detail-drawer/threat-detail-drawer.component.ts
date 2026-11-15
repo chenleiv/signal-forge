@@ -13,7 +13,7 @@ import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
-import { IpHistory, IpGeo, RelatedIp, scoreToColor } from '../../../shared/models/threat.models';
+import { IpHistory, IpGeo, RelatedIp, scoreToColor, scoreToTextColor } from '../../../shared/models/threat.models';
 
 @Component({
   selector: 'app-threat-detail-drawer',
@@ -165,6 +165,7 @@ export class ThreatDetailDrawerComponent {
   selectRelated(ip: string) { this.ipChange.emit(ip); }
 
   readonly scoreColor = scoreToColor;
+  readonly scoreTextColor = scoreToTextColor;
 
   countryFlag(code: string): string {
     return code.toUpperCase().replace(/./g, c =>

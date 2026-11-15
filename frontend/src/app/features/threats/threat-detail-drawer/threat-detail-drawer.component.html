@@ -1,8 +1,8 @@
 @if (!ip()) {
   <div class="detail-empty">
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="#4b5563" stroke-width="1.2" stroke-linejoin="round" />
-      <path d="M12 7l4 2.5v5L12 17l-4-2.5v-5L12 7z" fill="#4b5563" opacity="0.3" />
+    <svg class="empty-icon" width="36" height="36" viewBox="0 0 24 24" fill="none">
+      <path d="M12 2L3 7v10l9 5 9-5V7L12 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+      <path d="M12 7l4 2.5v5L12 17l-4-2.5v-5L12 7z" fill="currentColor" opacity="0.3" />
     </svg>
     <p>Select an IP to view threat intelligence</p>
   </div>
@@ -82,13 +82,13 @@
       } @else {
         <div class="score-section">
           <div class="score-ring" [style.borderColor]="scoreColor(history()?.score ?? 0)">
-            <span class="score-value" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.score }}</span>
+            <span class="score-value" [style.color]="scoreTextColor(history()?.score ?? 0)">{{ history()?.score }}</span>
             <span class="score-sub">AVG SCORE</span>
           </div>
           <div class="score-meta">
             <div class="meta-row">
               <span class="meta-label">Level</span>
-              <span class="meta-val" [style.color]="scoreColor(history()?.score ?? 0)">{{ history()?.threat_level?.toUpperCase() ?? '—' }}</span>
+              <span class="meta-val" [style.color]="scoreTextColor(history()?.score ?? 0)">{{ history()?.threat_level?.toUpperCase() ?? '—' }}</span>
             </div>
             <div class="meta-row">
               <span class="meta-label">Events</span>
@@ -300,7 +300,7 @@
                     </div>
                   </div>
                   <div class="related-right">
-                    <span class="related-score" [style.color]="scoreColor(r.score)">{{ r.score }}</span>
+                    <span class="related-score" [style.color]="scoreTextColor(r.score)">{{ r.score }}</span>
                     <span class="related-events">{{ r.event_count }} events</span>
                   </div>
                 </div>
@@ -341,7 +341,7 @@
                   <tr>
                     <td class="mono muted">{{ e.timestamp | date:'HH:mm:ss' }}</td>
                     <td>{{ e.attack_type }}</td>
-                    <td class="mono" [style.color]="scoreColor(e.score)">{{ e.score }}</td>
+                    <td class="mono" [style.color]="scoreTextColor(e.score)">{{ e.score }}</td>
                     <td class="mono muted">{{ e.region }}</td>
                   </tr>
                 } @empty {

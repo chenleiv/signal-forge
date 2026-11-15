@@ -1,3 +1,4 @@
+// The overlay carries .theme-dark: the console uses the dark tokens in both themes.
 .console-overlay {
     position: fixed;
     bottom: 0;
@@ -20,7 +21,7 @@
 }
 
 .console {
-    background: #080d14;
+    background: var(--c-bg);
     border-top: 1px solid var(--c-border);
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.4);
     height: 220px;
@@ -34,33 +35,33 @@
     gap: 12px;
     padding: 6px 16px;
     border-bottom: 1px solid var(--c-border);
-    background: #060b12;
+    background: var(--c-input);
 }
 
 .console-title {
     font-size: 10px;
     font-family: monospace;
-    color: #00d4ff;
+    color: var(--c-accent);
     letter-spacing: 0.1em;
     font-weight: 700;
 }
 
 .console-hint {
     font-size: 10px;
-    color: #2a4a6a;
+    color: var(--c-muted);
     margin-left: auto;
 }
 
 .console-close {
     background: none;
     border: none;
-    color: #2a4a6a;
+    color: var(--c-muted);
     cursor: pointer;
     font-size: 12px;
     padding: 2px 6px;
 
     &:hover {
-        color: #fff;
+        color: var(--c-text);
     }
 }
 
@@ -76,11 +77,11 @@
 .line {
     font-size: 12px;
     font-family: monospace;
-    color: #4a8a6a;
+    color: var(--c-success);
     white-space: pre-wrap;
 
     &.cmd-line {
-        color: #00d4ff;
+        color: var(--c-accent);
     }
 }
 
@@ -93,7 +94,7 @@
 }
 
 .prompt {
-    color: #00d4ff;
+    color: var(--c-accent);
     font-family: monospace;
     font-size: 14px;
     font-weight: 700;
@@ -104,11 +105,11 @@
     background: none;
     border: none;
     outline: none;
-    color: #c8d8e8;
+    color: var(--c-text);
     font-family: monospace;
     font-size: 13px;
 
     &::placeholder {
-        color: #1a3a5a;
+        color: var(--c-muted);
     }
 }
