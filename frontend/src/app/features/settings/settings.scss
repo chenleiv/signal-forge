@@ -165,14 +165,14 @@
     border-radius: 50%;
     flex-shrink: 0;
 
-    &.critical { background: #ef4444; }
-    &.high     { background: #f97316; }
-    &.medium   { background: #f59e0b; }
+    &.critical { background: $sev-critical-fill; }
+    &.high     { background: $sev-high-fill; }
+    &.medium   { background: $sev-medium-fill; }
 }
 
-.label-critical { font-size: 12px; color: #ef4444; font-weight: 500; }
-.label-high     { font-size: 12px; color: #f97316; font-weight: 500; }
-.label-medium   { font-size: 12px; color: #f59e0b; font-weight: 500; }
+.label-critical { font-size: 12px; color: $sev-critical; font-weight: 500; }
+.label-high     { font-size: 12px; color: $sev-high; font-weight: 500; }
+.label-medium   { font-size: 12px; color: $sev-medium; font-weight: 500; }
 
 .threshold-op {
     font-size: 14px;
@@ -192,19 +192,19 @@
 
 .btn-logout {
     padding: 8px 18px;
-    border: 1px solid #7f1d1d;
+    border: 1px solid color-mix(in srgb, var(--c-sev-critical-fill) 40%, transparent);
     border-radius: 4px;
     background: transparent;
-    color: #f87171;
+    color: $sev-critical;
     font-size: 12px;
     cursor: pointer;
     transition: all 0.15s;
     margin-right: auto;
 
     &:hover {
-        background: rgba(239, 68, 68, 0.12);
-        border-color: #ef4444;
-        color: #fca5a5;
+        background: color-mix(in srgb, var(--c-sev-critical-fill) 12%, transparent);
+        border-color: $sev-critical-fill;
+        color: $sev-critical;
     }
 }
 
@@ -241,10 +241,10 @@
     }
 
     &.saved {
-        background: rgba(255,255,255,.65);
+        background: $secondary;
 
         &:hover {
-            background: #15803d;
+            background: $success;
         }
     }
 }
@@ -315,9 +315,9 @@
 }
 
 .pw-error {
-    color: #f87171;
+    color: $sev-critical;
 }
 
 .pw-ok {
-    color: #4ade80;
+    color: $success;
 }

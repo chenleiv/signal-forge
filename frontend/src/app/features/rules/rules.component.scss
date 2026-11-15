@@ -42,16 +42,16 @@
 
 .btn-new {
   padding: 4px 10px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.35);
-  color: $accent;
+  background: color-mix(in srgb, var(--c-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 35%, transparent);
+  color: $accent-hover;
   border-radius: 3px;
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover { background: rgba(59, 130, 246, 0.2); }
+  &:hover { background: color-mix(in srgb, var(--c-accent) 20%, transparent); }
 }
 
 .sidebar-empty {
@@ -79,8 +79,8 @@
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover { border-color: rgba(59, 130, 246, 0.3); background: rgba(59, 130, 246, 0.03); }
-  &.active { border-color: rgba(59, 130, 246, 0.5); background: rgba(59, 130, 246, 0.06); }
+  &:hover { border-color: color-mix(in srgb, var(--c-accent) 30%, transparent); background: color-mix(in srgb, var(--c-accent) 3%, transparent); }
+  &.active { border-color: color-mix(in srgb, var(--c-accent) 50%, transparent); background: color-mix(in srgb, var(--c-accent) 6%, transparent); }
 }
 
 .rule-toggle {
@@ -94,7 +94,9 @@
   flex-shrink: 0;
   transition: background 0.2s;
 
-  &.on { background: rgba(255, 255, 255, 0.35); }
+  // 51%: the lowest alpha where the "on" track reaches 3:1 against the
+  // panel and the page background in both themes.
+  &.on { background: color-mix(in srgb, var(--c-text) 51%, transparent); }
 
   .toggle-dot {
     position: absolute;
@@ -109,7 +111,7 @@
 
   &.on .toggle-dot {
     left: 14px;
-    background: $green;
+    background: $secondary;
   }
 }
 
@@ -146,7 +148,7 @@
   flex-shrink: 0;
   transition: color 0.15s;
 
-  &:hover { color: #ef4444; }
+  &:hover { color: $sev-critical; }
 }
 
 // ── Editor ────────────────────────────────────────────────────
@@ -165,6 +167,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
+  color: $muted;  // the empty-state icon (currentColor)
 
   p { font-size: 12px; color: $muted; }
 }
@@ -205,7 +208,7 @@
   max-width: 380px;
 
   &::placeholder { color: $muted; }
-  &:focus { border-color: rgba(59, 130, 246, 0.4); }
+  &:focus { border-color: color-mix(in srgb, var(--c-accent) 40%, transparent); }
 }
 
 // ── Conditions ────────────────────────────────────────────────
@@ -231,7 +234,7 @@
     cursor: pointer;
     transition: all 0.15s;
 
-    &.active { background: rgba(59, 130, 246, 0.15); color: $accent; }
+    &.active { background: color-mix(in srgb, var(--c-accent) 15%, transparent); color: $accent-hover; }
     &:hover:not(.active) { color: $secondary; }
   }
 }
@@ -258,7 +261,7 @@
   outline: none;
   cursor: pointer;
 
-  &:focus { border-color: rgba(59, 130, 246, 0.4); }
+  &:focus { border-color: color-mix(in srgb, var(--c-accent) 40%, transparent); }
   option { background: var(--c-input); }
 }
 
@@ -277,7 +280,7 @@
   outline: none;
 
   &::placeholder { color: $muted; }
-  &:focus { border-color: rgba(59, 130, 246, 0.4); }
+  &:focus { border-color: color-mix(in srgb, var(--c-accent) 40%, transparent); }
 }
 
 .cond-del {
@@ -292,7 +295,7 @@
   flex-shrink: 0;
   transition: all 0.15s;
 
-  &:hover:not(:disabled) { border-color: #ef4444; color: #ef4444; }
+  &:hover:not(:disabled) { border-color: $sev-critical-fill; color: $sev-critical; }
   &:disabled { opacity: 0.3; cursor: default; }
 }
 
@@ -300,8 +303,8 @@
   width: fit-content;
   padding: 4px 10px;
   background: transparent;
-  border: 1px dashed rgba(59, 130, 246, 0.3);
-  color: rgba(59, 130, 246, 0.7);
+  border: 1px dashed color-mix(in srgb, var(--c-accent) 30%, transparent);
+  color: $accent;
   border-radius: 3px;
   font-size: 10px;
   cursor: pointer;
@@ -332,12 +335,12 @@
   input[type="checkbox"] { display: none; }
 
   &.checked {
-    border-color: rgba(59, 130, 246, 0.5);
-    background: rgba(59, 130, 246, 0.08);
-    color: $accent;
+    border-color: color-mix(in srgb, var(--c-accent) 50%, transparent);
+    background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+    color: $accent-hover;
   }
 
-  &:hover:not(.checked) { border-color: rgba(59, 130, 246, 0.25); color: $secondary; }
+  &:hover:not(.checked) { border-color: color-mix(in srgb, var(--c-accent) 25%, transparent); color: $secondary; }
 }
 
 // ── Query preview ─────────────────────────────────────────────
@@ -371,21 +374,21 @@
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover { background: rgba(255, 255, 255, 0.04); color: $text; }
+  &:hover { background: color-mix(in srgb, var(--c-text) 4%, transparent); color: $text; }
 }
 
 .btn-save {
   padding: 7px 20px;
-  background: rgba(59, 130, 246, 0.12);
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  color: $accent;
+  background: color-mix(in srgb, var(--c-accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 40%, transparent);
+  color: $accent-hover;
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
 
-  &:hover:not(:disabled) { background: rgba(59, 130, 246, 0.22); }
+  &:hover:not(:disabled) { background: color-mix(in srgb, var(--c-accent) 22%, transparent); }
   &:disabled { opacity: 0.4; cursor: default; }
 }
 

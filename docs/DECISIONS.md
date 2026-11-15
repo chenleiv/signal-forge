@@ -16,6 +16,61 @@ to anything listed here.
 
 ---
 
+## 2026-11-15 · Page colors map to theme tokens; `$green` removed
+
+**Decision.** The dashboard, rules, incidents (list and detail), settings and
+threat hunting pages follow the token mapping of the entry below (PR 3a).
+The `$green` token (actually `rgba(255, 255, 255, 0.65)`) is removed from
+`_tokens.scss`; its five uses map to `$secondary`. Choices specific to these
+pages:
+- Rules toggle "on" track: `color-mix(--c-text 51%)`. 51% is the lowest
+  alpha that reaches 3:1 against `--c-panel` and `--c-bg` in both themes
+  (light: 3.09:1 on the panel, 3.00:1 on the background; dark: 4.7 to
+  4.8:1). The old 35% measured 2.05:1 in light and 2.90:1 in dark.
+- Settings "saved" button: `$secondary` background with `$on-accent` text
+  (7.56:1 light, 8.41:1 dark); its hover is `$success` (7.13:1 and 10.86:1),
+  replacing the fixed `#15803d`.
+- Incidents toast: text is `$text` (8.15:1 light on its `--c-border`
+  background); the blue identity is a 35% `$sev-low-fill` border plus a 3px
+  `$sev-low-fill` left stripe.
+- Accent text on accent tints (rules "New", logic toggle, action chips, save
+  buttons, hunt "Run", note "Add") uses `$accent-hover`: with `$accent` the
+  rest or hover state measured 3.73 to 4.49:1. The MITRE tag keeps `$accent`
+  (4.98:1 light, 4.87:1 dark).
+- Dashed "add condition" and "save hunt" buttons: text was the accent at 70%
+  alpha (2.91:1 light, 3.47:1 dark); it is now plain `$accent` (5.03:1,
+  5.91:1).
+- Threat hunting "high" level badge: tint 7% instead of 12% (4.29:1 to
+  4.57:1 in light), as for the "high" filter pill.
+- Settings logout button: border `color-mix($sev-critical-fill 40%)` for the
+  old dark red `#7f1d1d`; text `$sev-critical` at rest and on hover (the old
+  lighter hover red `#fca5a5` has no token).
+- Empty-state icons use `currentColor` with `$muted`; the task check mark uses
+  `$success`.
+
+**Reason.** Same as the entry below: the fixed values were tuned for the dark
+theme and were invisible or below 4.5:1 in the light theme.
+
+**Alternatives rejected.**
+- A higher toggle alpha (55 to 65%): more contrast than the 3:1 the owner
+  asked for, and the "on" dot (`$secondary`) blends further into the track.
+- A lighter text color for the logout hover: no matching token, and new
+  tokens are out of scope.
+
+Limits: the "on" toggle dot measures 1.74:1 (dark) and 2.14:1 (light)
+against its track; the state is shown by the track and the dot position.
+The critical row flash on the dashboard peaks at an 18% red tint where
+`$muted` text drops to 4.19:1 (light) and 4.43:1 (dark) for under 1.5 s.
+Severity colors set from TypeScript (`dashboard.ts`, `incidents.ts`,
+`incident-detail.component.ts`) are left for PR 3c, as are alerts, threats,
+the threat map and the command console.
+
+Files: `dashboard.scss`, `rules.component.scss`, `rules.component.html`,
+`incidents.scss`, `incident-detail.component.scss`,
+`incident-detail.component.html`, `settings.scss`,
+`threat-hunting.component.scss`, `threat-hunting.component.html`,
+`styles/_tokens.scss`.
+
 ## 2026-11-15 · Component colors map to theme tokens, no new tokens
 
 **Decision.** Hard-coded colors in components are replaced with the existing

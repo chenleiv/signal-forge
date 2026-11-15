@@ -16,6 +16,7 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
+  color: $muted;  // the empty-state icon (currentColor)
 
   p { font-size: 12px; color: $muted; }
 }
@@ -101,14 +102,14 @@
   transition: all 0.15s;
 
   &:hover:not(.active) {
-    border-color: rgba(59, 130, 246, 0.3);
+    border-color: color-mix(in srgb, var(--c-accent) 30%, transparent);
     color: $secondary;
   }
 
   &.past {
-    color: $green;
-    border-color: rgba(255, 255, 255, 0.25);
-    background: rgba(255, 255, 255, 0.04);
+    color: $secondary;
+    border-color: color-mix(in srgb, var(--c-text) 25%, transparent);
+    background: color-mix(in srgb, var(--c-text) 4%, transparent);
   }
 
   &.active {
@@ -165,7 +166,7 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 
-  &:hover { color: #60a5fa; }
+  &:hover { color: $accent-hover; }
 }
 
 .assignee-select {
@@ -179,7 +180,7 @@
   cursor: pointer;
   outline: none;
 
-  &:focus { border-color: rgba(59, 130, 246, 0.4); }
+  &:focus { border-color: color-mix(in srgb, var(--c-accent) 40%, transparent); }
   option { background: var(--c-input); color: $text; }
 }
 
@@ -229,7 +230,7 @@
   transition: background 0.1s;
   border: 1px solid transparent;
 
-  &:hover { background: rgba(255, 255, 255, 0.03); }
+  &:hover { background: color-mix(in srgb, var(--c-text) 3%, transparent); }
 
   &.done .task-label {
     text-decoration: line-through;
@@ -247,10 +248,11 @@
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
+  color: $success;  // the check mark (currentColor)
 
   .done & {
-    border-color: $green;
-    background: rgba(255, 255, 255, 0.1);
+    border-color: $secondary;
+    background: color-mix(in srgb, var(--c-text) 10%, transparent);
   }
 }
 
@@ -277,14 +279,14 @@
   outline: none;
 
   &::placeholder { color: $muted; }
-  &:focus { border-color: rgba(59, 130, 246, 0.4); }
+  &:focus { border-color: color-mix(in srgb, var(--c-accent) 40%, transparent); }
 }
 
 .note-add-btn {
   padding: 5px 12px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-  color: $accent;
+  background: color-mix(in srgb, var(--c-accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 30%, transparent);
+  color: $accent-hover;
   border-radius: 3px;
   font-size: 11px;
   font-weight: 600;
@@ -292,7 +294,7 @@
   transition: all 0.15s;
   white-space: nowrap;
 
-  &:hover:not(:disabled) { background: rgba(59, 130, 246, 0.2); }
+  &:hover:not(:disabled) { background: color-mix(in srgb, var(--c-accent) 20%, transparent); }
   &:disabled { opacity: 0.4; cursor: default; }
 }
 
@@ -303,7 +305,7 @@
 }
 
 .note-item {
-  background: rgba(255, 255, 255, 0.02);
+  background: color-mix(in srgb, var(--c-text) 2%, transparent);
   border: 1px solid $border;
   border-radius: 4px;
   padding: 8px 10px;
@@ -363,9 +365,9 @@
   }
 
   &:has(.tl-status)::before { background: $accent; }
-  &:has(.tl-create)::before { background: $green; }
-  &:has(.tl-note)::before   { background: #a855f7; }
-  &:has(.tl-assign)::before { background: #f59e0b; }
+  &:has(.tl-create)::before { background: $secondary; }
+  &:has(.tl-note)::before   { background: $purple-fill; }
+  &:has(.tl-assign)::before { background: $sev-medium-fill; }
 }
 
 .tl-dot { display: none; }
@@ -397,8 +399,8 @@
 .mitre-tag {
   padding: 2px 8px;
   border-radius: 3px;
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.25);
+  background: color-mix(in srgb, var(--c-accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c-accent) 25%, transparent);
   color: $accent;
   font-size: 10px;
   font-family: monospace;
