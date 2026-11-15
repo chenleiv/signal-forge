@@ -303,6 +303,42 @@
 }
 
 // ── Change password card ─────────────────────────────────────
+.pw-summary {
+    cursor: pointer;
+    list-style: none;           // hide the native marker; the chevron replaces it
+    border-radius: 4px;
+
+    &::-webkit-details-marker {
+        display: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid $accent;
+        outline-offset: 4px;
+    }
+
+    &:hover .pw-chevron {
+        color: $text;
+    }
+}
+
+.pw-chevron {
+    width: 14px;
+    height: 14px;
+    margin-left: auto;
+    color: $secondary;
+    flex-shrink: 0;
+    transition: transform 0.15s, color 0.15s;
+
+    .pw-details[open] & {
+        transform: rotate(90deg);
+    }
+}
+
+.pw-form {
+    margin-top: 16px;
+}
+
 .card-note {
     margin: 0;
     font-size: 12px;

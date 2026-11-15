@@ -16,6 +16,34 @@ to anything listed here.
 
 ---
 
+## 2026-11-15 · Settings change-password form is collapsed (native details/summary)
+
+**Decision.** The change-password form on the Settings page sits in a native
+`<details>` element and is closed by default. The `<summary>` is the control,
+so Enter, Space and the expanded state come from the browser. The element owns
+the open state: the `pwOpen` signal only mirrors its `toggle` event, and code
+changes it through `setPwOpen()`, never through an `[open]` binding. Opening
+focuses the current-password field (not in demo mode, where it is disabled).
+Closing clears the fields and the error. A successful change closes the form
+and returns focus to the summary; the success message and the demo note sit
+outside the details element so they stay visible. A server error keeps it open.
+The form stays in the DOM while closed. Files: `settings.html`, `settings.ts`,
+`settings.scss`, `settings.spec.ts`. The password API and validation are
+unchanged.
+
+**Reason.** The form is rarely used and took a full card. A native control
+gives keyboard and screen reader behaviour without custom key handling. An
+`[open]` binding only writes when its own last value changes, so after a
+native toggle it can be stale and a programmatic close may not reach the
+element; one owner (the element) avoids that.
+
+**Alternatives rejected.**
+- A `<button aria-expanded aria-controls>` with a hidden panel: more code for
+  the same behaviour.
+- Removing the form from the DOM with `@if` while closed: breaks existing tests
+  that query the fields and messages.
+- Binding `[open]` to the signal: the two can disagree (see Reason).
+
 ## 2026-11-15 · Alerts, threats, map, console and TypeScript colors use theme tokens
 
 **Decision.** The last hard-coded colors (alerts page, alert and threat

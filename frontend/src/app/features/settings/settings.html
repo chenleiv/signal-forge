@@ -30,22 +30,25 @@
             </div>
         </section>
 
-        <!-- Change password -->
+        <!-- Change password: collapsed by default (native details/summary). The form stays
+             in the DOM when closed; the element owns the open state and pwOpen follows its toggle event. -->
         <section class="card">
-            <div class="card-header">
-                <svg class="card-icon" viewBox="0 0 16 16" fill="none">
+            <details #pwDetails class="pw-details" (toggle)="onPwToggle()">
+            <summary #pwSummary class="card-header pw-summary">
+                <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                     <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" stroke-width="1.2" />
                     <path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" stroke="currentColor" stroke-width="1.2" />
                 </svg>
                 <h2 class="card-title">Change Password</h2>
-            </div>
-            @if (pwLocked()) {
-                <p class="card-note">Password changes are off in the public demo: the demo accounts are shared.</p>
-            }
-            <form class="field-grid" (submit)="$event.preventDefault(); changePassword()">
+                <svg class="pw-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                    <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+            </summary>
+            <form class="field-grid pw-form" (submit)="$event.preventDefault(); changePassword()">
                 <div class="field full">
                     <label for="current-password">Current password</label>
-                    <input id="current-password" type="password" autocomplete="current-password"
+                    <input #currentPwInput id="current-password" type="password" autocomplete="current-password"
                         [disabled]="pwLocked()" [value]="currentPw()"
                         (input)="currentPw.set($any($event.target).value)" />
                 </div>
@@ -64,15 +67,20 @@
                 @if (pwProblem() ?? pwError(); as msg) {
                     <p class="field full pw-msg pw-error" role="alert">{{ msg }}</p>
                 }
-                @if (pwNotice(); as msg) {
-                    <p class="field full pw-msg pw-ok" role="status">{{ msg }}</p>
-                }
                 <div class="field full">
                     <button type="submit" class="btn-save" [disabled]="!canSubmitPw()">
                         {{ pwBusy() ? 'Changing…' : 'Change password' }}
                     </button>
                 </div>
             </form>
+            </details>
+            <!-- Outside the details element so they stay visible while it is closed. -->
+            @if (pwLocked()) {
+                <p class="card-note">Password changes are off in the public demo: the demo accounts are shared.</p>
+            }
+            @if (pwNotice(); as msg) {
+                <p class="pw-msg pw-ok" role="status">{{ msg }}</p>
+            }
         </section>
 
         <!-- Appearance -->

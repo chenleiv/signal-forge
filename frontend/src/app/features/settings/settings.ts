@@ -1,4 +1,7 @@
-import { Component, computed, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import {
+  Component, computed, inject, signal, ChangeDetectionStrategy, DestroyRef, ElementRef, Injector,
+  afterNextRender, viewChild,
+} from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { SettingsService, AppSettings } from '../../core/services/settings.service';
@@ -23,6 +26,7 @@ export class Settings {
   readonly themeService = inject(ThemeService);
   private readonly demo = inject(DemoModeService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
 
   form = signal<AppSettings>({ ...this.svc.settings() });
 
@@ -54,6 +58,32 @@ export class Settings {
   readonly pwError    = signal<string | null>(null);
   readonly pwNotice   = signal<string | null>(null);
 
+  // Collapsed by default. The native details element owns the open state: pwOpen only
+  // mirrors it (toggle event), and code changes it through setPwOpen, never by binding.
+  readonly pwOpen = signal(false);
+  private readonly pwDetails = viewChild.required<ElementRef<HTMLDetailsElement>>('pwDetails');
+  private readonly pwSummary = viewChild.required<ElementRef<HTMLElement>>('pwSummary');
+  private readonly currentPwInput = viewChild.required<ElementRef<HTMLInputElement>>('currentPwInput');
+
+  /** Opens or closes the details element; onPwToggle then runs from its toggle event. */
+  setPwOpen(open: boolean) {
+    this.pwDetails().nativeElement.open = open;
+    this.pwOpen.set(open);
+  }
+
+  onPwToggle() {
+    const open = this.pwDetails().nativeElement.open;
+    this.pwOpen.set(open);
+    if (open) {
+      this.pwNotice.set(null);
+      if (!this.pwLocked()) this.currentPwInput().nativeElement.focus();
+    } else {
+      // Closing discards what was typed and any error; a success notice stays visible.
+      this.currentPw.set(''); this.newPw.set(''); this.confirmPw.set('');
+      this.pwError.set(null);
+    }
+  }
+
   /** A client-side check for quick feedback; the server re-checks everything. */
   readonly pwProblem = computed((): string | null => {
     const next = this.newPw();
@@ -83,6 +113,9 @@ export class Settings {
           this.pwBusy.set(false);
           this.currentPw.set(''); this.newPw.set(''); this.confirmPw.set('');
           this.pwNotice.set('Password changed. Your other sessions were signed out.');
+          // Close the form; the submit button is hidden with it, so focus goes back to the summary.
+          this.setPwOpen(false);
+          afterNextRender(() => this.pwSummary().nativeElement.focus(), { injector: this.injector });
         },
         error: (e: HttpErrorResponse) => {
           this.pwBusy.set(false);
