@@ -146,8 +146,8 @@
     &::placeholder { color: $muted; }
 
     &:focus {
-        border-color: rgba($accent, 0.5);
-        box-shadow: 0 0 0 3px rgba($accent, 0.07);
+        border-color: color-mix(in srgb, var(--c-accent) 50%, transparent);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--c-accent) 7%, transparent);
     }
 }
 
@@ -170,7 +170,7 @@
     background: $accent;
     border: none;
     border-radius: 6px;
-    color: #fff;
+    color: $on-accent;
     font-size: 13px;
     font-weight: 600;
     padding: 11px;
@@ -182,7 +182,7 @@
     gap: 8px;
     margin-top: 2px;
 
-    &:hover:not(:disabled) { background: #2563eb; }
+    &:hover:not(:disabled) { background: $accent-hover; }
     &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
@@ -220,7 +220,7 @@
     overflow: hidden;
 
     &:hover {
-        border-color: rgba($accent, 0.4);
+        border-color: color-mix(in srgb, var(--c-accent) 40%, transparent);
         color: $text;
     }
 }

@@ -10,33 +10,72 @@ html, body {
 }
 
 body {
-  background: var(--c-bg, #0f1117);
+  background: var(--c-bg, #0d1117);
 }
 
+// WCAG AA: text tokens reach 4.5:1 on --c-bg and --c-panel, *-fill tokens
+// (dots, bars, non-text marks) reach 3:1. --c-on-sev is the text color on a
+// severity background (--c-sev-*) and reaches 4.5:1 on each of them.
+// --c-on-accent is the text color on --c-accent and --c-accent-hover fills
+// (buttons) and reaches 4.5:1 on both.
+// src/styles.contrast.spec.ts checks these ratios.
+
 :root[data-theme="dark"] {
-  --c-bg:     #0f1117;
-  --c-panel:  #13171f;
-  --c-border: #1e2535;
-  --c-text:   #e5e7eb;
-  --c-text-2: #9ca3af;
-  --c-muted:  #4b5563;
-  --c-accent: #3b82f6;
-  --c-input:  #0d1220;
+  --c-bg:     #0d1117;
+  --c-panel:  #151b24;
+  --c-border: #2a3444;
+  --c-text:   #e6edf3;
+  --c-text-2: #a3aebb;
+  --c-muted:  #8b96a5;
+  --c-accent: #4c8dff;
+  --c-accent-hover: #6ea3ff;
+  --c-on-accent:    #0d1117;
+  --c-input:  #0b0f15;
   --c-success: #4ade80;
-  --c-warning: #f59e0b;
+  --c-warning: #fbbf24;
+
+  --c-sev-critical: #f87171;
+  --c-sev-high:     #fb923c;
+  --c-sev-medium:   #fbbf24;
+  --c-sev-low:      #60a5fa;
+  --c-purple:       #c084fc;
+
+  --c-sev-critical-fill: #f87171;
+  --c-sev-high-fill:     #fb923c;
+  --c-sev-medium-fill:   #fbbf24;
+  --c-sev-low-fill:      #60a5fa;
+  --c-purple-fill:       #c084fc;
+
+  --c-on-sev: #0d1117;
 }
 
 :root[data-theme="light"] {
-  --c-bg:     #eef2ff;
-  --c-panel:  #f5f7ff;
-  --c-border: #c7d0e8;
-  --c-text:   #1e293b;
-  --c-text-2: #475569;
-  --c-muted:  #64748b;
-  --c-accent: #4f72de;
+  --c-bg:     #e9edf3;
+  --c-panel:  #f6f8fb;
+  --c-border: #b8c2cf;
+  --c-text:   #1f2937;
+  --c-text-2: #4b5563;
+  --c-muted:  #5b6575;
+  --c-accent: #2f5fc4;
+  --c-accent-hover: #244c9e;
+  --c-on-accent:    #ffffff;
   --c-input:  #ffffff;
   --c-success: #166534;
   --c-warning: #854d0e;
+
+  --c-sev-critical: #b91c1c;
+  --c-sev-high:     #b43c0a;
+  --c-sev-medium:   #92400e;
+  --c-sev-low:      #1d4ed8;
+  --c-purple:       #7e22ce;
+
+  --c-sev-critical-fill: #dc2626;
+  --c-sev-high-fill:     #dc4f0a;
+  --c-sev-medium-fill:   #c26a06;
+  --c-sev-low-fill:      #2563eb;
+  --c-purple-fill:       #9333ea;
+
+  --c-on-sev: #ffffff;
 }
 
 /* ── Skeleton shimmer ─────────────────────────────────────────── */

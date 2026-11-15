@@ -8,21 +8,33 @@ $text:      var(--c-text);
 $secondary: var(--c-text-2);
 $muted:     var(--c-muted);
 $accent:    var(--c-accent);
+// Filled accent buttons: hover background and the text color on both fills.
+$accent-hover: var(--c-accent-hover);
+$on-accent:    var(--c-on-accent);
 $green:     rgba(255,255,255,.65);
 // Status colors, themed: success = live/healthy, warning = degraded.
 $success:   var(--c-success);
 $warning:   var(--c-warning);
 
-// Severity colors
-$sev-critical: #ef4444;
-$sev-high:     #f97316;
-$sev-medium:   #f59e0b;
-$sev-low:      #60a5fa;
-$red:    #ef4444;
-$orange: #f97316;
-$yellow: #f59e0b;
-$blue:   #60a5fa;
-$purple: #a855f7;
+// Severity colors, themed. The plain names are safe for text (4.5:1); the
+// -fill names are for dots, bars and other non-text marks (3:1). $on-sev is
+// the text color on a $sev-* background. These are CSS variables, so use
+// color-mix() for transparency; Sass rgba() cannot read them.
+$sev-critical: var(--c-sev-critical);
+$sev-high:     var(--c-sev-high);
+$sev-medium:   var(--c-sev-medium);
+$sev-low:      var(--c-sev-low);
+$sev-critical-fill: var(--c-sev-critical-fill);
+$sev-high-fill:     var(--c-sev-high-fill);
+$sev-medium-fill:   var(--c-sev-medium-fill);
+$sev-low-fill:      var(--c-sev-low-fill);
+$on-sev:       var(--c-on-sev);
+$red:    $sev-critical;
+$orange: $sev-high;
+$yellow: $sev-medium;
+$blue:   $sev-low;
+$purple: var(--c-purple);
+$purple-fill: var(--c-purple-fill);
 
 // Phones and small tablets: layouts switch to one column below this width.
 $narrow: 768px;

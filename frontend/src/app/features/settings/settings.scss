@@ -229,7 +229,7 @@
     border: none;
     border-radius: 4px;
     background: $accent;
-    color: #fff;
+    color: $on-accent;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -237,7 +237,7 @@
     min-width: 120px;
 
     &:hover {
-        background: #2563eb;
+        background: $accent-hover;
     }
 
     &.saved {
@@ -272,7 +272,7 @@
 
   &.active {
     background: var(--c-accent);
-    color: #fff;
+    color: var(--c-on-accent);
   }
 
   &:disabled {
