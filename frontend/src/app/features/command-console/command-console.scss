@@ -1,3 +1,5 @@
+@use 'tokens' as *;
+
 // The overlay carries .theme-dark: the console uses the dark tokens in both themes.
 .console-overlay {
     position: fixed;
@@ -111,5 +113,23 @@
 
     &::placeholder {
         color: var(--c-muted);
+    }
+}
+
+// Phones: the console takes at most 40% of a short screen, and the
+// keyboard hint (no physical keyboard) gives its room to the title.
+@media (max-width: $narrow) {
+    .console {
+        height: min(220px, 40vh);
+    }
+
+    .console-hint {
+        display: none;
+    }
+
+    .console-close {
+        margin-left: auto;
+        min-width: 44px;
+        min-height: 44px;
     }
 }

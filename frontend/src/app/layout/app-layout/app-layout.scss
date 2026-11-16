@@ -471,9 +471,9 @@
 }
 
 
-// ── Narrow screens (phones, small tablets) ───────────────────
+// ── Tablets and phones ───────────────────────────────────────
 // The sidebar becomes an off-canvas menu opened from the topbar, so the
-// page gets the full width. Desktop layout is unchanged.
+// page gets the full width. Desktop layout (above $tablet) is unchanged.
 
 .nav-toggle,
 .nav-backdrop,
@@ -481,7 +481,7 @@
   display: none;
 }
 
-@media (max-width: $narrow) {
+@media (max-width: $tablet) {
   .sidebar {
     position: fixed;
     top: 0;
@@ -524,6 +524,14 @@
     cursor: pointer;
   }
 
+  .logout-btn {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+// ── Phones ───────────────────────────────────────────────────
+@media (max-width: $narrow) {
   .topbar {
     padding: 0 12px;
   }
@@ -551,11 +559,6 @@
 
   .demo-text-short {
     display: inline;
-  }
-
-  .logout-btn {
-    width: 44px;
-    height: 44px;
   }
 
   .demo-toast {

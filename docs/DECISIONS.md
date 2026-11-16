@@ -16,6 +16,44 @@ to anything listed here.
 
 ---
 
+## 2026-11-16 · Tablet breakpoint: the slide-in menu up to 1024px
+
+**Decision.** A second breakpoint, `$tablet: 1024px`, joins `$narrow: 768px`
+in `_tokens.scss`. At or below `$tablet`:
+- The sidebar is the same slide-in menu as on phones (menu button, backdrop,
+  Escape closes it), with 44px menu and logout buttons. The breadcrumb, clock
+  and short demo text still change only at `$narrow`.
+- Overlay drawers (Threats, Incidents) are capped at 90% width so the page
+  stays visible; the resize handle is hidden. Phones keep full width.
+- Settings shows one column of cards; each card keeps two field columns.
+- On phones the console is at most 40% of the screen height and hides its
+  keyboard hint.
+
+Every new rule sits inside a `max-width` query, so desktop above 1024px is
+unchanged. E2E gains a `tablet` project (820x1180, touch) that skips the
+phone-only one-pane rules test (`grepInvert`), plus new tests in
+`e2e/responsive.e2e.ts`. `npm run e2e` runs the tablet project in a second
+pass with its own server.
+
+**Reason.** Between 769 and 1024px the fixed 220px sidebar left about 580px
+for the page. In one pass, the extra tablet page loads exceed the 50/minute
+per-IP limit on `/api/stats`, and the threats table stays empty.
+
+**Alternatives rejected.**
+- An icon rail sidebar on tablets: the owner chose the same slide-in menu.
+- Raising or bypassing the `/api/stats` rate limit for tests: it is a
+  security control.
+- One-pane rules on tablets: two panes fit at 820px.
+
+**Open item for PR 7.** `/api/stats` 429s are dropped silently
+(`threats.service.ts`, `catchError(() => EMPTY)`): several users behind one
+shared IP, each polling every 5 seconds, can exhaust 50 requests per minute
+and the live table stays empty with no message.
+
+Files: `_tokens.scss`, `_drawer.scss`, `app-layout.scss`,
+`command-console.scss`, `settings.scss`, `playwright.config.ts`,
+`package.json`, `e2e/responsive.e2e.ts` (new).
+
 ## 2026-11-16 · Users page: load states, keyboard focus and themed row styles
 
 **Decision.** The admin users page keeps its table (one row per user) and

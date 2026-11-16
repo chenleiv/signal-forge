@@ -286,6 +286,13 @@
   }
 }
 
+// Tablets: one column of cards (each card keeps its two-column field grid).
+@media (max-width: $tablet) {
+    .sections {
+        grid-template-columns: 1fr;
+    }
+}
+
 // Narrow screens (same breakpoint as the app layout): one column.
 @media (max-width: $narrow) {
     .settings-page {
