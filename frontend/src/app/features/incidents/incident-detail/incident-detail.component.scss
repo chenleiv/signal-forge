@@ -424,3 +424,37 @@
   color: $accent;
   cursor: pointer;
 }
+
+// ── Tablets and phones ────────────────────────────────────────
+// A 44px close button (touch target).
+@media (max-width: $tablet) {
+  .close-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    font-size: 12px;
+  }
+}
+
+// ── Phones ────────────────────────────────────────────────────
+// Status buttons wrap (the arrows are hidden, a wrapped line would end in
+// one) and the meta grid is one column.
+@media (max-width: $narrow) {
+  .status-bar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .status-btn {
+    flex: 1 1 calc(50% - 6px);
+    min-height: 32px;
+  }
+
+  .status-arrow {
+    display: none;
+  }
+
+  .meta-grid {
+    grid-template-columns: 1fr;
+  }
+}

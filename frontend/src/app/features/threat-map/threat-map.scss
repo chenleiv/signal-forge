@@ -1,3 +1,5 @@
+@use 'tokens' as *;
+
 :host {
   display: block;
   flex: 1;
@@ -48,6 +50,20 @@
   &.high.active     { border-color: var(--c-sev-high-fill);     color: var(--c-sev-high); }
   &.medium.active   { border-color: var(--c-sev-medium-fill);   color: var(--c-sev-medium); }
   &.low.active      { border-color: var(--c-sev-low-fill);      color: var(--c-sev-low); }
+}
+
+// Tablets and phones: 44px touch targets; the row wraps if it ever runs out
+// of room (at 390px the five buttons fit on one line).
+@media (max-width: $tablet) {
+  .filter-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .filter-btn {
+    min-height: 44px;
+    padding: 4px 14px;
+  }
 }
 
 // The map canvas and its hint carry .theme-dark: always dark, both themes.

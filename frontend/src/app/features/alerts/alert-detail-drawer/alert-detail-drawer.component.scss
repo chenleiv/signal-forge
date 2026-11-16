@@ -68,6 +68,15 @@
   &:hover { color: $text; background: $border; }
 }
 
+// Tablets and phones: a 44px touch target.
+@media (max-width: $tablet) {
+  .close-btn {
+    min-width: 44px;
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+}
+
 // ── Action bar ────────────────────────────────────────────────
 
 .action-bar {
