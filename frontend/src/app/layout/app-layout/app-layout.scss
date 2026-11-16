@@ -408,6 +408,14 @@
   }
 }
 
+// Tablets and phones: a 44px touch target.
+@media (max-width: $tablet) {
+  .console-toggle-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
 .console-btn-icon {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;

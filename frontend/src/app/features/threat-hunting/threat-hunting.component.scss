@@ -342,9 +342,58 @@
   &:hover { border-color: $accent; color: $accent; }
 }
 
-// Narrow screens (same breakpoint as the app layout): the results table
-// scrolls sideways inside its own box.
+// Tablets and phones: single buttons are 44px touch targets.
+@media (max-width: $tablet) {
+  .btn-run,
+  .btn-clear,
+  .btn-save {
+    min-height: 44px;
+  }
+
+  .investigate-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .saved-del {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+// Narrow screens (same breakpoint as the app layout): the query panel stacks
+// above the results (same DOM order, so the tab order is unchanged) and the
+// page scrolls. The saved hunts list scrolls on its own, so a long list never
+// pushes the results out of view. The results table scrolls sideways inside
+// its own box.
 @media (max-width: $narrow) {
+  .hunt-page {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .hunt-sidebar {
+    width: auto;
+    flex-shrink: 0;
+    overflow: visible;
+    border-right: 0;
+    border-bottom: 1px solid $border;
+  }
+
+  // 30vh: at 40vh the results started below the bottom of an 844px screen.
+  .saved-list {
+    max-height: 30vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: $border transparent;
+  }
+
+  .hunt-results {
+    flex: 1 0 auto;
+    min-height: 300px;
+    overflow: visible;
+  }
+
   .results-table-wrap {
     overflow-x: auto;
   }

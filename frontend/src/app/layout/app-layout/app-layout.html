@@ -139,7 +139,7 @@
         <span class="topbar-page">{{ pageTitle() }}</span>
       </div>
       <div class="topbar-right">
-        <button class="console-toggle-btn" (click)="consoleRef.isOpen.update(v => !v)" title="Toggle Console (`)">
+        <button class="console-toggle-btn" (click)="consoleRef.isOpen.update(v => !v)" title="Toggle Console (`)" aria-label="Toggle console">
           <span class="console-btn-icon">&gt;_</span>
         </button>
 

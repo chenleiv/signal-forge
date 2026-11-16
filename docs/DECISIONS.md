@@ -16,6 +16,46 @@ to anything listed here.
 
 ---
 
+## 2026-11-16 · Tool pages on tablets and phones
+
+**Decision.** Threat Hunting, Detection Rules, Settings, Users, Login and the
+console toggle adapt at `$tablet` (1024px) and `$narrow` (768px):
+- Threat Hunting on phones: the query panel stacks above the results in the
+  same DOM order, so the keyboard order is unchanged, and the page scrolls.
+  The saved hunts list is capped at 30vh with its own scroll.
+- Login on phones: the card is `min(360px, 100% - 32px)` wide, with 16px
+  above and below and 24px/20px card padding.
+- Users on phones: 12px page and 16px card padding; row actions, the role
+  select, the form fields and Create are 44px.
+- Single buttons are 44px at or below `$tablet`: Hunting Run, Clear, Save,
+  saved hunt delete and investigate; Rules New, Add Condition, back, Cancel,
+  Save, condition and rule delete; the console toggle. Chip groups (Rules
+  AND/OR and actions) are 32px. Settings card headers (open/close) are 44px.
+- The console toggle gets the accessible name "Toggle console" (it was
+  ">_"); template only.
+
+Every rule sits inside a `max-width` query, so 1025px and up is unchanged
+(guarded by desktop tests at 1025px in `e2e/responsive-tools.e2e.ts`). The
+Hunting tests stub only GET `/api/hunt` and GET `/api/hunts`.
+
+**Reason.** Measured before the change at 390px: the 260px hunting panel
+left 130px for the results; at 360px the login card touched both screen
+edges, and at 320px the demo hint was clipped by 10px; users row actions were
+26px; the console toggle was 36x21 at 390px and 820px. Rules and Settings did
+not overflow at 390px or 820px, so only touch sizes changed.
+
+**Alternatives rejected.**
+- A 40vh cap on saved hunts: with 44px buttons, the results began at 854px
+  on an 844px screen.
+- One-pane hunting on phones, like Rules: hiding the query panel would hide
+  the query that produced the results.
+- Changing the Users form layout: its fields were already full width at
+  390px (`auto-fit` gives one column).
+
+Files: `threat-hunting.component.scss`, `login.scss`,
+`admin-users.component.scss`, `rules.component.scss`, `settings.scss`,
+`app-layout.scss`, `app-layout.html`, `e2e/responsive-tools.e2e.ts` (new).
+
 ## 2026-11-16 · Data pages on tablets and phones
 
 **Decision.** Dashboard, Alerts, Incident detail and Threat Map adapt at

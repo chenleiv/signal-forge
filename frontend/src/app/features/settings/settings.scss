@@ -346,6 +346,14 @@
     margin-top: 16px;
 }
 
+// Tablets and phones: the card header that opens and closes a card is a
+// 44px touch target.
+@media (max-width: $tablet) {
+    .card-summary {
+        min-height: 44px;
+    }
+}
+
 // ── Change password card ─────────────────────────────────────
 .card-note {
     margin: 0;
