@@ -37,3 +37,7 @@ $purple-fill: var(--c-purple-fill);
 
 // Phones and small tablets: layouts switch to one column below this width.
 $narrow: 768px;
+// Tablets: the sidebar becomes the slide-in menu at or below this width.
+// Every rule for it sits inside max-width queries, so wider screens keep
+// the desktop layout.
+$tablet: 1024px;

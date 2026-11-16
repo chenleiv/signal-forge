@@ -26,6 +26,21 @@ export default defineConfig({
       },
     },
     {
+      // A touch tablet (iPad Air portrait). Same slide-in menu as a phone, so
+      // the phone menu tests run here too; Detection Rules keeps two panes on
+      // a tablet, so the phone-only one-pane rules test is left out.
+      // `npm run e2e` runs this project in its own pass (fresh server): in one
+      // pass with phone and desktop, the page loads exceed the 50/minute
+      // per-IP limit on /api/stats and the threats table stays empty.
+      name: 'tablet',
+      dependencies: ['setup'],
+      grepInvert: /phone rules/,
+      use: {
+        storageState: 'e2e/.auth/admin.json',
+        viewport: { width: 820, height: 1180 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2,
+      },
+    },
+    {
       name: 'desktop',
       dependencies: ['setup'],
       use: { storageState: 'e2e/.auth/admin.json', viewport: { width: 1440, height: 900 } },
