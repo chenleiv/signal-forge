@@ -16,15 +16,44 @@
     <div class="msg msg-ok" role="status">{{ notice() }}</div>
   }
 
-  <section class="card">
-    <h2 class="card-title">Accounts</h2>
+  <section class="card" aria-labelledby="accounts-title">
+    <div class="card-head">
+      <h2 class="card-title" id="accounts-title" tabindex="-1">Accounts</h2>
+      @if (!loading() && !loadFailed()) {
+        <span class="count">{{ users().length }} {{ users().length === 1 ? 'account' : 'accounts' }}</span>
+      }
+    </div>
     @if (loading()) {
-      <p class="muted">Loading…</p>
+      <div class="loading" role="status" aria-busy="true">
+        <span class="sr-only">Loading users</span>
+        @for (i of [1, 2, 3]; track i) {
+          <div class="sk-line loading-row" aria-hidden="true"></div>
+        }
+      </div>
+    } @else if (loadFailed()) {
+      <div class="load-error" role="alert">
+        <span>Could not load users.</span>
+        <button type="button" id="retry-load" class="btn-plain" (click)="retry()">Retry</button>
+      </div>
+    } @else if (users().length === 0) {
+      <div class="empty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <circle cx="12" cy="8" r="3.5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M5 19c.8-3.4 3.6-5 7-5s6.2 1.6 7 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        <p>No users yet</p>
+      </div>
     } @else {
       <div class="table-wrap h-scroll">
         <table class="users-table">
+          <caption class="sr-only">User accounts</caption>
           <thead>
-            <tr><th>Username</th><th>Name</th><th>Role</th><th class="actions-col">Actions</th></tr>
+            <tr>
+              <th scope="col">Username</th>
+              <th scope="col">Name</th>
+              <th scope="col">Role</th>
+              <th scope="col" class="actions-col">Actions</th>
+            </tr>
           </thead>
           <tbody>
             @for (u of users(); track u.username) {
@@ -48,24 +77,28 @@
                   @if (pendingDelete() === u.username) {
                     <span class="confirm">
                       Delete {{ u.username }}?
-                      <button type="button" class="btn-danger" (click)="confirmDelete()">Delete</button>
-                      <button type="button" class="btn-plain" (click)="cancel()">Cancel</button>
+                      <button type="button" class="btn-danger" (click)="confirmDelete()" (keydown.escape)="cancel()">Delete</button>
+                      <button type="button" id="cancel-delete" class="btn-plain" (click)="cancel()" (keydown.escape)="cancel()">Cancel</button>
                     </span>
                   } @else if (resetFor() === u.username) {
-                    <span class="confirm">
+                    <form class="confirm" (submit)="$event.preventDefault(); submitReset()" (keydown.escape)="cancel()">
                       <label class="sr-only" for="reset-password">New password for {{ u.username }}</label>
                       <input id="reset-password" type="password" autocomplete="new-password"
                              placeholder="New password (12+ chars)"
                              [value]="resetPassword()" (input)="resetPassword.set($any($event.target).value)" />
-                      <button type="button" class="btn-plain" (click)="submitReset()">Save</button>
+                      <button type="submit" class="btn-plain">Save</button>
                       <button type="button" class="btn-plain" (click)="cancel()">Cancel</button>
-                    </span>
+                    </form>
                   } @else {
                     @if (canReset(u)) {
-                      <button type="button" class="btn-plain" (click)="startReset(u.username)">Reset password</button>
+                      <button type="button" class="btn-plain" [id]="resetButtonId(u.username)"
+                              [attr.aria-label]="'Reset password for ' + u.username"
+                              (click)="startReset(u.username)">Reset password</button>
                     }
                     @if (canDelete(u) && u.username !== me()) {
-                      <button type="button" class="btn-plain btn-del" (click)="askDelete(u.username)">Delete</button>
+                      <button type="button" class="btn-plain btn-del" [id]="deleteButtonId(u.username)"
+                              [attr.aria-label]="'Delete ' + u.username"
+                              (click)="askDelete(u.username)">Delete</button>
                     }
                   }
                 </td>

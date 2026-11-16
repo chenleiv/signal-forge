@@ -16,6 +16,68 @@ to anything listed here.
 
 ---
 
+## 2026-11-16 · Users page: load states, keyboard focus and themed row styles
+
+**Decision.** The admin users page keeps its table (one row per user) and
+gains:
+- A loading state (three skeleton lines in a `role="status"`,
+  `aria-busy="true"` region with hidden "Loading users" text), an empty state
+  ("No users yet" with a `currentColor` icon in `$muted`), and a load error
+  inside the Accounts card with a Retry button. Retry calls the same
+  `getUsers()` again; it moves focus to the Accounts heading on success and
+  keeps it on Retry on failure. The load error no longer uses the page-level
+  error message, which stays for action errors.
+- A user count next to the Accounts heading, `scope="col"` headers and a
+  hidden table caption.
+- Focus handling: opening a reset focuses the password field; the field sits
+  in a `<form>`, so Enter saves. A delete confirmation focuses Cancel, the
+  safe choice. Escape closes either one and returns focus to the button that
+  opened it; a successful reset also returns focus there. After a delete the
+  row is gone, so focus moves to the Accounts heading (`tabindex="-1"`).
+  Focus moves by element id in `afterNextRender`, after the new controls
+  exist.
+- Reset and Delete buttons carry an `aria-label` with the username
+  ("Reset password for alice"); the visible text is unchanged.
+- Cancelling a reset clears the typed password. Opening a reset closes an
+  open delete confirmation and the other way round, so only one is open.
+- Styles, all from existing tokens with no new tokens: row hover and
+  focus-within `color-mix(--c-text 4%)`; read-only roles as a pill,
+  `$secondary` on `color-mix(--c-text 6%)`; the "you" tag `$accent-hover` on
+  `color-mix(--c-accent 10%)` with a 40% accent border; selects and inputs
+  get a 2px `$accent` focus ring, as the buttons already had.
+
+Measured contrast, dark / light (WCAG sRGB, tints composited over
+`--c-panel`, and over the hovered row where they can sit on one):
+- Row hover: `$text` 13.31 / 12.82, `$secondary` 6.99 / 6.60, Delete text
+  `$sev-critical` 5.69 / 5.65.
+- Role pill text: 6.63 / 6.36; on a hovered row 5.95 / 5.92.
+- "you" tag text: 6.01 / 6.60; on a hovered row 5.44 / 6.16.
+- Focus ring `$accent`: on the panel 5.40 / 5.55, on a hovered row
+  4.91 / 5.16, on `--c-input` 6.00 / 5.91.
+- Empty icon `$muted` 5.77 / 5.54; empty text and count `$secondary`
+  7.68 / 7.10; load error border `$sev-critical-fill` 6.25 / 4.54.
+
+Every value met its target (4.5:1 text, 3:1 rings, icons and borders) on the
+first measurement, so no tint or color had to change.
+
+**Reason.** The page had no loading, empty or error state beyond plain text,
+its inline reset and delete controls left keyboard focus behind, and its
+row actions had the same name on every row for screen readers.
+
+**Alternatives rejected.**
+- Cards instead of a table: the layout per screen size belongs to the
+  responsive PR, and existing tests read table rows.
+- A collapsible "New user" card like Settings: the owner chose to leave it
+  as it is.
+- Skeleton rows inside `<tbody>`: they would count as user rows.
+
+Limits: the API, permission checks and password rules are unchanged. Phone
+layout is unchanged (the table still scrolls inside `.h-scroll`).
+
+Files: `admin-users.component.html`, `admin-users.component.ts`,
+`admin-users.component.scss`, `admin-users.component.spec.ts` (new tests
+only).
+
 ## 2026-11-15 · Settings cards are collapsible; the password form starts closed
 
 **Decision.** Every Settings card (User Profile, Change Password, Appearance,

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, Injector, afterNextRender, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpErrorResponse } from '@angular/common/http';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
@@ -22,6 +22,7 @@ export class AdminUsersComponent {
   private store      = inject(ThreatStoreService);
   private auth       = inject(AuthService);
   private destroyRef = inject(DestroyRef);
+  private injector   = inject(Injector);
 
   /** Roles an admin can give. Never 'admin': there is exactly one admin. */
   readonly roles: UserRole[] = ['analyst', 'manager'];
@@ -38,6 +39,8 @@ export class AdminUsersComponent {
 
   users   = signal<UserSummary[]>([]);
   loading = signal(true);
+  /** The user list could not be loaded; the Accounts card offers Retry. */
+  loadFailed = signal(false);
   error   = signal<string | null>(null);
   notice  = signal<string | null>(null);
 
@@ -53,11 +56,23 @@ export class AdminUsersComponent {
   pendingDelete   = signal<string | null>(null);
 
   constructor() {
+    this.load();
+  }
+
+  /** Load again after a failed load. Focus returns to the Accounts heading. */
+  retry() {
+    if (this.loading()) return;
+    this.load(true);
+  }
+
+  private load(focusAfter = false) {
+    this.loading.set(true);
+    this.loadFailed.set(false);
     this.store.getUsers()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: users => { this.users.set(users); this.loading.set(false); },
-        error: () => { this.error.set('Could not load users'); this.loading.set(false); },
+        next: users => { this.users.set(users); this.loading.set(false); if (focusAfter) this.focusAfterRender('accounts-title'); },
+        error: () => { this.loadFailed.set(true); this.loading.set(false); if (focusAfter) this.focusAfterRender('retry-load'); },
       });
   }
 
@@ -96,8 +111,10 @@ export class AdminUsersComponent {
   // Handlers re-check permissions: hidden controls are UX, not a boundary.
   startReset(username: string) {
     if (!this.canReset(this.findUser(username))) return;
+    this.pendingDelete.set(null);
     this.resetFor.set(username);
     this.resetPassword.set('');
+    this.focusAfterRender('reset-password');
   }
 
   submitReset() {
@@ -106,7 +123,11 @@ export class AdminUsersComponent {
     this.store.updateUser(username, { password: this.resetPassword() })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => { this.resetFor.set(null); this.resetPassword.set(''); this.done(`Password reset for ${username}; their sessions were signed out`); },
+        next: () => {
+          this.resetFor.set(null); this.resetPassword.set('');
+          this.done(`Password reset for ${username}; their sessions were signed out`);
+          this.focusAfterRender(this.resetButtonId(username));
+        },
         error: e => this.fail(e),
       });
   }
@@ -114,7 +135,10 @@ export class AdminUsersComponent {
   askDelete(username: string) {
     const target = this.findUser(username);
     if (!target || !this.canDelete(target) || username === this.me()) return;
+    this.resetFor.set(null);
+    this.resetPassword.set('');
     this.pendingDelete.set(username);
+    this.focusAfterRender('cancel-delete');  // the safe choice gets focus first
   }
 
   confirmDelete() {
@@ -128,14 +152,29 @@ export class AdminUsersComponent {
           this.users.update(list => list.filter(u => u.username !== username));
           this.pendingDelete.set(null);
           this.done(`Deleted ${username}. Their open incidents are now unassigned.`);
+          this.focusAfterRender('accounts-title');  // the row and its buttons are gone
         },
         error: e => { this.pendingDelete.set(null); this.fail(e); },
       });
   }
 
+  /** Close an inline reset or delete confirmation; focus returns to the button that opened it. */
   cancel() {
+    const reset = this.resetFor();
+    const del = this.pendingDelete();
     this.pendingDelete.set(null);
     this.resetFor.set(null);
+    this.resetPassword.set('');
+    if (reset) this.focusAfterRender(this.resetButtonId(reset));
+    else if (del) this.focusAfterRender(this.deleteButtonId(del));
+  }
+
+  readonly resetButtonId  = (username: string) => `reset-btn-${username}`;
+  readonly deleteButtonId = (username: string) => `delete-btn-${username}`;
+
+  /** Move focus once the next render has put the element in the DOM. */
+  private focusAfterRender(id: string) {
+    afterNextRender(() => document.getElementById(id)?.focus(), { injector: this.injector });
   }
 
   private findUser(username: string): UserSummary | undefined {

@@ -1,7 +1,7 @@
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { AdminUsersComponent } from './admin-users.component';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { AuthService } from '../../core/services/auth';
@@ -167,5 +167,141 @@ describe('AdminUsersComponent', () => {
       c.submitReset();
       expect(store.updateUser).toHaveBeenCalledWith('alice', { password: 'new-password-123' });
     });
+  });
+});
+
+describe('AdminUsersComponent states and keyboard', () => {
+  const ADMIN_U: CurrentUser = { username: 'admin', display_name: 'Sarah Kim', role: 'admin' };
+  const LIST: UserSummary[] = [
+    ADMIN_U,
+    { username: 'alice', display_name: 'Alice Chen', role: 'analyst' },
+    { username: 'bob', display_name: 'Bob Martinez', role: 'analyst' },
+  ];
+  const user = signal<CurrentUser | null>(ADMIN_U);
+  const store = {
+    getUsers: vi.fn((): Observable<UserSummary[]> => of(LIST)),
+    createUser: vi.fn(),
+    updateUser: vi.fn((username: string) => of(LIST.find(u => u.username === username)!)),
+    deleteUser: vi.fn(() => of({ ok: true })),
+  };
+
+  function create() {
+    TestBed.configureTestingModule({
+      imports: [AdminUsersComponent],
+      providers: [{ provide: ThreatStoreService, useValue: store }, { provide: AuthService, useValue: { currentUser: user } }],
+    });
+    const fixture = TestBed.createComponent(AdminUsersComponent);
+    document.body.appendChild(fixture.nativeElement);   // focus needs the element in the document
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  async function settle(fixture: ComponentFixture<AdminUsersComponent>) {
+    fixture.detectChanges();
+    await fixture.whenStable();
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    store.getUsers.mockImplementation(() => of(LIST));
+    user.set(ADMIN_U);
+  });
+
+  it('shows a busy loading state until the list arrives, then the table and a count', () => {
+    const pending = new Subject<UserSummary[]>();
+    store.getUsers.mockReturnValueOnce(pending);
+    const fixture = create();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[role=status][aria-busy=true]')?.textContent).toContain('Loading users');
+    expect(el.querySelector('table')).toBeNull();
+    pending.next(LIST);
+    fixture.detectChanges();
+    expect(el.querySelector('[aria-busy=true]')).toBeNull();
+    expect(el.querySelectorAll('tbody tr')).toHaveLength(3);
+    expect(el.querySelector('.count')?.textContent?.trim()).toBe('3 accounts');
+  });
+
+  it('shows an empty state when there are no users', () => {
+    store.getUsers.mockReturnValueOnce(of([]));
+    const el = create().nativeElement as HTMLElement;
+    expect(el.querySelector('.empty')?.textContent).toContain('No users yet');
+    expect(el.querySelector('table')).toBeNull();
+  });
+
+  it('offers Retry after a failed load, and Retry loads the list and focuses the Accounts heading', async () => {
+    store.getUsers.mockReturnValueOnce(throwError(() => new HttpErrorResponse({ status: 500 })));
+    const fixture = create();
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[role=alert]')?.textContent).toContain('Could not load users');
+    expect(el.querySelector('table')).toBeNull();
+    (el.querySelector('#retry-load') as HTMLButtonElement).click();
+    await settle(fixture);
+    expect(store.getUsers).toHaveBeenCalledTimes(2);
+    expect(el.querySelectorAll('tbody tr')).toHaveLength(3);
+    expect(document.activeElement?.id).toBe('accounts-title');
+  });
+
+  it('a failed Retry keeps the Retry button focused', async () => {
+    store.getUsers.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    const fixture = create();
+    (fixture.nativeElement.querySelector('#retry-load') as HTMLButtonElement).click();
+    await settle(fixture);
+    expect(document.activeElement?.id).toBe('retry-load');
+  });
+
+  it('row action buttons name the user they act on', () => {
+    const el = create().nativeElement as HTMLElement;
+    expect(el.querySelector('#reset-btn-alice')?.getAttribute('aria-label')).toBe('Reset password for alice');
+    expect(el.querySelector('#delete-btn-alice')?.getAttribute('aria-label')).toBe('Delete alice');
+  });
+
+  it('opening a reset focuses the field; Escape closes it, clears it and returns focus', async () => {
+    const fixture = create();
+    const el = fixture.nativeElement as HTMLElement;
+    (el.querySelector('#reset-btn-alice') as HTMLButtonElement).click();
+    await settle(fixture);
+    const input = el.querySelector('#reset-password') as HTMLInputElement;
+    expect(document.activeElement).toBe(input);
+    fixture.componentInstance.resetPassword.set('typed-but-cancelled');
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle(fixture);
+    expect(fixture.componentInstance.resetFor()).toBeNull();
+    expect(fixture.componentInstance.resetPassword()).toBe('');
+    expect(document.activeElement?.id).toBe('reset-btn-alice');
+  });
+
+  it('Enter in the reset field submits the reset', async () => {
+    const fixture = create();
+    const el = fixture.nativeElement as HTMLElement;
+    fixture.componentInstance.startReset('alice');
+    await settle(fixture);
+    fixture.componentInstance.resetPassword.set('new-password-123');
+    el.querySelector('form.confirm')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await settle(fixture);
+    expect(store.updateUser).toHaveBeenCalledWith('alice', { password: 'new-password-123' });
+    expect(document.activeElement?.id).toBe('reset-btn-alice');
+  });
+
+  it('a delete confirmation focuses Cancel; Escape closes it and returns focus to Delete', async () => {
+    const fixture = create();
+    const el = fixture.nativeElement as HTMLElement;
+    (el.querySelector('#delete-btn-bob') as HTMLButtonElement).click();
+    await settle(fixture);
+    expect(document.activeElement?.id).toBe('cancel-delete');
+    document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await settle(fixture);
+    expect(fixture.componentInstance.pendingDelete()).toBeNull();
+    expect(store.deleteUser).not.toHaveBeenCalled();
+    expect(document.activeElement?.id).toBe('delete-btn-bob');
+  });
+
+  it('after a delete, focus moves to the Accounts heading', async () => {
+    const fixture = create();
+    fixture.componentInstance.askDelete('bob');
+    await settle(fixture);
+    fixture.componentInstance.confirmDelete();
+    await settle(fixture);
+    expect(store.deleteUser).toHaveBeenCalledWith('bob');
+    expect(document.activeElement?.id).toBe('accounts-title');
   });
 });
