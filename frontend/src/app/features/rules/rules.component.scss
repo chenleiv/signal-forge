@@ -430,6 +430,38 @@
   cursor: pointer;
 }
 
+// ── Tablets and phones: touch targets ────────────────────────
+// Single buttons are 44px; the AND/OR toggle and the action chips are
+// groups, so 32px (above the 24px WCAG AA minimum).
+@media (max-width: $tablet) {
+  .btn-new,
+  .btn-add-cond,
+  .editor-back,
+  .btn-cancel,
+  .btn-save {
+    min-height: 44px;
+  }
+
+  .editor-back {
+    align-items: center;
+  }
+
+  .cond-del {
+    width: 44px;
+    height: 44px;
+  }
+
+  .rule-del {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .logic-toggle button,
+  .action-chip {
+    min-height: 32px;
+  }
+}
+
 // ── Narrow screens (same breakpoint as the app layout) ───────
 // One pane at a time: the list, or (after choosing a rule / "New") the
 // editor full width. Cancel returns to the list.

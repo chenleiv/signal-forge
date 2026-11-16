@@ -247,6 +247,26 @@ input {
     }
 }
 
+// Narrow screens (same breakpoint as the app layout): less padding, and
+// 44px touch targets for row actions, fields and buttons.
+@media (max-width: $narrow) {
+    .users-page {
+        padding: 12px;
+    }
+
+    .card {
+        padding: 16px;
+    }
+
+    .btn-plain,
+    .btn-danger,
+    .btn-save,
+    .role-select,
+    input {
+        min-height: 44px;
+    }
+}
+
 .sr-only {
     position: absolute;
     width: 1px;

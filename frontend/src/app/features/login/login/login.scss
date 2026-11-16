@@ -275,6 +275,21 @@
     margin: 0;
 }
 
+// Narrow screens (same breakpoint as the app layout): the card keeps a 16px
+// gutter on each side, the page keeps 16px above and below, and the card
+// padding shrinks.
+@media (max-width: $narrow) {
+    .login-page {
+        box-sizing: border-box;
+        padding-block: 16px;
+    }
+
+    .login-card {
+        width: min(360px, 100% - 32px);
+        padding: 24px 20px 20px;
+    }
+}
+
 .login-or {
     display: flex;
     align-items: center;
