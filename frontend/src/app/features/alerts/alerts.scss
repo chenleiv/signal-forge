@@ -314,14 +314,95 @@
   position: relative;
 }
 
+// ── Tablets ($tablet) ─────────────────────────────────────────
+// The detail drawer opens over the list instead of beside it, so the list
+// keeps its width; it is capped at 90% so the list stays visible behind it.
+@media (max-width: $tablet) {
+  .alerts-layout {
+    position: relative;
+  }
+
+  .drawer-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    max-width: 90%;
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.55);
+  }
+}
+
 // ── Narrow screens (same breakpoint as the app layout) ───────
 // The detail drawer opens over the list, full screen, instead of beside it.
+// The metrics become a grid and the filters a wrapping row above the list.
 @media (max-width: $narrow) {
   .drawer-panel {
     position: fixed;
     inset: 0;
     z-index: 70;
     max-width: 100%;
+  }
+
+  .soc-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .metric-chip {
+    padding: 6px 10px;
+  }
+
+  .metric-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .alerts-layout {
+    flex-direction: column;
+  }
+
+  .filter-panel {
+    width: auto;
+    flex-shrink: 0;
+    border-right: none;
+    border-bottom: 1px solid $border;
+    padding: 10px 12px;
+    gap: 10px;
+    overflow-y: visible;
+  }
+
+  // One wrapping row per section: label, then 32px chips with a clear gap.
+  .filter-section {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filter-label {
+    width: 100%;
+    margin-bottom: 0;
+  }
+
+  .filter-btn {
+    min-height: 32px;
+    padding: 4px 12px;
+    border-color: $border;
+  }
+
+  .inline-badge {
+    margin-left: 4px;
+  }
+
+  .alerts-header {
+    padding: 12px;
+  }
+
+  .alerts-list {
+    padding: 10px 12px;
   }
 }
 

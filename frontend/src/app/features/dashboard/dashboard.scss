@@ -396,6 +396,25 @@ tr.row-high td {
   animation: rowFlash 1.5s ease-out;
 }
 
+// ── Tablets ($tablet) ────────────────────────────────────────
+// Charts in a 2x2 grid. The page scrolls so the stream panel keeps at least
+// 300px on short (landscape) screens.
+@media (max-width: $tablet) {
+  .dashboard {
+    overflow-y: auto;
+  }
+
+  .chart-row {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 220px;
+    height: auto;
+  }
+
+  .middle-row {
+    min-height: 300px;
+  }
+}
+
 // ── Narrow screens (same breakpoint as the app layout) ───────
 // One column that scrolls vertically; KPIs wrap, charts stack.
 @media (max-width: $narrow) {

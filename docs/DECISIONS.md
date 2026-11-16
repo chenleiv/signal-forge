@@ -16,6 +16,49 @@ to anything listed here.
 
 ---
 
+## 2026-11-16 · Data pages on tablets and phones
+
+**Decision.** Dashboard, Alerts, Incident detail and Threat Map adapt at
+`$tablet` (1024px) and `$narrow` (768px):
+- Alerts, at or below `$tablet`: the detail drawer opens over the list
+  (capped at 90%) instead of beside it. On phones the five metrics form a
+  2 to 3 column grid and the filters become one wrapping row per section
+  above the list, with 32px chips and an 8px gap.
+- Single buttons are 44px touch targets at or below `$tablet`: the Alerts and
+  Incident drawer close buttons and the Threat Map filter buttons. Chip groups
+  (Alerts filters, Incident status buttons on phones) are 32px, above the
+  24px WCAG AA minimum.
+- Incident detail on phones: status buttons wrap two per line with the arrows
+  hidden; the meta grid is one column.
+- Dashboard at or below `$tablet`: charts in a 2x2 grid; the page scrolls and
+  the stream row keeps at least 300px.
+- Threat table: no change; it already fits at 390px and 820px. A test guards it.
+
+Every rule sits inside a `max-width` query, so 1025px and up is unchanged
+(guarded by desktop tests at 1025px). The new tests in
+`e2e/responsive-data.e2e.ts` stub only the GET alerts list, alerts summary
+and incidents list with `page.route`, because the test server has no alerts
+or incidents for the first 30 seconds or more.
+
+**Reason.** Measured before the change: at 390px the Alerts metrics were
+27px wider than the screen and the 160px filter column left 230px for the
+list; at 820px the 420px drawer beside the list would leave it about 240px.
+The Threat Map filters did not overflow at 390px (the last button ended at
+309px) but were 22px tall. A 2x2 chart grid without scrolling would shrink
+the stream panel to about 130px on a 1024x768 screen.
+
+**Alternatives rejected.**
+- 44px Alerts filter chips: 14 chips would wrap to about five rows and push
+  the list down.
+- Wrapping the Threat Map filters for overflow: there was none; only the
+  touch size changed.
+- Waiting for real alerts and incidents in e2e: too slow and not
+  deterministic.
+
+Files: `alerts.scss`, `alert-detail-drawer.component.scss`,
+`incident-detail.component.scss`, `dashboard.scss`, `threat-map.scss`,
+`e2e/responsive-data.e2e.ts` (new).
+
 ## 2026-11-16 · Tablet breakpoint: the slide-in menu up to 1024px
 
 **Decision.** A second breakpoint, `$tablet: 1024px`, joins `$narrow: 768px`
