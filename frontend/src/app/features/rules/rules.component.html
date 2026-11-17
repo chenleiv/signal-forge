@@ -35,6 +35,8 @@
           <button class="rule-toggle" [class.on]="rule.enabled"
                   [class.is-disabled]="!manage().allowed"
                   [attr.aria-disabled]="!manage().allowed || null"
+                  [attr.aria-pressed]="rule.enabled"
+                  [attr.aria-label]="'Rule ' + rule.name + ' enabled'"
                   (click)="toggleEnabled(rule, $event)"
                   [title]="manageReason() ?? (rule.enabled ? 'Disable' : 'Enable')">
             <span class="toggle-dot"></span>
@@ -44,7 +46,8 @@
             <span class="rule-meta">{{ rule.match_count }} hits · {{ rule.actions.join(' + ') }}</span>
           </div>
           @if (manage().allowed) {
-            <button class="rule-del" (click)="deleteRule(rule, $event)">✕</button>
+            <button class="rule-del" [attr.aria-label]="'Delete rule ' + rule.name"
+                    (click)="deleteRule(rule, $event)">✕</button>
           }
         </div>
       }
@@ -117,7 +120,8 @@
                          [placeholder]="cond.field === 'score' ? '0–100' : 'value'" />
                 }
 
-                <button class="cond-del" (click)="removeCondition($index)"
+                <button class="cond-del" [attr.aria-label]="'Remove condition ' + ($index + 1)"
+                        (click)="removeCondition($index)"
                         [disabled]="editConditions().length === 1">✕</button>
               </div>
             }

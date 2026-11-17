@@ -116,6 +116,13 @@
     }
 }
 
+// Tablets and phones: the command input is a 44px touch target.
+@media (max-width: $tablet) {
+    .console-input {
+        min-height: 44px;
+    }
+}
+
 // Phones: the console takes at most 40% of a short screen, and the
 // keyboard hint (no physical keyboard) gives its room to the title.
 @media (max-width: $narrow) {

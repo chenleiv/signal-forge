@@ -180,6 +180,16 @@
       </div>
     }
 
+    @if (ws.statsLimited()) {
+      <div class="demo-banner feed-banner stats-banner" role="status">
+        <span class="demo-badge feed-badge">STATS</span>
+        <span class="demo-text-long">
+          Live stats are paused: too many requests from this network. Retrying in about a minute.
+        </span>
+        <span class="demo-text-short">Live stats paused (rate limit). Retrying soon.</span>
+      </div>
+    }
+
     <section class="content">
       <router-outlet></router-outlet>
     </section>

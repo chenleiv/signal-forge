@@ -63,7 +63,7 @@
           <input class="field-input" [value]="saveName()" (input)="saveName.set($any($event.target).value)"
                  placeholder="Hunt name…" (keydown.enter)="saveHunt()" />
           <button class="btn-run" (click)="saveHunt()" [disabled]="!saveName().trim()">Save</button>
-          <button class="btn-clear" (click)="showSave.set(false)">✕</button>
+          <button class="btn-clear" aria-label="Cancel saving the hunt" (click)="showSave.set(false)">✕</button>
         </div>
       }
     </div>
@@ -78,7 +78,8 @@
                 <span class="saved-name">{{ hunt.name }}</span>
                 <span class="saved-meta">{{ hunt.result_count }} results · {{ hunt.created_at | date:'HH:mm' }}</span>
               </div>
-              <button class="saved-del" (click)="deleteHunt(hunt.id, $event)">✕</button>
+              <button class="saved-del" [attr.aria-label]="'Delete saved hunt ' + hunt.name"
+                      (click)="deleteHunt(hunt.id, $event)">✕</button>
             </div>
           }
         </div>
@@ -136,7 +137,8 @@
                   </td>
                   <td class="mono muted">{{ r.timestamp | date:'HH:mm:ss' }}</td>
                   <td>
-                    <button class="investigate-btn" (click)="investigateIp(r.ip)">→</button>
+                    <button class="investigate-btn" [attr.aria-label]="'Investigate ' + r.ip"
+                            (click)="investigateIp(r.ip)">→</button>
                   </td>
                 </tr>
               }

@@ -109,9 +109,12 @@
     transition: all 0.2s;
   }
 
+  // The on dot uses the input color: at least 3.30:1 against the on track in
+  // both themes, over the panel and the page background ($secondary was
+  // 1.63 to 2.29:1).
   &.on .toggle-dot {
     left: 14px;
-    background: $secondary;
+    background: var(--c-input);
   }
 }
 
@@ -459,6 +462,15 @@
   .logic-toggle button,
   .action-chip {
     min-height: 32px;
+  }
+
+  // The enable toggle keeps its 28x16 look; an invisible pseudo-element
+  // widens its hit area to 44x44. It reaches the 8px gap beside it and the
+  // row padding, not the rule name or the row above or below.
+  .rule-toggle::after {
+    content: '';
+    position: absolute;
+    inset: -14px -8px;
   }
 }
 
