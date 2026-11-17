@@ -29,9 +29,10 @@ export default defineConfig({
       // A touch tablet (iPad Air portrait). Same slide-in menu as a phone, so
       // the phone menu tests run here too; Detection Rules keeps two panes on
       // a tablet, so the phone-only one-pane rules test is left out.
-      // `npm run e2e` runs this project in its own pass (fresh server): in one
-      // pass with phone and desktop, the page loads exceed the 50/minute
-      // per-IP limit on /api/stats and the threats table stays empty.
+      // `npm run e2e` runs phone, tablet and desktop each in its own pass,
+      // on a fresh server: the per-IP limits (60/minute on /auth/ws-ticket,
+      // 50/minute on /api/stats) are in memory, so each pass starts at zero.
+      // Two projects in one pass already exceed both limits.
       name: 'tablet',
       dependencies: ['setup'],
       grepInvert: /phone rules/,

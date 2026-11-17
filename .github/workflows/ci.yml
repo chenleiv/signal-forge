@@ -69,6 +69,6 @@ jobs:
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
-      - name: Layout checks (Playwright, phone + desktop)
+      - name: Layout checks (Playwright, phone, desktop, tablet)
         run: npm run e2e
         working-directory: frontend

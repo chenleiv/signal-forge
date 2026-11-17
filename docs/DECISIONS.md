@@ -16,6 +16,49 @@ to anything listed here.
 
 ---
 
+## 2026-11-17 · E2E: one pass per project for rate limit headroom
+
+**Decision.** `npm run e2e` runs phone, desktop and tablet each in its own
+Playwright pass (before: phone and desktop together, then tablet). Each pass
+starts a fresh server, and the per-IP limits are in memory, so each pass
+starts at zero. CI runs the same script (`ci.yml`, step renamed). The server
+limits and the tests are unchanged.
+
+Measured locally (uvicorn access log, every pass ran under 60 seconds, so
+each total is the count for one limit window):
+
+| Pass | `/auth/ws-ticket` (limit 60) | `/api/stats` (limit 50) | Time |
+| --- | --- | --- | --- |
+| Before: phone + desktop | 60 OK + 1 rejected (429) | 50 OK + 6 rejected (429) | 53.2s |
+| Before: tablet | 32 | 31 | 30.2s |
+| After: phone | 36 | 34 | 32.1s |
+| After: desktop | 26 | 24 | 27.6s |
+| After: tablet | 32 | 31 | 30.2s |
+
+Total time: 83.4s before, 89.9s after (about +6.5s for one more build and
+server start; the local Angular build was cached at about 3s, so CI may add
+more). The phone pass, the largest, uses 60% of the ticket limit and 68% of
+the stats limit.
+
+**Reason.** The phone and desktop pass already got 429s on both routes
+(see "E2E headroom" in the Settings entry below), so one more page load
+could fail an unrelated test.
+
+**Alternatives rejected.**
+- A shared fixture that stubs `/api/stats` and aborts `/auth/ws-ticket` in
+  every spec: it changes every existing spec, and the tests that need the
+  live stream (threats table, drawer, the stats 429 banner) would need
+  opt-outs.
+- An opt-in stub helper applied to existing specs: edits existing tests for
+  less headroom than separate passes.
+- Raising the server limits: they are a security control.
+
+The rule for new specs stays: stub `GET /api/stats` and abort
+`GET /auth/ws-ticket` unless the test needs the live stream.
+
+Files: `frontend/package.json`, `frontend/playwright.config.ts` (comment),
+`.github/workflows/ci.yml` (step name).
+
 ## 2026-11-17 · Settings: Save only with changes, every card starts closed
 
 **Decision.**
