@@ -247,6 +247,21 @@
             background: $success;
         }
     }
+
+    // Disabled (no changes to save, or an incomplete password form): an outline
+    // with muted text, so it does not look clickable. The "Saved" confirmation
+    // keeps its own look for its 2 seconds. $muted is 4.5:1 on $bg and $panel.
+    // The padding is 1px smaller so the border does not change the button size.
+    &:disabled:not(.saved) {
+        padding: 7px 19px;
+        background: transparent;
+        border: 1px solid $border;
+        color: $muted;
+    }
+
+    &:disabled {
+        cursor: not-allowed;
+    }
 }
 
 // ── Theme Toggle ──────────────────────────────────────────────

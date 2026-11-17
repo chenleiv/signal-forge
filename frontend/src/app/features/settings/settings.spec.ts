@@ -229,7 +229,7 @@ describe('Settings: change password', () => {
       [...(f.nativeElement as HTMLElement).querySelectorAll('section.card')] as HTMLElement[];
     const detailsOf = (card: HTMLElement) => card.querySelector('details.card-details') as HTMLDetailsElement;
 
-    it('each card is a details element with its summary first, and only the password card starts closed', () => {
+    it('each card is a details element with its summary first, and every card starts closed', () => {
       const f = create();
       const state = cards(f).map(card => {
         const details = detailsOf(card);
@@ -238,11 +238,11 @@ describe('Settings: change password', () => {
         return [summary.querySelector('.card-title')?.textContent?.trim(), details.open];
       });
       expect(state).toEqual([
-        ['User Profile', true],
+        ['User Profile', false],
         ['Change Password', false],
-        ['Appearance', true],
-        ['Connection', true],
-        ['Alert Thresholds', true],
+        ['Appearance', false],
+        ['Connection', false],
+        ['Alert Thresholds', false],
       ]);
     });
 

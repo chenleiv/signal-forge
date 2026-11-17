@@ -6,13 +6,13 @@
     </div>
 
     <!-- Every card is a native details/summary: Enter, Space and the expanded state come from
-         the browser, and the fields stay in the DOM while a card is closed. Only the password
-         card starts closed and clears on close; closing the others keeps unsaved edits. -->
+         the browser, and the fields stay in the DOM while a card is closed. Every card starts
+         closed. Only the password card clears on close; closing the others keeps unsaved edits. -->
     <div class="sections">
 
         <!-- User Profile -->
         <section class="card">
-            <details class="card-details" open>
+            <details class="card-details">
                 <summary class="card-header card-summary">
                     <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                         <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.2" />
@@ -94,7 +94,7 @@
 
         <!-- Appearance -->
         <section class="card">
-            <details class="card-details" open>
+            <details class="card-details">
                 <summary class="card-header card-summary">
                     <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                         <circle cx="8" cy="8" r="5.5" stroke="currentColor" stroke-width="1.2"/>
@@ -131,7 +131,7 @@
 
         <!-- Connection -->
         <section class="card">
-            <details class="card-details" open>
+            <details class="card-details">
                 <summary class="card-header card-summary">
                     <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                         <circle cx="8" cy="8" r="2" stroke="currentColor" stroke-width="1.2" />
@@ -171,7 +171,7 @@
 
         <!-- Alert Thresholds -->
         <section class="card">
-            <details class="card-details" open>
+            <details class="card-details">
                 <summary class="card-header card-summary">
                     <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                         <path d="M8 2l5.5 10H2.5L8 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
@@ -225,7 +225,7 @@
     <div class="actions">
         <button class="btn-logout" (click)="logout()">Logout</button>
         <button class="btn-reset" (click)="reset()">Reset to Defaults</button>
-        <button class="btn-save" [class.saved]="saved()" (click)="save()">
+        <button class="btn-save" [class.saved]="saved()" [disabled]="!dirty()" (click)="save()">
             {{ saved() ? '✓ Saved' : 'Save Settings' }}
         </button>
     </div>
