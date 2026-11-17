@@ -463,6 +463,15 @@
   .action-chip {
     min-height: 32px;
   }
+
+  // The enable toggle keeps its 28x16 look; an invisible pseudo-element
+  // widens its hit area to 44x44. It reaches the 8px gap beside it and the
+  // row padding, not the rule name or the row above or below.
+  .rule-toggle::after {
+    content: '';
+    position: absolute;
+    inset: -14px -8px;
+  }
 }
 
 // ── Narrow screens (same breakpoint as the app layout) ───────
