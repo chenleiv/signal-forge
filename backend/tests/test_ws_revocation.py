@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from tests.conftest import ANALYST_PASSWORD, login, session_client
+from tests.ws_client import open_stream, ws_accepts
 
 import main
 import simulation
@@ -65,11 +66,7 @@ def _close_code(ws) -> int | None:
 
 
 def _accepts(client: TestClient, ticket: str) -> bool:
-    try:
-        with client.websocket_connect(f"/ws/threats?ticket={ticket}"):
-            return True
-    except WebSocketDisconnect:
-        return False
+    return ws_accepts(client, ticket)
 
 
 # ── Control ───────────────────────────────────────────────────
@@ -77,7 +74,7 @@ def _accepts(client: TestClient, ticket: str) -> bool:
 def test_valid_session_keeps_streaming(app_client):
     """Many re-check intervals pass and the stream stays open."""
     ticket = _ticket(login("alice"))
-    with app_client.websocket_connect(f"/ws/threats?ticket={ticket}") as ws:
+    with open_stream(app_client, ticket) as ws:
         for _ in range(40):
             assert "timestamp" in ws.receive_json()
 
@@ -94,7 +91,7 @@ def test_ticket_carries_the_session_claims(app_client):
 
 def test_logout_closes_the_open_stream(app_client):
     user = login("alice")
-    with app_client.websocket_connect(f"/ws/threats?ticket={_ticket(user)}") as ws:
+    with open_stream(app_client, _ticket(user)) as ws:
         ws.receive_json()
         assert user.post("/auth/logout").status_code == 200
         assert _close_code(ws) == main.WS_SESSION_ENDED
@@ -103,7 +100,7 @@ def test_logout_closes_the_open_stream(app_client):
 def test_logout_of_another_session_keeps_this_stream(app_client):
     """Logout ends only its own session."""
     this, other = login("alice"), login("alice")
-    with app_client.websocket_connect(f"/ws/threats?ticket={_ticket(this)}") as ws:
+    with open_stream(app_client, _ticket(this)) as ws:
         ws.receive_json()
         assert other.post("/auth/logout").status_code == 200
         for _ in range(40):
@@ -114,7 +111,7 @@ def test_logout_of_another_session_keeps_this_stream(app_client):
 def test_admin_action_closes_the_users_stream(app_client, action):
     bob = login("bob")
     admin = session_client("admin", "admin")
-    with app_client.websocket_connect(f"/ws/threats?ticket={_ticket(bob)}") as ws:
+    with open_stream(app_client, _ticket(bob)) as ws:
         ws.receive_json()
         if action == "delete":
             r = admin.delete("/api/users/bob")
@@ -134,7 +131,7 @@ def test_busy_stream_is_closed_by_the_per_message_check(app_client, monkeypatch,
     monkeypatch.setattr(main, "WS_RECHECK_SECONDS", 30.0)
     bob = login("bob")
     admin = session_client("admin", "admin")
-    with app_client.websocket_connect(f"/ws/threats?ticket={_ticket(bob)}") as ws:
+    with open_stream(app_client, _ticket(bob)) as ws:
         ws.receive_json()
         started = time.monotonic()
         if action == "delete":
@@ -148,7 +145,7 @@ def test_busy_stream_is_closed_by_the_per_message_check(app_client, monkeypatch,
 
 def test_own_password_change_closes_other_sessions_streams(app_client):
     streaming, changer = login("alice"), login("alice")
-    with app_client.websocket_connect(f"/ws/threats?ticket={_ticket(streaming)}") as ws:
+    with open_stream(app_client, _ticket(streaming)) as ws:
         ws.receive_json()
         r = changer.patch("/auth/me", json={"current_password": ANALYST_PASSWORD, "new_password": NEW_PASSWORD})
         assert r.status_code == 200, r.text
@@ -163,7 +160,7 @@ def test_idle_stream_is_closed_by_the_periodic_recheck(app_client, monkeypatch):
     monkeypatch.setattr(main, "generate_threat",
                         lambda: None if time.monotonic() < quiet_until else real_generate())
     user = login("alice")
-    with app_client.websocket_connect(f"/ws/threats?ticket={_ticket(user)}") as ws:
+    with open_stream(app_client, _ticket(user)) as ws:
         assert user.post("/auth/logout").status_code == 200
         assert _close_code(ws) == main.WS_SESSION_ENDED
         assert time.monotonic() < quiet_until, "closed only after events resumed: idle re-check did not run"

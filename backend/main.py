@@ -266,21 +266,59 @@ app.include_router(users.router)
 WS_SESSION_ENDED = 4001
 # An idle stream re-checks its session at least this often (seconds).
 WS_RECHECK_SECONDS = 2.0
+# Close code when no first message arrives in time. The frontend treats it
+# like any other drop: reconnect with backoff.
+WS_AUTH_TIMEOUT = 4408
+# Seconds a new socket has to send its ticket as the first message. The
+# client sends it on open, so this only bounds sockets that never authenticate.
+WS_AUTH_TIMEOUT_SECONDS = 5.0
+# Upper bound for the first message; a ticket is a few hundred characters.
+WS_AUTH_MAX_CHARS = 4096
+# Sent once the ticket is accepted; events follow.
+WS_READY = json.dumps({"type": "ready"})
+
+
+def _ws_ticket_claims(message: dict) -> dict | None:
+    """The claims of a valid ticket in the first message, else None.
+
+    Expected: a text frame {"type": "auth", "ticket": "<jwt>"}. Nothing here
+    is logged: the ticket is a credential."""
+    raw = message.get("text")
+    if not isinstance(raw, str) or len(raw) > WS_AUTH_MAX_CHARS:
+        return None
+    try:
+        body = json.loads(raw)
+        if not isinstance(body, dict) or body.get("type") != "auth" or not isinstance(body.get("ticket"), str):
+            return None
+        claims = jwt.decode(body["ticket"], SECRET_KEY, algorithms=["HS256"])
+        if claims.get("typ") != "ws" or not _store.session_claims_valid(claims):
+            return None
+        return claims
+    except Exception:
+        return None
 
 
 @app.websocket("/ws/threats")
-async def threats_ws(ws: WebSocket, ticket: str = ""):
+async def threats_ws(ws: WebSocket):
+    # The ticket arrives as the first message, never in the URL, so it cannot
+    # end up in server or proxy access logs.
+    await ws.accept()
     try:
-        claims = jwt.decode(ticket, SECRET_KEY, algorithms=["HS256"])
-        if claims.get("typ") != "ws":
-            raise ValueError("not a ws ticket")
-        if not _store.session_claims_valid(claims):
-            raise ValueError("session logged out or revoked")
-    except Exception:
-        await ws.close(code=WS_SESSION_ENDED)
+        try:
+            first = await asyncio.wait_for(ws.receive(), timeout=WS_AUTH_TIMEOUT_SECONDS)
+        except TimeoutError:
+            await ws.close(code=WS_AUTH_TIMEOUT)
+            return
+        if first["type"] == "websocket.disconnect":
+            return
+        claims = _ws_ticket_claims(first)
+        if claims is None:
+            await ws.close(code=WS_SESSION_ENDED)
+            return
+        await ws.send_text(WS_READY)
+    except (WebSocketDisconnect, RuntimeError):
         return
 
-    await ws.accept()
     queue: asyncio.Queue[str] = asyncio.Queue(maxsize=CLIENT_QUEUE_SIZE)
     _clients.add(queue)
     try:

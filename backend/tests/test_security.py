@@ -10,11 +10,11 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
-from starlette.websockets import WebSocketDisconnect
 import jwt
 
 import main
 from tests.conftest import ANALYST_PASSWORD
+from tests.ws_client import ws_accepts
 from store import SECRET_KEY
 
 COOKIE = "sf_session"
@@ -69,13 +69,10 @@ def _as_session(client: TestClient, token: str) -> TestClient:
 
 
 def _ws_accepts(client: TestClient, ticket: str) -> bool:
-    """Connect only (never wait for a message, so a wrongly accepted ticket
-    fails the test instead of hanging it)."""
-    try:
-        with client.websocket_connect(f"/ws/threats?ticket={ticket}"):
-            return True
-    except WebSocketDisconnect:
-        return False
+    """Send the ticket as the first message and wait only for the answer
+    (ready or close), never for an event, so a wrongly accepted ticket fails
+    the test instead of hanging it."""
+    return ws_accepts(client, ticket)
 
 
 # ── 0. Controls: the crafted tokens are otherwise valid ───────────

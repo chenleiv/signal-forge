@@ -182,7 +182,7 @@ All endpoints require a session except those marked *public*. Role requirements 
 | GET | `/auth/me` | Current user: username, display name, role | any user |
 | PATCH | `/auth/me` | Change your own password: exactly `{current_password, new_password}` | any user (not in demo) |
 | GET | `/auth/ws-ticket` | Short-lived (5 min) ticket for the WebSocket | any user |
-| WS | `/ws/threats?ticket=…` | Live threat event stream | valid ticket |
+| WS | `/ws/threats` | Live threat event stream; the first message must be `{"type":"auth","ticket":"…"}` | valid ticket |
 | GET | `/api/config` | `{demo_mode}` | public |
 | GET | `/api/threat-feed` | Threat feed `{state, reason}` (see below) | any user |
 | GET | `/api/users` | Active users (no password hashes) | any user |
@@ -218,7 +218,7 @@ All endpoints require a session except those marked *public*. Role requirements 
 ```
 Browser
   └── Angular 21 (port 4200)
-        ├── WebSocket → /ws/threats?ticket=…   (live events; ticket from /auth/ws-ticket)
+        ├── WebSocket → /ws/threats            (live events; ticket from /auth/ws-ticket as the first message)
         └── HTTP      → /api/*, /auth/*        (session in an HttpOnly cookie)
 
 FastAPI (port 8000)
@@ -264,7 +264,9 @@ The server is the security boundary. Everything the frontend does with permissio
   would have expired, so a copied cookie stops working at once. Only that session ends: other devices of the same
   user, and other visitors of a shared demo account, stay signed in. Revocations are kept in memory and, with a
   database, in `revoked_sessions` (reloaded at startup, expired rows dropped).
-- **WebSocket ticket:** a separate 5-minute JWT with `typ: "ws"`, fetched from `/auth/ws-ticket`.
+- **WebSocket ticket:** a separate 5-minute JWT with `typ: "ws"`, fetched from `/auth/ws-ticket` and sent as the
+  first WebSocket message, never in the URL, so it cannot appear in server or proxy access logs. The server answers
+  `{"type":"ready"}`, closes with 4001 on a missing or invalid ticket, and with 4408 when none arrives within 5 seconds.
 - Every decode site accepts only `HS256` and only its own `typ`, so a ticket cannot be used as a session and vice versa.
   `alg: none`, forged signatures, expired tokens, and tampered claims (e.g. `role` changed to `admin`) are rejected.
 - Every request also checks the token against the **current** user record: the user must still exist, have
