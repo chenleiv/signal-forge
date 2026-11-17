@@ -25,7 +25,7 @@ describe('AppLayout: live-feed chip', () => {
         provideRouter([]),
         {
           provide: ThreatsService,
-          useValue: { status, slowConnection: signal(false), connect: vi.fn(), disconnect: vi.fn() },
+          useValue: { status, slowConnection: signal(false), statsLimited: signal(false), connect: vi.fn(), disconnect: vi.fn() },
         },
         { provide: ThreatStoreService, useValue: { newAlertCount: signal(0) } },
         {

@@ -139,6 +139,34 @@ test.describe('signed out', () => {
 
 // ── Every project ─────────────────────────────────────────────
 
+test('a 429 on /api/stats shows a stats banner that fits the screen', async ({ page }) => {
+  // Every stats poll is rate limited, like many users behind one IP.
+  let polls = 0;
+  await page.route(url => url.pathname === '/api/stats', route => {
+    polls++;
+    return route.fulfill({
+      status: 429, contentType: 'application/json',
+      body: JSON.stringify({ error: 'Rate limit exceeded: 50 per 1 minute' }),
+    });
+  });
+  await page.goto('/dashboard');
+  const banner = page.locator('.stats-banner');
+  await expect(banner).toBeVisible();
+  await expect(banner).toHaveAttribute('role', 'status');
+  await expect(banner).toContainText(/paused/i);
+
+  const width = page.viewportSize()!.width;
+  const box = (await banner.boundingBox())!;
+  expect(box.x).toBeGreaterThanOrEqual(-1);
+  expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
+  expect(await banner.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(0);
+
+  // Backed off: no further polls within the next 6 seconds (one 5s tick).
+  const after = polls;
+  await page.waitForTimeout(6000);
+  expect(polls).toBe(after);
+});
+
 test('rules: the on dot has at least 3:1 against the on track in both themes', async ({ page }) => {
   await openRules(page);
   for (const theme of ['dark', 'light']) {

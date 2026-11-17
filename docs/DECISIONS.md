@@ -28,8 +28,9 @@ to anything listed here.
 - `/api/stats` 429 (the open item in "Tablet breakpoint" below): the client
   pauses stats polling for one 60-second window, the server's fixed window
   (it sends no `Retry-After`), and sets `statsLimited` until the next
-  successful poll. The server limit is unchanged. The visible message is
-  not in this change yet: see the open item below.
+  successful poll. The server limit is unchanged. While it is set, the shell
+  shows a "STATS" banner (`role="status"`, same style as the feed banner):
+  live stats are paused, retrying in about a minute.
 - Rule toggle on-dot: `--c-input` instead of `--c-text-2`. Measured against
   the on track (`--c-text` at 51%): dark 4.89:1 over the page, 5.23:1 over
   the panel; light 3.53:1 and 3.30:1. Before: 1.74/1.63 (dark), 2.14/2.29
@@ -58,11 +59,12 @@ out, not reconnecting.
   enough and keeps the look.
 - Retrying alerts polling on 429: `GET /api/alerts` has no rate limit.
 
-**Open item.** The 429 banner in the shell needs one line added to the
-existing `app-layout.spec.ts` stub (`statsLimited`), which waits for the
-owner's approval.
+The banner needed one line of test data in the existing
+`app-layout.spec.ts` stub (`statsLimited: signal(false)`), approved by the
+owner; no assertion changed.
 
-Files: `threats.service.ts`, `threat-hunting.component.html`,
+Files: `threats.service.ts`, `app-layout.html`, `app-layout.spec.ts` (stub
+only), `threat-hunting.component.html`,
 `rules.component.html`, `rules.component.scss`, `command-console.html`,
 `command-console.scss`, `login.scss`, new specs
 `threats.service.reconnect.spec.ts`, `rules.component.a11y.spec.ts`,
