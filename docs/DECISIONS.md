@@ -16,6 +16,53 @@ to anything listed here.
 
 ---
 
+## 2026-11-17 · Settings: Save only with changes, every card starts closed
+
+**Decision.**
+- Save Settings is enabled only when the form differs from the stored
+  settings: `dirty` in `settings.ts` compares each field of the form with
+  `SettingsService.settings()`. Reverting the values disables it again.
+  `save()` returns without storing when nothing changed (checked in the
+  handler, not only on the button). After a save the button shows "✓ Saved"
+  for 2 seconds and stays disabled until the next change.
+- The password button keeps its own rule (`canSubmitPw`: enabled only when the
+  form is valid; always disabled in the demo).
+- A disabled `.btn-save` (both buttons) looks disabled: transparent
+  background, a `$border` border and `$muted` text; the padding is 1px smaller
+  so the border does not change the size. `$muted` is already guarded at
+  4.5:1 on `$bg` and `$panel` in both themes (`styles.contrast.spec.ts`). The
+  "✓ Saved" state keeps its own look while it shows. Before, the disabled
+  password button looked the same as an enabled one.
+- All five Settings cards start closed (before: only the password card, see
+  "Settings cards are collapsible" below). Only the password card clears its
+  fields on close.
+
+**Reason.** An always-enabled Save gave no sign of unsaved changes and stored
+the same values again; a disabled button that looks enabled reads as broken.
+All cards closed: owner decision, reason not recorded.
+
+**Alternatives rejected.**
+- `opacity` for the disabled look: it lowers text contrast with no measured
+  value.
+- Comparing with `JSON.stringify`: depends on key order.
+
+E2E headroom (not changed here): the phone and desktop pass sits at about 59
+of the 60 `/auth/ws-ticket` requests per minute the server allows per IP (one
+ticket per signed-in page load), and every signed-in page polls `/api/stats`
+(50 per minute per IP). One extra page load made
+`small-fixes.e2e.ts` "a 429 on /api/stats" fail: both ticket requests got
+429, the socket never opened, so stats polling never started (seen in a
+Playwright trace). New e2e specs must stub `GET /api/stats` and abort
+`GET /auth/ws-ticket` with `page.route`, as `e2e/settings-save.e2e.ts` does.
+The server limits stay as they are.
+
+The existing test "each card is a details element ... every card starts
+closed" in `settings.spec.ts` changed its title and expected open states,
+approved by the owner; no other test changed.
+
+Files: `settings.ts`, `settings.html`, `settings.scss`, `settings.spec.ts`
+(one test), new specs `settings.save.spec.ts`, `e2e/settings-save.e2e.ts`.
+
 ## 2026-11-17 · Small fixes: stream reconnect, stats 429, toggle contrast, touch targets
 
 **Decision.**

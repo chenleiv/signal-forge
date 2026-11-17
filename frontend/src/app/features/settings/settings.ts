@@ -32,7 +32,15 @@ export class Settings {
 
   saved = signal(false);
 
+  /** True when a field differs from the stored settings; reverting the values clears it. */
+  readonly dirty = computed(() => {
+    const stored = this.svc.settings();
+    const current = this.form();
+    return (Object.keys(stored) as (keyof AppSettings)[]).some(key => current[key] !== stored[key]);
+  });
+
   save() {
+    if (!this.dirty()) return;   // re-checked here, not only on the button
     this.svc.save(this.form());
     this.saved.set(true);
     setTimeout(() => this.saved.set(false), 2000);
