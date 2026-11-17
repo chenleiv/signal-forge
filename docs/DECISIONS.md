@@ -16,6 +16,73 @@ to anything listed here.
 
 ---
 
+## 2026-11-17 · WebSocket ticket as the first message, not in the URL
+
+**Decision.** The client opens `/ws/threats` with no query string and sends
+the ticket from `/auth/ws-ticket` as the first message:
+`{"type": "auth", "ticket": "<jwt>"}`. The server accepts the socket, waits
+up to `WS_AUTH_TIMEOUT_SECONDS` (5 s) for that message, runs the same checks
+as before (HS256 signature, expiry, `typ: "ws"`, `session_claims_valid`) and
+answers `{"type": "ready"}`; events follow. A missing, malformed, binary,
+oversized (over `WS_AUTH_MAX_CHARS`, 4096) or invalid ticket closes with 4001;
+no first message in time closes with 4408 (`WS_AUTH_TIMEOUT`). A `?ticket=`
+in the URL is ignored. Nothing in this path is logged. The frontend sets
+"connected", resets the backoff and clears the one-check flag for 4001 on
+`ready`, not on open. Unchanged: a 401/403 on the ticket request is signed
+out with no retry; a 4001 triggers one ticket check, then signed out; every
+other close code (4408 included) reconnects with the doubling backoff. The
+per-IP limit on `/auth/ws-ticket` (60/minute) is unchanged.
+
+**Reason.** The ticket is a session credential for 5 minutes. In the query
+string it was written to the uvicorn access log and to proxy logs (Render) on
+every connect. In a message it never appears in a request line; the e2e
+server log now shows `"WebSocket /ws/threats" [accepted]`.
+
+Before this change the server closed a bad ticket before accepting the
+socket, which a browser sees as 1006, so the 4001 path in the frontend only
+ran for a stream that had been open. Now a rejected ticket reaches the
+browser as 4001. Resetting the session check on open would then loop (open,
+4001, check, open, 4001, ...) with no backoff, so it moved to `ready`. A new
+e2e test (`e2e/ws-ticket.e2e.ts`) checks this in a real browser: an invalid
+ticket gives exactly two ticket requests and two sockets, then SIGNED OUT.
+
+4408 for the timeout, not 4001: a slow network must not sign the user out
+after two slow opens; a plain reconnect with backoff is enough.
+
+**Alternatives rejected.**
+- The ticket in a `Sec-WebSocket-Protocol` header: browsers send it in the
+  handshake, where proxies may log headers, and the server must echo a
+  protocol back.
+- The session cookie on the WebSocket handshake: `wsUrl` can point at
+  another host (Settings), where the cookie is not sent, and the stream
+  would depend on the cookie again instead of a short-lived ticket.
+- No ready frame ("connected" on open): the client could not tell an
+  accepted socket from one about to be closed, see the loop above.
+
+**Known gap.** The server now accepts a socket before it is authenticated,
+so an unauthenticated socket can stay open for up to 5 s
+(`WS_AUTH_TIMEOUT_SECONDS`) each, and there is no per-IP limit on WebSocket
+connections. Before, a bad ticket was refused at the handshake. Not
+addressed here; a per-IP connection cap is the likely fix if it matters.
+
+E2E rate limit counts after this change (uvicorn access log, one pass each,
+every pass under 60 seconds): phone 36 `/auth/ws-ticket` and 34
+`/api/stats`, desktop 26 and 24, tablet 32 and 30, no 429s. The new spec
+stubs both routes and adds none.
+
+Deploy: client and server must ship together. An old tab still sends the
+ticket in the URL; the new server ignores it and closes with 4408, so the
+tab keeps reconnecting with backoff until it is refreshed.
+
+Tests: the existing WebSocket tests only changed how they connect (shared
+helper `backend/tests/ws_client.py`; `FakeWebSocket.open()` in the two
+`threats.service` specs now also delivers the ready frame); no assertion
+changed. New: `backend/tests/test_ws_first_message.py`,
+`threats.service.auth.spec.ts`, `e2e/ws-ticket.e2e.ts`.
+
+Files: `backend/main.py` (`threats_ws`, `_ws_ticket_claims`),
+`frontend/src/app/core/services/threats.service.ts`, `README.md`.
+
 ## 2026-11-17 · E2E: one pass per project for rate limit headroom
 
 **Decision.** `npm run e2e` runs phone, desktop and tablet each in its own

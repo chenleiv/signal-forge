@@ -14,6 +14,7 @@ os.environ["ENV"] = "development"
 from fastapi.testclient import TestClient  # noqa: E402
 
 from tests.conftest import ANALYST_PASSWORD  # noqa: E402
+from tests.ws_client import open_stream  # noqa: E402
 
 import main  # noqa: E402
 import simulation  # noqa: E402
@@ -39,8 +40,8 @@ def test_two_clients_share_one_stream(monkeypatch):
         t1, t2 = _ticket(client), _ticket(client)
         store.ip_store.clear()
 
-        with client.websocket_connect(f"/ws/threats?ticket={t1}") as ws1, \
-             client.websocket_connect(f"/ws/threats?ticket={t2}") as ws2:
+        with open_stream(client, t1) as ws1, \
+             open_stream(client, t2) as ws2:
             seen1 = {ws1.receive_json()["timestamp"] for _ in range(N)}
             seen2 = {ws2.receive_json()["timestamp"] for _ in range(N)}
 

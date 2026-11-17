@@ -18,6 +18,14 @@ export const STATS_PAUSE_MS = 60_000;
 /** Upper bound for the reconnect backoff. */
 export const MAX_RECONNECT_MS = 30_000;
 
+/** The first message on a new socket: the ticket from /auth/ws-ticket. */
+interface WsAuthMessage { type: 'auth'; ticket: string }
+
+/** The server's answer to a valid ticket; events follow it. */
+function isReady(data: unknown): boolean {
+  return typeof data === 'object' && data !== null && (data as { type?: unknown }).type === 'ready';
+}
+
 /** HTTP status of an error, if it has one. */
 function statusOf(err: unknown): number | undefined {
   const status = (err as { status?: unknown } | null)?.status;
@@ -35,11 +43,11 @@ export class ThreatsService {
 
   private destroyed = false;
   private slowTimer: ReturnType<typeof setTimeout> | null = null;
-  // Set after a 4001 until a socket opens again: a second 4001 in a row
-  // means signed out, with no further ticket request.
+  // Set after a 4001 until the server accepts a ticket again: a second 4001
+  // in a row means signed out, with no further ticket request.
   private sessionChecked = false;
   // Reconnect backoff: the delay doubles per failed attempt, capped at
-  // MAX_RECONNECT_MS, and resets when a socket opens.
+  // MAX_RECONNECT_MS, and resets when the server accepts a ticket.
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   // Stats polls are skipped until this time after a 429.
@@ -107,21 +115,29 @@ export class ThreatsService {
   }
 
   private openSocket(ticket: string) {
-    const wsUrl = `${this.settingsService.settings().wsUrl}?ticket=${ticket}`;
-    this.socket = new WebSocket(wsUrl);
+    // The ticket goes in the first message, never in the URL, so it cannot
+    // end up in server or proxy access logs.
+    this.socket = new WebSocket(this.settingsService.settings().wsUrl);
 
     this.socket.onopen = () => {
-      this.clearSlowTimer();
-      this.sessionChecked = false;
-      this.reconnectAttempt = 0;
-      this.status.set('connected');
+      const auth: WsAuthMessage = { type: 'auth', ticket };
+      this.socket.send(JSON.stringify(auth));
     };
 
     this.socket.onmessage = (event) => {
-      try {
-        const data: ThreatEvent = JSON.parse(event.data);
-        this.store.addEvent(data);
-      } catch { /* ignore non-JSON frames */ }
+      let data: unknown;
+      try { data = JSON.parse(event.data); } catch { return; /* ignore non-JSON frames */ }
+      if (isReady(data)) {
+        // Connected only once the server accepted the ticket: an open socket
+        // that is then closed with 4001 must not reset the session check or
+        // the backoff, or it would reconnect in a loop.
+        this.clearSlowTimer();
+        this.sessionChecked = false;
+        this.reconnectAttempt = 0;
+        this.status.set('connected');
+        return;
+      }
+      this.store.addEvent(data as ThreatEvent);
     };
 
     this.socket.onerror = () => {

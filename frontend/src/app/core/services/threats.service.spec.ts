@@ -15,10 +15,14 @@ class FakeWebSocket {
   onerror: (() => void) | null = null;
   onclose: ((e: CloseEvent) => void) | null = null;
 
+  sent: string[] = [];
+
   constructor(readonly url: string) { FakeWebSocket.instances.push(this); }
 
+  send(data: string) { this.sent.push(data); }
   close() { /* client-side close: the tests fire onclose themselves */ }
-  open() { this.onopen?.(); }
+  /** Opens and authenticates: the server's ready frame follows the open. */
+  open() { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ type: 'ready' }) } as MessageEvent); }
   serverClose(code: number) { this.onclose?.({ code } as CloseEvent); }
 }
 
