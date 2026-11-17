@@ -288,6 +288,20 @@
         width: min(360px, 100% - 32px);
         padding: 24px 20px 20px;
     }
+
+    // The hint is the demo username and password, for the form below: when
+    // it does not fit beside the label it moves to a second line whole,
+    // instead of losing the end of the password to an ellipsis.
+    .demo-btn {
+        flex-wrap: wrap;
+        row-gap: 2px;
+    }
+
+    .demo-hint {
+        overflow: visible;
+        text-overflow: clip;
+        white-space: nowrap;
+    }
 }
 
 .login-or {
