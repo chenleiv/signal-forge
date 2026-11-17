@@ -16,6 +16,58 @@ to anything listed here.
 
 ---
 
+## 2026-11-17 · Small fixes: stream reconnect, stats 429, toggle contrast, touch targets
+
+**Decision.**
+- Live stream (`threats.service.ts`): a failed `/auth/ws-ticket` request
+  in `connect()` no longer stops the stream. 401 or 403 shows "signed out"
+  with no retry; any other error (server down or starting) retries with a
+  doubling delay from the reconnect setting (default 3s), capped at 30s and
+  reset when a socket opens. Stats and alerts polling restart with each
+  socket. A replaced socket can no longer schedule its own reconnect.
+- `/api/stats` 429 (the open item in "Tablet breakpoint" below): the client
+  pauses stats polling for one 60-second window, the server's fixed window
+  (it sends no `Retry-After`), and sets `statsLimited` until the next
+  successful poll. The server limit is unchanged. The visible message is
+  not in this change yet: see the open item below.
+- Rule toggle on-dot: `--c-input` instead of `--c-text-2`. Measured against
+  the on track (`--c-text` at 51%): dark 4.89:1 over the page, 5.23:1 over
+  the panel; light 3.53:1 and 3.30:1. Before: 1.74/1.63 (dark), 2.14/2.29
+  (light). Guarded by `e2e/small-fixes.e2e.ts` in both themes.
+- Touch: at or below `$tablet` the rule toggle keeps its 28x16 look and gets
+  a 44x44 hit area from an invisible `::after` (inset -14px -8px), which stays
+  inside its row and clear of the rule name; the console input is 44px.
+- Login demo hint (the demo username and password): on phones it wraps to a
+  second line whole instead of losing the end of the password.
+- Accessible names for icon-only buttons (Hunting, Rules, console), and
+  `aria-pressed` on the rule toggle.
+
+Measured only, no change: the Settings saved button with `--c-on-accent`
+text is 8.41:1 on `--c-text-2` and 10.86:1 on the `--c-success` hover in dark,
+7.56:1 and 7.13:1 in light.
+
+**Reason.** After a backend restart the first reconnect usually reaches a
+server that is still starting; the ticket error set "disconnected" and nothing
+retried, while the chip read "RECONNECTING...". Without a database, session
+keys are new after a restart, so the old cookie gets a 401: that is signed
+out, not reconnecting.
+
+**Alternatives rejected.**
+- Raising or bypassing the `/api/stats` limit: it is a security control.
+- Reworking the rule row for a larger toggle: the `::after` hit area is
+  enough and keeps the look.
+- Retrying alerts polling on 429: `GET /api/alerts` has no rate limit.
+
+**Open item.** The 429 banner in the shell needs one line added to the
+existing `app-layout.spec.ts` stub (`statsLimited`), which waits for the
+owner's approval.
+
+Files: `threats.service.ts`, `threat-hunting.component.html`,
+`rules.component.html`, `rules.component.scss`, `command-console.html`,
+`command-console.scss`, `login.scss`, new specs
+`threats.service.reconnect.spec.ts`, `rules.component.a11y.spec.ts`,
+`threat-hunting.component.a11y.spec.ts`, `e2e/small-fixes.e2e.ts`.
+
 ## 2026-11-16 · Tool pages on tablets and phones
 
 **Decision.** Threat Hunting, Detection Rules, Settings, Users, Login and the
