@@ -109,9 +109,12 @@
     transition: all 0.2s;
   }
 
+  // The on dot uses the input color: at least 3.30:1 against the on track in
+  // both themes, over the panel and the page background ($secondary was
+  // 1.63 to 2.29:1).
   &.on .toggle-dot {
     left: 14px;
-    background: $secondary;
+    background: var(--c-input);
   }
 }
 
