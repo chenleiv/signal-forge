@@ -16,6 +16,26 @@ to anything listed here.
 
 ---
 
+## 2026-11-18 · Console toggle: chip-height look, 44px hit area on touch
+
+**Decision.** At or below `$tablet` the topbar console toggle (`>_`) keeps
+its 36x21 desktop look and gets its touch target from an invisible `::after`
+(inset -12px -4px), a 44x45 hit area. It replaces `min-width` and
+`min-height: 44px` on the button itself. Desktop is unchanged.
+See `app-layout.scss`; guarded by `e2e/responsive-tools.e2e.ts`.
+
+**Reason.** The 44x44 button stood far taller than the LIVE FEED chip (19px)
+and the clock (12px) on phones and tablets, so the row looked uneven. The
+hit area stays inside the 46px topbar and ends 4px before the chip (8px gap
+on phones, 16px on tablets), so a tap on the chip never hits the button.
+
+**Alternatives rejected.**
+- Shrinking the button with no hit area: below the 44px touch target used
+  for every single button at or below `$tablet`.
+- Padding 2px to match the chip's 19px exactly: changes desktop too; the 2px
+  difference with centres aligned was accepted by the owner.
+- Growing the chip and clock to 44px: changes their look for a button's sake.
+
 ## 2026-11-18 · Admin password reset hashes off the event loop
 
 **Decision.** `update_user` (admin or manager resetting another user's

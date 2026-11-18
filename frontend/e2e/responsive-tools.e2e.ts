@@ -56,6 +56,30 @@ async function expectTargets(page: Page, selector: string, min: number, square =
   }
 }
 
+type Rect = { left: number; top: number; right: number; bottom: number };
+
+/** The console toggle, its hit area (its box grown by the ::after insets),
+ *  the live chip and the topbar. */
+const topbarGeometry = (page: Page) => page.evaluate(() => {
+  const rect = (el: Element): Rect => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  };
+  const btn = document.querySelector('.console-toggle-btn')!;
+  const after = getComputedStyle(btn, '::after');
+  const b = rect(btn);
+  const px = (v: string) => (v === 'auto' ? 0 : parseFloat(v));
+  const hit = after.content === 'none' ? b : {
+    left: b.left + px(after.left), top: b.top + px(after.top),
+    right: b.right - px(after.right), bottom: b.bottom - px(after.bottom),
+  };
+  return {
+    btn: b, hit,
+    chip: rect(document.querySelector('.topbar-chip')!),
+    bar: rect(document.querySelector('.topbar')!),
+  };
+});
+
 const isPhone = (page: Page, isMobile: boolean) => isMobile && page.viewportSize()!.width <= 768;
 
 // ── Phones ────────────────────────────────────────────────────
@@ -146,9 +170,65 @@ test('the console toggle is a named 44px touch target', async ({ page, isMobile 
   await page.goto('/settings');
   const toggle = page.getByRole('button', { name: 'Toggle console' });
   await expect(toggle).toBeVisible();
-  const r = (await toggle.boundingBox())!;
-  expect(r.width).toBeGreaterThanOrEqual(44);
-  expect(r.height).toBeGreaterThanOrEqual(44);
+  const { hit } = await topbarGeometry(page);
+  expect(hit.right - hit.left).toBeGreaterThanOrEqual(44);
+  expect(hit.bottom - hit.top).toBeGreaterThanOrEqual(44);
+});
+
+test('the console toggle is level with the live chip and its hit area stays clear of it', async ({ page, isMobile }) => {
+  test.skip(!isMobile, 'phone and tablet');
+  // The chip's text sets its width, and the right-aligned row moves with it.
+  // With no ticket the chip stays "RECONNECTING...", so nothing shifts. This
+  // also keeps the test off the per-IP limits: GET /api/stats is stubbed and
+  // GET /auth/ws-ticket is aborted, as in settings-save.e2e.ts.
+  const stats = { severity_counts: { critical: 0, high: 0, medium: 0, low: 0 }, attack_types: {}, events_per_min: [], top_ips: [] };
+  await page.route(url => url.pathname === '/api/stats', route =>
+    route.request().method() === 'GET'
+      ? route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(stats) })
+      : route.fallback());
+  await page.route(url => url.pathname === '/auth/ws-ticket', route =>
+    route.request().method() === 'GET' ? route.abort() : route.fallback());
+  await page.goto('/settings');
+  await expect(page.locator('.topbar-chip')).toHaveClass(/chip-reconnecting/);
+
+  // Measure and tap in one step, so the layout cannot change in between.
+  const { btn, hit, chip, bar, tapAbove, tapChip } = await page.evaluate(() => {
+    const rect = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+    };
+    const button = document.querySelector('.console-toggle-btn')!;
+    const after = getComputedStyle(button, '::after');
+    const b = rect(button);
+    const px = (v: string) => (v === 'auto' ? 0 : parseFloat(v));
+    const c = rect(document.querySelector('.topbar-chip')!);
+    const at = (x: number, y: number) => {
+      const el = document.elementFromPoint(x, y);
+      return el?.closest('.console-toggle-btn') ? 'button' : el?.closest('.topbar-chip') ? 'chip' : 'other';
+    };
+    return {
+      btn: b, chip: c, bar: rect(document.querySelector('.topbar')!),
+      hit: after.content === 'none' ? b : {
+        left: b.left + px(after.left), top: b.top + px(after.top),
+        right: b.right - px(after.right), bottom: b.bottom - px(after.bottom),
+      },
+      // 8px above the visible button, and the chip's left edge.
+      tapAbove: at((b.left + b.right) / 2, b.top - 8),
+      tapChip: at(c.left + 1, (c.top + c.bottom) / 2),
+    };
+  });
+
+  const height = (r: Rect) => r.bottom - r.top;
+  const middle = (r: Rect) => (r.top + r.bottom) / 2;
+  expect(Math.round(height(btn))).toBe(21);                       // the desktop look
+  expect(Math.abs(height(btn) - height(chip))).toBeLessThanOrEqual(2);
+  expect(Math.abs(middle(btn) - middle(chip))).toBeLessThanOrEqual(1);
+  // The hit area stays inside the topbar and does not reach the chip.
+  expect(hit.top).toBeGreaterThanOrEqual(bar.top - 0.5);
+  expect(hit.bottom).toBeLessThanOrEqual(bar.bottom + 0.5);
+  expect(hit.right).toBeLessThanOrEqual(chip.left + 0.5);
+  expect(tapAbove).toBe('button');
+  expect(tapChip).toBe('chip');
 });
 
 // ── Desktop guard ─────────────────────────────────────────────

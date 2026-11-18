@@ -408,11 +408,17 @@
   }
 }
 
-// Tablets and phones: a 44px touch target.
+// Tablets and phones: the button keeps its 36x21 look, level with the chip,
+// and an invisible ::after gives it a 44x45 touch target inside the topbar.
 @media (max-width: $tablet) {
   .console-toggle-btn {
-    min-width: 44px;
-    min-height: 44px;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -12px -4px;
+    }
   }
 }
 
