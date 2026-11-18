@@ -106,6 +106,9 @@ async def update_user(db: Optional[AsyncSession], username: str, body: dict) -> 
     if not body:
         raise HTTPException(status_code=422, detail="Nothing to change")
     user = _require_existing(username)
+    # The router's permission check saw this role (a manager may reset only
+    # analysts); no await has run since then.
+    role_checked = user["role"]
 
     fields: dict = {}
     if "role" in body:
@@ -113,7 +116,12 @@ async def update_user(db: Optional[AsyncSession], username: str, body: dict) -> 
         if role != user["role"]:
             fields["role"] = role
     if "password" in body:
-        fields["password_hash"] = hash_password(_check_password(body["password"]))
+        # bcrypt is CPU-bound: keep it off the event loop (as change_own_password does).
+        fields["password_hash"] = await run_in_threadpool(hash_password, _check_password(body["password"]))
+        # The await let other requests run: if the user was deleted or got
+        # another role meanwhile, the permission check above no longer holds.
+        if user.get("deleted_at") or user["role"] != role_checked:
+            raise HTTPException(status_code=409, detail="User changed during the update, try again")
     if fields:
         # A new key signs out every session of this user.
         fields["session_key"] = new_session_key()
