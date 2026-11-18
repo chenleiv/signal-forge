@@ -16,6 +16,79 @@ to anything listed here.
 
 ---
 
+## 2026-11-18 · Incidents toast is a polite live region
+
+**Decision.** The incidents toast sits inside a `.toast-region` wrapper with
+`role="status"`, `aria-live="polite"` and `aria-atomic="true"`. The wrapper is
+always in the DOM; the `.toast` element is added inside it while a message
+shows. This covers every toast on the page: failed status, assignee and task
+updates, and "Case ... already exists — opened existing". The look is
+unchanged: the wrapper has no styles and no position, so `.toast` keeps its
+absolute position against the same ancestor.
+
+**Reason.** The toast was a plain `div`, so screen readers did not announce
+it. A live region added to the DOM together with its text is announced
+unreliably; one that exists first and then changes is announced.
+
+**Alternatives rejected.**
+- `role="status"` on the `.toast` element itself: it is created with its text
+  inside `@if`, the unreliable case above.
+- `role="alert"` (assertive): it interrupts the user, and the "already exists"
+  message is information, not an error. The failure messages are not urgent
+  either: the value on screen is already back to the stored one.
+
+Limits: the same message shown again while it is still on screen changes no
+text, so it is not announced again.
+
+Tests: new `incidents.toast-a11y.spec.ts`. Existing unit and e2e tests select
+`.toast` by class and read its text, so they did not change.
+
+Files: `incidents.html`.
+
+## 2026-11-18 · Console: `clear` is not a server command
+
+**Decision.** `POST /api/command` no longer accepts `clear`: it is removed from
+`ALLOWED_COMMANDS` and its branch (which answered `__clear__`) is gone, so the
+server answers it like any unknown command. The `help` text still lists
+`clear`, because the console (`command-console.ts`) clears its own screen on
+`clear` and never sends it. `ThreatStoreService.executeCommand` is unchanged:
+it sends every other console command.
+
+**Reason.** No client read `__clear__`, so the branch was dead code that
+widened the command allowlist for nothing.
+
+**Alternatives rejected.** Removing `clear` from the help text too: the
+console still handles it, and users read the list from `help`.
+
+Tests: new `backend/tests/test_console_commands.py`; its `clear` cases fail
+against the previous `ip.py`.
+
+Files: `backend/routers/ip.py`.
+
+## 2026-11-18 · Incident detail: a failed task update rolls back that task only
+
+**Decision.** `toggleTask` keeps its optimistic update. On a server error it
+logs `[IncidentDetail] task update failed`, shows the same toast as a failed
+status or assignee change (the server's `detail` when it is text, otherwise
+"Please try again"), and puts back only the task that was toggled, on the
+current set. The message is built by one helper, `failureMessage`, shared with
+`patchAndEmit`.
+
+**Reason.** The task PATCH had no error handler: on a 403 or 500 the checkbox
+stayed in its new state with no message, so the analyst saw a task as done
+that the server never stored.
+
+**Alternatives rejected.**
+- Restoring the whole set saved before the request: a second toggle made while
+  the first request was in flight would be undone too.
+- Waiting for the server before showing the change: slower for every click to
+  handle a rare failure.
+
+Tests: new `incidents.task-failure.spec.ts` (3 of its 4 tests fail with the
+rollback removed, checked by hand) and `e2e/incident-task-failure.e2e.ts`.
+
+Files: `incident-detail.component.ts`.
+
 ## 2026-11-18 · Settings: the Alert Thresholds card is removed
 
 **Decision.** The Alert Thresholds card (critical, high and medium minimum
