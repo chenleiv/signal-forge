@@ -267,11 +267,13 @@ The server is the security boundary. Everything the frontend does with permissio
 - **WebSocket ticket:** a separate 5-minute JWT with `typ: "ws"`, fetched from `/auth/ws-ticket` and sent as the
   first WebSocket message, never in the URL, so it cannot appear in server or proxy access logs. The server answers
   `{"type":"ready"}`, closes with 4001 on a missing or invalid ticket, and with 4408 when none arrives within 5 seconds.
+  The ticket carries the session's expiry (`sexp`): an open stream closes with 4001 when the 8-hour session expires.
 - Every decode site accepts only `HS256` and only its own `typ`, so a ticket cannot be used as a session and vice versa.
   `alg: none`, forged signatures, expired tokens, and tampered claims (e.g. `role` changed to `admin`) are rejected.
 - Every request also checks the token against the **current** user record: the user must still exist, have
   the role in the token, and still have the session key in the token. So deleting a user, changing their role or
-  resetting their password takes effect **immediately**, on every open session.
+  resetting their password takes effect **immediately** on every HTTP request; an open WebSocket stream closes at its
+  next check, within about 2 seconds.
 - The server refuses to start without a `JWT_SECRET` of at least 32 bytes, and with `DEMO_MODE=false` when there is
   no admin yet (or the admin still has the demo password) and no `ADMIN_PASSWORD` of 12-72 bytes.
 

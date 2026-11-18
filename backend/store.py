@@ -97,6 +97,16 @@ def session_claims_valid(claims: dict) -> bool:
     )
 
 
+def usable_expiry(value: object) -> float | None:
+    """A session expiry (epoch seconds) the WebSocket stream can enforce, else
+    None. Shared by /auth/ws-ticket (which refuses to issue a ticket without
+    one) and the stream handshake (which rejects such a ticket), so the two
+    cannot disagree. A bool is not a number here."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
 def verify_session(request: Request) -> dict:
     """The verified session token's claims. Besides the signature, checks the
     token against the current user record and the logout list, so deletions,
