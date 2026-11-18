@@ -149,7 +149,7 @@ export class Incidents {
       });
   }
 
-  private showToast(msg: string) {
+  showToast(msg: string) {
     this.toast.set(msg);
     setTimeout(() => this.toast.set(null), 3500);
   }

@@ -81,7 +81,8 @@
     <app-incident-detail
       [incident]="selected()"
       (closed)="close()"
-      (incidentChange)="onIncidentChange($event)" />
+      (incidentChange)="onIncidentChange($event)"
+      (updateFailed)="showToast($event)" />
   </div>
 
 </div>

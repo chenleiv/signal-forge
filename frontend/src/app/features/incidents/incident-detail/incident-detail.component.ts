@@ -8,8 +8,11 @@ import {
   effect,
   DestroyRef,
   ChangeDetectionStrategy,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import {
@@ -59,6 +62,8 @@ export class IncidentDetailComponent {
   incident       = input<Incident | null>(null);
   closed         = output<void>();
   incidentChange = output<Incident>();
+  /** A short message for the user when a status or assignee change fails. */
+  updateFailed   = output<string>();
 
   // ── public signals ────────────────────────────────────────────
   notes          = signal<IncidentNote[]>([]);
@@ -84,6 +89,8 @@ export class IncidentDetailComponent {
     return !!a && !!this.directory().find(u => u.username === a && u.deleted);
   });
   private readonly destroyRef = inject(DestroyRef);
+  /** Present only for users who can reassign (managers and admins). */
+  private readonly assigneeSelect = viewChild<ElementRef<HTMLSelectElement>>('assigneeSelect');
 
   // ── permissions (UX only; the server re-checks every write) ──
   private readonly user = this.auth.currentUser;
@@ -183,7 +190,17 @@ export class IncidentDetailComponent {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next:  updated => { this.incidentChange.emit(updated); this.timeline.update(tl => [{ label: timelineLabel, at: updated.updated_at, type: timelineType }, ...tl]); },
-        error: () => console.error('[IncidentDetail] patch failed'),
+        error: (err: HttpErrorResponse) => {
+          console.error('[IncidentDetail] patch failed');
+          // The native select already shows the choice; nothing re-renders on a
+          // failure, so put it back to the incident's current assignee.
+          const select = this.assigneeSelect()?.nativeElement;
+          if (select) select.value = this.incident()?.assigned_to ?? '';
+          const detail = err?.error?.detail;
+          this.updateFailed.emit(typeof detail === 'string'
+            ? `Could not update ${inc.id}: ${detail}`
+            : `Could not update ${inc.id}. Please try again.`);
+        },
       });
   }
 }
