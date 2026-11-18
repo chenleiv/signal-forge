@@ -16,6 +16,26 @@ to anything listed here.
 
 ---
 
+## 2026-11-18 · Console: `clear` is not a server command
+
+**Decision.** `POST /api/command` no longer accepts `clear`: it is removed from
+`ALLOWED_COMMANDS` and its branch (which answered `__clear__`) is gone, so the
+server answers it like any unknown command. The `help` text still lists
+`clear`, because the console (`command-console.ts`) clears its own screen on
+`clear` and never sends it. `ThreatStoreService.executeCommand` is unchanged:
+it sends every other console command.
+
+**Reason.** No client read `__clear__`, so the branch was dead code that
+widened the command allowlist for nothing.
+
+**Alternatives rejected.** Removing `clear` from the help text too: the
+console still handles it, and users read the list from `help`.
+
+Tests: new `backend/tests/test_console_commands.py`; its `clear` cases fail
+against the previous `ip.py`.
+
+Files: `backend/routers/ip.py`.
+
 ## 2026-11-18 · Incident detail: a failed task update rolls back that task only
 
 **Decision.** `toggleTask` keeps its optimistic update. On a server error it

@@ -228,7 +228,8 @@ async def run_command(request: Request, body: CommandBody, _=Depends(verify_toke
     cmd = body.command.strip().lower()
     if len(cmd) > 100:
         return {"output": "Error: command too long"}
-    ALLOWED_COMMANDS = {"help", "status", "clear"}
+    # "clear" is not here: the console clears its own screen and never sends it.
+    ALLOWED_COMMANDS = {"help", "status"}
     ALLOWED_PREFIXES = ("block ip ", "unblock ip ", "scan ")
     if cmd not in ALLOWED_COMMANDS and not cmd.startswith(ALLOWED_PREFIXES):
         return {"output": f"Unknown command: '{cmd}'. Type 'help' for available commands."}
@@ -258,5 +259,3 @@ async def run_command(request: Request, body: CommandBody, _=Depends(verify_toke
         blocked = "BLOCKED" if target in _blocked_ips else "active"
         score = max((e["score"] for e in events), default=0)
         return {"output": f"{target} | {len(events)} events | max score: {score} | status: {blocked}"}
-    if cmd == "clear":
-        return {"output": "__clear__"}
