@@ -20,7 +20,6 @@ Role = Literal["admin", "manager", "analyst"]
 ROLES: tuple[Role, ...] = ("admin", "manager", "analyst")
 # There is exactly one admin (the bootstrap account). Every other account is
 # a manager or an analyst; the admin role can never be granted or removed.
-ASSIGNABLE_ROLES: tuple[Role, ...] = ("manager", "analyst")
 ADMIN_USERNAME = "admin"
 
 BCRYPT_ROUNDS = 12
