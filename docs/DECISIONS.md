@@ -22,6 +22,11 @@ to anything listed here.
 its 36x21 desktop look and gets its touch target from an invisible `::after`
 (inset -12px -4px), a 44x45 hit area. It replaces `min-width` and
 `min-height: 44px` on the button itself. Desktop is unchanged.
+The heights are explicit: the button is `height: 21px` and the chip
+`height: 19px` (both from `$topbar-control-height`, with `line-height: 1`
+and no vertical padding), so they no longer follow the fonts installed. With
+`line-height: normal`, Linux fonts made the chip 18px, a 3px gap that failed
+CI.
 See `app-layout.scss`; guarded by `e2e/responsive-tools.e2e.ts`.
 
 **Reason.** The 44x44 button stood far taller than the LIVE FEED chip (19px)
