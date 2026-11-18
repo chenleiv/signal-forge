@@ -647,6 +647,9 @@ already below 4.5:1.
 Limits: the 15% severity tints are measured on `--c-panel` and `--c-input`,
 where the chips sit; on `--c-bg` the light `$sev-high` chip would be 4.14:1.
 The logo gradient in `app.html` is brand artwork and keeps its literal colors.
+(Note, 2026-11-18: `app.html` was the unused Angular starter template, never
+rendered, and its gradient was the starter's Angular logo. It was deleted in
+`Remove unused frontend code`.)
 Black shadows and the mobile backdrop stay literal, as in PR 3a.
 
 Files: `threat.models.ts`, `alerts.scss`, `alerts.html`, `alerts.ts`,
