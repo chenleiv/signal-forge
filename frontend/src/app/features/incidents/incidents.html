@@ -68,9 +68,12 @@
     </table>
   </div>
 
-  @if (toast()) {
-    <div class="toast">{{ toast() }}</div>
-  }
+  <!-- Always in the DOM so screen readers announce each new message; the toast is added inside it. -->
+  <div class="toast-region" role="status" aria-live="polite" aria-atomic="true">
+    @if (toast()) {
+      <div class="toast">{{ toast() }}</div>
+    }
+  </div>
 
   <!-- Mouse shortcut only: keyboard users close the drawer with its close button. -->
   <div class="drawer-backdrop" [class.active]="selected()" (click)="close()" aria-hidden="true"></div>

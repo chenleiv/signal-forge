@@ -16,6 +16,35 @@ to anything listed here.
 
 ---
 
+## 2026-11-18 · Incidents toast is a polite live region
+
+**Decision.** The incidents toast sits inside a `.toast-region` wrapper with
+`role="status"`, `aria-live="polite"` and `aria-atomic="true"`. The wrapper is
+always in the DOM; the `.toast` element is added inside it while a message
+shows. This covers every toast on the page: failed status, assignee and task
+updates, and "Case ... already exists — opened existing". The look is
+unchanged: the wrapper has no styles and no position, so `.toast` keeps its
+absolute position against the same ancestor.
+
+**Reason.** The toast was a plain `div`, so screen readers did not announce
+it. A live region added to the DOM together with its text is announced
+unreliably; one that exists first and then changes is announced.
+
+**Alternatives rejected.**
+- `role="status"` on the `.toast` element itself: it is created with its text
+  inside `@if`, the unreliable case above.
+- `role="alert"` (assertive): it interrupts the user, and the "already exists"
+  message is information, not an error. The failure messages are not urgent
+  either: the value on screen is already back to the stored one.
+
+Limits: the same message shown again while it is still on screen changes no
+text, so it is not announced again.
+
+Tests: new `incidents.toast-a11y.spec.ts`. Existing unit and e2e tests select
+`.toast` by class and read its text, so they did not change.
+
+Files: `incidents.html`.
+
 ## 2026-11-18 · Console: `clear` is not a server command
 
 **Decision.** `POST /api/command` no longer accepts `clear`: it is removed from
