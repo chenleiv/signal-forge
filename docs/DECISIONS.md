@@ -16,6 +16,24 @@ to anything listed here.
 
 ---
 
+## 2026-11-18 · Settings: the Alert Thresholds card is removed
+
+**Decision.** The Alert Thresholds card (critical, high and medium minimum
+scores) and the `criticalThreshold`, `highThreshold` and `mediumThreshold`
+fields of `AppSettings` are removed. Old saved values are dropped on load
+through `LEGACY_KEYS` in `settings.service.ts`.
+
+**Reason.** Nothing read the values. Severity comes from the server with each
+event, so the card saved numbers that changed nothing, and an analyst could
+believe they had retuned severity when they had not.
+
+**Alternatives rejected.** Wiring the thresholds into the client: severity
+would then differ between the browser and the server, and between analysts.
+Moving them to the server as a shared setting: a separate feature, not
+recorded as needed.
+
+---
+
 ## 2026-11-18 · Console toggle: chip-height look, 44px hit area on touch
 
 **Decision.** At or below `$tablet` the topbar console toggle (`>_`) keeps
@@ -629,6 +647,9 @@ already below 4.5:1.
 Limits: the 15% severity tints are measured on `--c-panel` and `--c-input`,
 where the chips sit; on `--c-bg` the light `$sev-high` chip would be 4.14:1.
 The logo gradient in `app.html` is brand artwork and keeps its literal colors.
+(Note, 2026-11-18: `app.html` was the unused Angular starter template, never
+rendered, and its gradient was the starter's Angular logo. It was deleted in
+`Remove unused frontend code`.)
 Black shadows and the mobile backdrop stay literal, as in PR 3a.
 
 Files: `threat.models.ts`, `alerts.scss`, `alerts.html`, `alerts.ts`,

@@ -30,10 +30,6 @@ export class Dashboard {
   regionChart   = signal<EChartsOption | null>(null);
   topIpsChart   = signal<EChartsOption | null>(null);
 
-  readonly criticalEvents = computed(() =>
-    this.store.events().filter(e => e.threat_level === 'critical').slice(0, 30)
-  );
-
   // ── private injections ────────────────────────────────────────
   protected readonly store = inject(ThreatStoreService);
 

@@ -5,9 +5,6 @@ export interface AppSettings {
   wsUrl: string;
   reconnectDelay: number;
   bufferSize: number;
-  criticalThreshold: number;
-  highThreshold: number;
-  mediumThreshold: number;
 }
 
 /** The configured URL, or the same host the app is served from. */
@@ -21,13 +18,13 @@ const DEFAULTS: AppSettings = {
   wsUrl: defaultWsUrl(),
   reconnectDelay: 3,
   bufferSize: 100,
-  criticalThreshold: 80,
-  highThreshold: 60,
-  mediumThreshold: 40,
 };
 
 // Removed fields that older saved settings may still contain.
-const LEGACY_KEYS = ['analystName', 'analystRole'];
+const LEGACY_KEYS = [
+  'analystName', 'analystRole',
+  'criticalThreshold', 'highThreshold', 'mediumThreshold',
+];
 
 const STORAGE_KEY = 'sf_settings';
 

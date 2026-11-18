@@ -54,7 +54,7 @@
     <div class="meta-item">
       <span class="meta-label">Assigned</span>
       @if (reassign().allowed) {
-        <select class="assignee-select" (change)="updateAssignee($any($event.target).value)">
+        <select #assigneeSelect class="assignee-select" (change)="updateAssignee($any($event.target).value)">
           <option value="" [selected]="!incident()!.assigned_to">Unassigned</option>
           @if (assigneeIsDeleted()) {
             <option [value]="incident()!.assigned_to" selected disabled>{{ displayName(incident()!.assigned_to) }}</option>

@@ -105,7 +105,6 @@ body {
 .sk-line  { @extend .sk; height: 13px; }
 .sk-line-sm { @extend .sk; height: 10px; }
 .sk-line-lg { @extend .sk; height: 18px; }
-.sk-block { @extend .sk; border-radius: 8px; }
 .sk-circle { @extend .sk; border-radius: 50%; }
 
 ::-webkit-scrollbar { width: 5px; height: 5px; }

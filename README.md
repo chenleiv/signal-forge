@@ -25,7 +25,7 @@ The attacking IPs come from the AbuseIPDB blacklist (or a bundled sample in demo
 - **Users and roles** — `admin`, `manager` and `analyst` roles, user management screen; see [Security](#security) for the permission matrix
 - **Authentication** — session in an HttpOnly cookie (8 hours), bcrypt-hashed passwords, rate-limited login
 - **Demo mode** — read-only public demo with in-browser simulation of analyst actions
-- **Settings** — WebSocket URL, reconnect delay, buffer size, alert thresholds, theme
+- **Settings** — WebSocket URL, reconnect delay, buffer size, theme, change your own password
 
 ---
 
@@ -52,13 +52,19 @@ signalforge/
 ├── backend/
 │   ├── main.py              # App setup, lifespan, demo-mode middleware, WebSocket stream
 │   ├── store.py             # In-memory state, session verification, config checks
+│   ├── simulation.py        # Threat feed (AbuseIPDB, cache, snapshot, sample) and event generation
+│   ├── constants.py         # Simulation data, MITRE map, response playbooks, behavioral defaults
 │   ├── users.py             # Users, bcrypt, seeding, session checks
 │   ├── user_admin.py        # Admin user management (create, role, password, soft delete)
 │   ├── authz.py             # Authorization rules (single source for the server)
 │   ├── repositories.py      # Storage: database or in-memory, one interface per data type
 │   ├── sessions.py          # Logout revocation (per-session ids)
 │   ├── rate_limit.py        # Per-IP and per-key rate limits
+│   ├── schemas.py           # Typed request bodies (unknown fields, types, sizes: 422)
+│   ├── security_headers.py  # CSP, HSTS over HTTPS, no-store on the API
+│   ├── request_limits.py    # Request body size limit (413 over 64 KB)
 │   ├── routers/             # auth, users, incidents, alerts, rules, behavioral, hunting, ip
+│   ├── database.py          # Async SQLAlchemy engine and session from DATABASE_URL
 │   ├── models.py, db_ops.py # SQLAlchemy models and data access
 │   ├── alembic/             # Database migrations
 │   └── tests/               # pytest, including the security regression suite
@@ -68,9 +74,9 @@ signalforge/
     └── src/app/
         ├── core/
         │   ├── auth/        # Permission helper (client-side copy of the matrix)
-        │   ├── services/    # ThreatStore, Threats, Auth, DemoMode, DemoSimulator, Settings
+        │   ├── services/    # ThreatStore, Threats, ThreatFeed, Auth, DemoMode, DemoSimulator, Settings, Theme
         │   ├── interceptors/# API base URL, 401 redirect, demo mode
-        │   └── guards/      # Auth guard (canActivate)
+        │   └── guards/      # Auth guard (every page), admin guard (Users screen)
         ├── shared/
         │   └── models/      # TypeScript interfaces
         ├── layout/          # AppLayout shell — sidebar, topbar, command console
@@ -163,7 +169,8 @@ cd frontend && npm run e2e                        # layout checks in a real brow
 **CI** (`.github/workflows/ci.yml`) runs all of the above on every pull request and on `master`.
 
 **Layout checks (`npm run e2e`).** Builds the frontend, serves it from the backend in demo mode (like on Render,
-no database), and checks every page on a phone (390 px) and a desktop (1440 px): nothing may be cut off by the
+no database), and checks every page on a phone (390 px), a tablet (820 px) and a desktop (1440 px), each in its own
+pass on a fresh server: nothing may be cut off by the
 screen edge (only wide tables scroll sideways, inside `.h-scroll`), the phone menu opens and closes, and logout
 is reachable. Tests only talk to the local server: every other request is blocked. First run:
 `npx playwright install chromium`. The backend virtualenv is expected at `backend/venv` (override with
