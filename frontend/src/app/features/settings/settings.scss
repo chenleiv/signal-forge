@@ -69,13 +69,6 @@
     margin: 0;
 }
 
-.card-sub {
-    font-size: 11px;
-    color: $secondary;
-    width: 100%;
-    margin-left: 26px;
-}
-
 .field-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -120,67 +113,6 @@
         }
     }
 }
-
-// ── Alert Thresholds ──────────────────────────────────────────
-.threshold-grid {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.threshold-field {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: center;
-    gap: 12px;
-
-    input[type="number"] {
-        background: var(--c-input);
-        border: 1px solid $border;
-        border-radius: 4px;
-        padding: 7px 10px;
-        color: $text;
-        font-size: 13px;
-        font-family: monospace;
-        width: 80px;
-        text-align: center;
-        outline: none;
-        transition: border-color 0.15s;
-
-        &:focus {
-            border-color: $accent;
-        }
-    }
-}
-
-.threshold-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.sev-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-
-    &.critical { background: $sev-critical-fill; }
-    &.high     { background: $sev-high-fill; }
-    &.medium   { background: $sev-medium-fill; }
-}
-
-.label-critical { font-size: 12px; color: $sev-critical; font-weight: 500; }
-.label-high     { font-size: 12px; color: $sev-high; font-weight: 500; }
-.label-medium   { font-size: 12px; color: $sev-medium; font-weight: 500; }
-
-.threshold-op {
-    font-size: 14px;
-    color: $secondary;
-    margin-left: 4px;
-}
-
-
 
 // ── Actions ───────────────────────────────────────────────────
 .actions {

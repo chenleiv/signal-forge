@@ -16,6 +16,24 @@ to anything listed here.
 
 ---
 
+## 2026-11-18 · Settings: the Alert Thresholds card is removed
+
+**Decision.** The Alert Thresholds card (critical, high and medium minimum
+scores) and the `criticalThreshold`, `highThreshold` and `mediumThreshold`
+fields of `AppSettings` are removed. Old saved values are dropped on load
+through `LEGACY_KEYS` in `settings.service.ts`.
+
+**Reason.** Nothing read the values. Severity comes from the server with each
+event, so the card saved numbers that changed nothing, and an analyst could
+believe they had retuned severity when they had not.
+
+**Alternatives rejected.** Wiring the thresholds into the client: severity
+would then differ between the browser and the server, and between analysts.
+Moving them to the server as a shared setting: a separate feature, not
+recorded as needed.
+
+---
+
 ## 2026-11-18 · Console toggle: chip-height look, 44px hit area on touch
 
 **Decision.** At or below `$tablet` the topbar console toggle (`>_`) keeps

@@ -2,7 +2,7 @@
 
     <div class="page-header">
         <h1 class="page-title">Settings</h1>
-        <p class="page-sub">Configure analyst profile, connection parameters, and alert thresholds.</p>
+        <p class="page-sub">Configure your password, appearance and connection parameters.</p>
     </div>
 
     <!-- Every card is a native details/summary: Enter, Space and the expanded state come from
@@ -164,56 +164,6 @@
                         <input id="buffer-size" type="number" [value]="form().bufferSize"
                             (input)="form.update(s => ({...s, bufferSize: +$any($event.target).value}))"
                             min="10" max="500" />
-                    </div>
-                </div>
-            </details>
-        </section>
-
-        <!-- Alert Thresholds -->
-        <section class="card">
-            <details class="card-details">
-                <summary class="card-header card-summary">
-                    <svg class="card-icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path d="M8 2l5.5 10H2.5L8 2z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
-                        <path d="M8 7v2.5M8 11v.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-                    </svg>
-                    <h2 class="card-title">Alert Thresholds</h2>
-                    <svg class="card-chevron" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"
-                            stroke-linejoin="round" />
-                    </svg>
-                    <span class="card-sub">Minimum score to classify an event at each severity level.</span>
-                </summary>
-                <div class="threshold-grid card-body">
-                    <div class="threshold-field">
-                        <div class="threshold-label">
-                            <span class="sev-dot critical"></span>
-                            <label class="label-critical" for="threshold-critical">Critical</label>
-                            <span class="threshold-op">≥</span>
-                        </div>
-                        <input id="threshold-critical" type="number" [value]="form().criticalThreshold"
-                            (input)="form.update(s => ({...s, criticalThreshold: +$any($event.target).value}))"
-                            min="1" max="100" />
-                    </div>
-                    <div class="threshold-field">
-                        <div class="threshold-label">
-                            <span class="sev-dot high"></span>
-                            <label class="label-high" for="threshold-high">High</label>
-                            <span class="threshold-op">≥</span>
-                        </div>
-                        <input id="threshold-high" type="number" [value]="form().highThreshold"
-                            (input)="form.update(s => ({...s, highThreshold: +$any($event.target).value}))"
-                            min="1" max="100" />
-                    </div>
-                    <div class="threshold-field">
-                        <div class="threshold-label">
-                            <span class="sev-dot medium"></span>
-                            <label class="label-medium" for="threshold-medium">Medium</label>
-                            <span class="threshold-op">≥</span>
-                        </div>
-                        <input id="threshold-medium" type="number" [value]="form().mediumThreshold"
-                            (input)="form.update(s => ({...s, mediumThreshold: +$any($event.target).value}))"
-                            min="1" max="100" />
                     </div>
                 </div>
             </details>

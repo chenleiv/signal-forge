@@ -242,7 +242,6 @@ describe('Settings: change password', () => {
         ['Change Password', false],
         ['Appearance', false],
         ['Connection', false],
-        ['Alert Thresholds', false],
       ]);
     });
 

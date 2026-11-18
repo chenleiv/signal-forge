@@ -64,7 +64,7 @@ test('settings: cards start closed, Save is enabled only with changes, and disab
     await page.goto('/settings');
 
     const details = page.locator('section.card details.card-details');
-    await expect(details).toHaveCount(5);
+    await expect(details).toHaveCount(4);
     for (const d of await details.all()) expect(await d.evaluate(el => (el as HTMLDetailsElement).open)).toBe(false);
 
     const save = page.locator('.actions .btn-save');

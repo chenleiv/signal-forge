@@ -61,11 +61,11 @@ describe('Settings: Save is enabled only when something changed', () => {
     const f = create();
     const svc = TestBed.inject(SettingsService);
 
-    type(f, 'threshold-critical', '85');
+    type(f, 'buffer-size', '250');
     saveBtn(f).click();
     f.detectChanges();
 
-    expect(svc.settings().criticalThreshold).toBe(85);
+    expect(svc.settings().bufferSize).toBe(250);
     expect(saveBtn(f).disabled).toBe(true);
     expect(saveBtn(f).textContent).toContain('Saved');
 
