@@ -8,6 +8,7 @@ import pathlib
 import random
 import subprocess
 import sys
+import time
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 
@@ -261,8 +262,9 @@ app.include_router(behavioral.router)
 app.include_router(users.router)
 
 
-# Close code for a missing, invalid or ended session. The frontend shows
-# "signed out" and does not reconnect on it.
+# Close code for a missing, invalid, ended or expired session. The frontend
+# checks the session once (a new ticket), then shows "signed out" and does
+# not reconnect.
 WS_SESSION_ENDED = 4001
 # An idle stream re-checks its session at least this often (seconds).
 WS_RECHECK_SECONDS = 2.0
@@ -293,9 +295,19 @@ def _ws_ticket_claims(message: dict) -> dict | None:
         claims = jwt.decode(body["ticket"], SECRET_KEY, algorithms=["HS256"])
         if claims.get("typ") != "ws" or not _store.session_claims_valid(claims):
             return None
+        # Checked last, so the checks above still decide every other case.
+        if _seconds_left(claims) <= 0:
+            return None
         return claims
     except Exception:
         return None
+
+
+def _seconds_left(claims: dict) -> float:
+    """Seconds until the session behind a ticket expires ("sexp"); 0 when
+    the ticket carries no usable expiry (fail closed)."""
+    expiry = _store.usable_expiry(claims.get("sexp"))
+    return 0.0 if expiry is None else expiry - time.time()
 
 
 @app.websocket("/ws/threats")
@@ -323,13 +335,17 @@ async def threats_ws(ws: WebSocket):
     _clients.add(queue)
     try:
         while True:
+            # Wake up no later than the session's expiry, so an idle stream
+            # closes on time rather than up to WS_RECHECK_SECONDS late.
+            timeout = max(0.0, min(WS_RECHECK_SECONDS, _seconds_left(claims)))
             try:
-                message: str | None = await asyncio.wait_for(queue.get(), timeout=WS_RECHECK_SECONDS)
+                message: str | None = await asyncio.wait_for(queue.get(), timeout=timeout)
             except TimeoutError:
                 message = None
             # Same checks as every HTTP request: logout, deletion, role change
-            # and password resets end an open stream too.
-            if not _store.session_claims_valid(claims):
+            # and password resets end an open stream too, and so does the
+            # session's own expiry.
+            if _seconds_left(claims) <= 0 or not _store.session_claims_valid(claims):
                 await ws.close(code=WS_SESSION_ENDED)
                 break
             if message is not None:

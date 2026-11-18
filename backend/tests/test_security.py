@@ -57,6 +57,7 @@ def _ws_ticket(claims: dict | None = None, key: str = SECRET_KEY, drop: tuple = 
         "sk": users.get_user("alice")["session_key"],
         "sid": "crafted-test-session-id",
         "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
+        "sexp": int((datetime.now(timezone.utc) + timedelta(hours=8)).timestamp()),
     }
     payload = {k: v for k, v in {**base, **(claims or {})}.items() if k not in drop}
     return jwt.encode(payload, key, algorithm="HS256")

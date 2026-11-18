@@ -122,6 +122,12 @@ async def patch_me(request: Request, body: OwnPasswordBody, response: Response,
 # one NAT address, must keep their live stream; minting needs a session anyway.
 @limiter.limit("60/minute")
 async def ws_ticket(request: Request, session: dict = Depends(verify_session)):
+    # The stream closes when the session expires, so it needs the session's
+    # expiry. jwt.decode only checks "exp" when present: a session without a
+    # usable one gets no ticket rather than one the handshake would reject.
+    session_expiry = _store.usable_expiry(session.get("exp"))
+    if session_expiry is None:
+        raise HTTPException(status_code=401, detail="Session has no usable expiry")
     ticket = jwt.encode(
         {
             "sub": session["sub"],
@@ -131,6 +137,9 @@ async def ws_ticket(request: Request, session: dict = Depends(verify_session)):
             "role": session["role"],
             "sk": session["sk"],
             "sid": session["sid"],
+            # The session's own expiry (epoch seconds): the stream closes at
+            # this time even while the ticket and the socket are still fine.
+            "sexp": session_expiry,
             "typ": "ws",
             "exp": datetime.now(timezone.utc) + timedelta(minutes=5),
         },

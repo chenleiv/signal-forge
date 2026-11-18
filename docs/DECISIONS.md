@@ -16,6 +16,102 @@ to anything listed here.
 
 ---
 
+## 2026-11-18 · Admin password reset hashes off the event loop
+
+**Decision.** `update_user` (admin or manager resetting another user's
+password) runs `hash_password` with `run_in_threadpool`, as
+`change_own_password` already did. The await lets other requests run between
+the router's permission check and the write, so after hashing `update_user`
+answers 409 if the user was deleted or got another role meanwhile.
+
+**Reason.** bcrypt at 12 rounds takes about 0.25 s; on the event loop it
+paused every request and WebSocket stream during a reset. The 409 keeps the
+permission check valid: a manager may reset only analysts, and a role change
+during the hash must not let the reset through.
+
+**Alternatives rejected.**
+- Hashing in the router before the permission check: spends bcrypt time on
+  requests that are then denied.
+- No re-check after the await: a concurrent promotion or deletion would be
+  ignored.
+
+Tests: new `backend/tests/test_admin_reset_threadpool.py`: the hash runs in a
+thread with no event loop, and a manager's reset of an analyst who is deleted
+or promoted during the hash gets 409 with the password and session key
+unchanged. Both fail against the previous `update_user`.
+
+Files: `backend/user_admin.py` (`update_user`).
+
+## 2026-11-18 · WebSocket stream ends when the session token expires
+
+**Decision.** `/auth/ws-ticket` copies the session's `exp` into the ticket as
+`sexp` (epoch seconds). The handshake (`_ws_ticket_claims`) rejects a ticket
+whose `sexp` is missing, not a number (a bool counts as invalid) or already
+past, with 4001. This check runs last, so every other rejection keeps its own
+reason. In `threats_ws` the idle wait is `min(WS_RECHECK_SECONDS, seconds
+until sexp)` and the stream closes with 4001 (`WS_SESSION_ENDED`) when the
+session has expired or `session_claims_valid` fails. `/auth/ws-ticket` answers
+401 for a session with no usable `exp` (`jwt.decode` checks `exp` only when
+present), so it never issues a ticket the handshake would reject; the server
+and the handshake share `store.usable_expiry`. The 60/minute limit on
+`/auth/ws-ticket`, the ticket's own 5-minute `exp` and the first-message flow
+are unchanged.
+
+The frontend did not change: on 4001 it requests one ticket, the expired
+cookie gets 401, and it shows SIGNED OUT with no reconnect, as for any other
+ended session.
+
+**Reason.** An open stream outlived its 8-hour session: nothing in the
+ticket told the stream when the session ended (the "Limits" of the
+2026-11-14 entry).
+
+**Alternatives rejected.**
+- A new close code for expiry: the client already handles 4001 the right
+  way; a new code needs client changes and a deploy where client and server
+  ship together.
+- The expiry check inside `store.session_claims_valid`: the HTTP path already
+  gets it from `jwt.decode`, and session tokens have no `sexp`.
+- Treating a ticket without `sexp` as never expiring: fail open.
+- Capping the ticket's 5-minute `exp` at the session's `exp`: the handshake
+  check already rejects such a ticket.
+
+**Correction: deletion versus password reset.** A manual test (2026-11-14,
+commit 83ac9f2, idle re-check then 10 s) saw a deleted user's stream close
+after about 10 s and a password reset's almost at once. The cause was timing,
+not the action: both rotate the user's session key in memory before the
+response (`user_admin._apply`), and the stream only sees that the key no
+longer matches, at its next check (before the next event, or at the idle
+re-check). The stream is idle when there are no threat IPs, the usual local
+setup with `DEMO_MODE=false` and no AbuseIPDB key or cache. Each action was
+tried once, so one landed just before a 10 s tick and the other just after.
+The 2026-11-14 entry describes this only as "an idle stream took about 10 s".
+`test_admin_action_closes_an_idle_stream_within_one_recheck` measures
+deletion, password reset and role change on an idle stream with a 0.3 s
+re-check: 5 runs in a row, 15 of 15 passed, each case 0.31 s from open to
+close (bound 1.0 s). Not explained: in a browser the deleted user's tab
+polls `/api/stats` every 5 s, gets 401 and leaves for `/login`, which closes
+the socket from the client, so a browser should have seen at most about 5 s.
+
+Deploy: a ticket issued by the old server just before the deploy has no
+`sexp`, so the new server rejects it once with 4001; the client requests a
+fresh ticket (with `sexp`) and reconnects. Without a database, session keys
+are new after a restart anyway, so old cookies get 401 and show signed out.
+
+E2E rate limit counts after this change (uvicorn access log, one pass each,
+every pass under 60 seconds): phone 36 `/auth/ws-ticket` and 34
+`/api/stats` (43.5 s), desktop 26 and 23 (39.8 s), tablet 32 and 30
+(41.9 s), no 429s. The new spec stubs both routes and adds none.
+
+Tests: one existing helper changed test data only, approved by the owner:
+`_ws_ticket` in `test_security.py` gains a `sexp` claim, so its control
+ticket stays valid; no assertion changed. New:
+`backend/tests/test_ws_session_expiry.py`,
+`threats.service.expiry.spec.ts`, `e2e/ws-session-expiry.e2e.ts`.
+
+Files: `backend/main.py` (`_ws_ticket_claims`, `_seconds_left`,
+`threats_ws`), `backend/routers/auth.py` (`ws_ticket`), `backend/store.py`
+(`usable_expiry`), `README.md`.
+
 ## 2026-11-17 · WebSocket ticket as the first message, not in the URL
 
 **Decision.** The client opens `/ws/threats` with no query string and sends
@@ -736,7 +832,8 @@ idle re-check, so within `WS_RECHECK_SECONDS`. Revocations live in each
 process's memory, so this holds for a single
 uvicorn worker (the documented setup, `build.sh` and README). The stream does
 not end when the 8-hour session token itself expires; that is not covered by
-this decision.
+this decision (since 2026-11-18 it does, see "WebSocket stream ends when the
+session token expires", which also corrects the 10 s manual test above).
 
 Files: `backend/main.py` (`threats_ws`), `backend/store.py`
 (`session_claims_valid`), `backend/routers/auth.py` (`ws_ticket`),
