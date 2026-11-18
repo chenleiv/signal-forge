@@ -62,7 +62,7 @@ export class IncidentDetailComponent {
   incident       = input<Incident | null>(null);
   closed         = output<void>();
   incidentChange = output<Incident>();
-  /** A short message for the user when a status or assignee change fails. */
+  /** A short message for the user when a status, assignee or task change fails. */
   updateFailed   = output<string>();
 
   // ── public signals ────────────────────────────────────────────
@@ -141,13 +141,26 @@ export class IncidentDetailComponent {
   toggleTask(index: number) {
     const inc = this.incident();
     if (!inc || !this.work().allowed) return;
+    const wasDone = this.completedTasks().has(index);
     const next = new Set(this.completedTasks());
-    if (next.has(index)) next.delete(index);
+    if (wasDone) next.delete(index);
     else next.add(index);
     this.completedTasks.set(next);
     this.store.updateIncidentTasks(inc.id, [...next])
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe();
+      .subscribe({
+        error: (err: HttpErrorResponse) => {
+          console.error('[IncidentDetail] task update failed');
+          // Put back only this task, so other toggles made meanwhile stay.
+          this.completedTasks.update(current => {
+            const rolledBack = new Set(current);
+            if (wasDone) rolledBack.add(index);
+            else rolledBack.delete(index);
+            return rolledBack;
+          });
+          this.updateFailed.emit(this.failureMessage(inc.id, err));
+        },
+      });
   }
 
   addNote() {
@@ -196,11 +209,16 @@ export class IncidentDetailComponent {
           // failure, so put it back to the incident's current assignee.
           const select = this.assigneeSelect()?.nativeElement;
           if (select) select.value = this.incident()?.assigned_to ?? '';
-          const detail = err?.error?.detail;
-          this.updateFailed.emit(typeof detail === 'string'
-            ? `Could not update ${inc.id}: ${detail}`
-            : `Could not update ${inc.id}. Please try again.`);
+          this.updateFailed.emit(this.failureMessage(inc.id, err));
         },
       });
+  }
+
+  /** The server's reason when it gives one as text, otherwise a generic retry message. */
+  private failureMessage(id: string, err: HttpErrorResponse): string {
+    const detail = err?.error?.detail;
+    return typeof detail === 'string'
+      ? `Could not update ${id}: ${detail}`
+      : `Could not update ${id}. Please try again.`;
   }
 }

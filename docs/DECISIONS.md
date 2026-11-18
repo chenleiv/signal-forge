@@ -16,6 +16,30 @@ to anything listed here.
 
 ---
 
+## 2026-11-18 · Incident detail: a failed task update rolls back that task only
+
+**Decision.** `toggleTask` keeps its optimistic update. On a server error it
+logs `[IncidentDetail] task update failed`, shows the same toast as a failed
+status or assignee change (the server's `detail` when it is text, otherwise
+"Please try again"), and puts back only the task that was toggled, on the
+current set. The message is built by one helper, `failureMessage`, shared with
+`patchAndEmit`.
+
+**Reason.** The task PATCH had no error handler: on a 403 or 500 the checkbox
+stayed in its new state with no message, so the analyst saw a task as done
+that the server never stored.
+
+**Alternatives rejected.**
+- Restoring the whole set saved before the request: a second toggle made while
+  the first request was in flight would be undone too.
+- Waiting for the server before showing the change: slower for every click to
+  handle a rare failure.
+
+Tests: new `incidents.task-failure.spec.ts` (3 of its 4 tests fail with the
+rollback removed, checked by hand) and `e2e/incident-task-failure.e2e.ts`.
+
+Files: `incident-detail.component.ts`.
+
 ## 2026-11-18 · Settings: the Alert Thresholds card is removed
 
 **Decision.** The Alert Thresholds card (critical, high and medium minimum
