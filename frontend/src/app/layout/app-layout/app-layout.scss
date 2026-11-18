@@ -252,6 +252,11 @@
 }
 
 // Topbar
+// Fixed heights for the console toggle and the live chip, so they no longer
+// follow the line height of whatever fonts the machine has. The chip is 2px
+// shorter than the button and centred on it.
+$topbar-control-height: 21px;
+
 .topbar {
   height: 46px;
   flex-shrink: 0;
@@ -297,7 +302,9 @@
   background: color-mix(in srgb, var(--c-muted) 8%, transparent);
   border: 1px solid color-mix(in srgb, var(--c-muted) 30%, transparent);
   border-radius: 4px;
-  padding: 3px 8px;
+  height: $topbar-control-height - 2px;
+  padding: 0 8px;
+  line-height: 1;
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.8px;
@@ -398,7 +405,9 @@
   background: color-mix(in srgb, var(--c-text) 3%, transparent);
   border: 1px solid color-mix(in srgb, var(--c-text) 10%, transparent);
   border-radius: 5px;
-  padding: 3px 10px;
+  height: $topbar-control-height;
+  padding: 0 10px;
+  line-height: 1;
   cursor: pointer;
   transition: all 0.15s;
 
@@ -408,11 +417,17 @@
   }
 }
 
-// Tablets and phones: a 44px touch target.
+// Tablets and phones: the button keeps its 36x21 look, level with the chip,
+// and an invisible ::after gives it a 44x45 touch target inside the topbar.
 @media (max-width: $tablet) {
   .console-toggle-btn {
-    min-width: 44px;
-    min-height: 44px;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      inset: -12px -4px;
+    }
   }
 }
 
