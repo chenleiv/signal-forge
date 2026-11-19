@@ -23,6 +23,7 @@ from sqlalchemy import text as _sa_text
 from starlette.requests import Request
 
 from database import AsyncSessionLocal, engine as db_engine
+from forwarded_diag import ForwardedCountDiagnostic  # TEMPORARY DIAGNOSTIC
 from db_ops import db_get_rules, db_get_behavioral_settings
 import simulation
 from simulation import (
@@ -251,6 +252,10 @@ app.add_middleware(
 # Added last, so it is the outermost layer: every response gets the headers,
 # including CORS preflights, demo-mode 403s and rate-limit 429s.
 app.add_middleware(SecurityHeadersMiddleware)
+
+# TEMPORARY DIAGNOSTIC, remove after the Render check (forwarded_diag.py):
+# off unless DIAG_FORWARDED_COUNT=true. Outermost, so it sees every request.
+app.add_middleware(ForwardedCountDiagnostic)
 
 app.include_router(auth.router)
 app.include_router(ip.router)

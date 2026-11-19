@@ -16,6 +16,56 @@ to anything listed here.
 
 ---
 
+## 2026-11-19 · Temporary X-Forwarded-For count diagnostic (to be removed)
+
+**TEMPORARY DIAGNOSTICS: remove `backend/forwarded_diag.py`, its two lines in
+`backend/main.py`, `backend/tests/test_forwarded_diag.py` and the helper
+sentence in the README Deployment checklist once the Render check below is
+done and recorded here.**
+
+**Decision.** An ASGI middleware, outermost in `main.py`, off unless
+`DIAG_FORWARDED_COUNT=true` (exact value, any case; read once at startup).
+When on, it logs one line for each of the first 5 API requests (`/api/`,
+`/auth/`) and the first 5 WebSocket upgrades to `/ws/threats`, at most 10
+lines per process:
+
+```
+[diag] forwarded-count kind=ws xff=present entries=1 trusted_proxy_hops=1 line=6/10
+```
+
+Only the kind, whether `X-Forwarded-For` is present, the number of
+non-empty comma-separated entries over all header lines (counted like
+`rate_limit.client_ip`) and `TRUSTED_PROXY_HOPS`. The line is built from fixed
+words and integers only: never an address, a header value, a ticket, a cookie
+or any other header.
+
+**Reason.** The WebSocket per-IP cap (entry below) is per user only if Render
+adds `X-Forwarded-For` to WebSocket upgrade requests and `TRUSTED_PROXY_HOPS`
+matches. The README step asked for a temporary count log, but no mechanism
+existed, so checking meant a code change and a deploy each time.
+
+**Alternatives rejected.**
+- Counting `/health`: Render's health checker may call it without the proxy,
+  so it could log "absent" while user traffic has the header.
+- Logging the path or the remote address: not needed for the count, and an
+  address is personal data.
+- A permanent debug endpoint: anyone could call it; a log line on a flag is
+  removed by deleting one variable.
+
+Expected on Render with one proxy: `xff=present entries=1
+trusted_proxy_hops=1` for both kinds. `entries` larger than
+`trusted_proxy_hops` only when the client sent its own header. `xff=absent`
+for `kind=ws` while `kind=http` is present: the per-IP WebSocket cap counts
+all users as one client.
+
+Result on Render: not recorded yet.
+
+Tests: new `backend/tests/test_forwarded_diag.py` (off by default and for any
+value but "true", exact line content, no address, cookie, ticket or bearer
+value in any record, other paths ignored, 10-line cap shared across stacks).
+
+Files: `backend/forwarded_diag.py` (new), `backend/main.py`, `README.md`.
+
 ## 2026-11-19 · WebSocket connection caps, message size limit, one-way stream
 
 **Decision.**
