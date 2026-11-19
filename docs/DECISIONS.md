@@ -16,6 +16,81 @@ to anything listed here.
 
 ---
 
+## 2026-11-19 · WebSocket connection caps, message size limit, one-way stream
+
+**Decision.**
+- `threats_ws` counts open sockets, unauthenticated and streaming alike,
+  from before `accept()` until the handler returns: at most
+  `WS_MAX_PER_IP` (20) per client IP and `WS_MAX_TOTAL` (500) in total. Over
+  either cap the handshake is refused with HTTP 429 (`send_denial_response`),
+  before the upgrade, so a refused socket holds nothing. The browser sees a
+  failed connection (1006) and the frontend retries with its doubling backoff,
+  which resets only on `ready`, so it never loops.
+- The client IP is `rate_limit.client_ip`, the same as the HTTP limits:
+  the rightmost `TRUSTED_PROXY_HOPS` entry of `X-Forwarded-For`. **The
+  per-IP cap is only per user if Render adds `X-Forwarded-For` to WebSocket
+  upgrade requests and `TRUSTED_PROXY_HOPS` is right.** Too high: a
+  client-chosen entry becomes the key and the per-IP cap can be bypassed (the
+  total cap still holds). Too low, or no header on the upgrade: every user
+  shares the proxy's address, so the per-IP cap acts as a global cap of 20.
+  Verify with the README Deployment checklist step (count the
+  `X-Forwarded-For` entries, never the IPs, on one HTTP request and one
+  WebSocket upgrade). Not yet verified on Render.
+- Each incoming message is limited to 8 KiB by uvicorn:
+  `--ws-max-size 8192` in the start command (Render setting, `build.sh`
+  comment, `e2e/serve.mjs`). A larger one closes with 1009. The limit applies
+  to the decompressed size, so permessage-deflate stays on. The app keeps its
+  own 4096-character check on the ticket message (4001).
+- After `ready` a reader task waits on `ws.receive()` beside the event queue:
+  any text or binary frame closes the stream with 1008 (`WS_POLICY_VIOLATION`).
+  The browser never sends one. Reading also stops uvicorn from pausing the
+  socket, so keepalive pongs are seen.
+- Unchanged: `WS_AUTH_TIMEOUT_SECONDS` stays 5 s, close codes 4001 and 4408,
+  the 60/minute ticket limit, the frontend.
+
+**Reason.** Measured locally (uvicorn 0.54.0, websockets 17.1, macOS, server
+file limit set to 1024, RSS sampled every 50 ms, so peaks are lower bounds),
+before the change:
+- 1,100 unauthenticated sockets from one client: 1,012 accepted, the rest
+  refused, `/health` failed while they were held, and recovered when they
+  were closed with 4408 after 5 s. Repeatable every 5 s.
+- First frame: a 15 MiB frame was buffered whole before the 4096-character
+  check (RSS +31 MB, kept). 20 sockets × 15 MiB deflate-compressed frames,
+  about 15 KiB each on the wire: peak +112 MB.
+- After `ready`: uvicorn pauses reading after one message the app does not
+  take, so a socket holds one message, and its keepalive then fails (1011,
+  about 40 s). 5 sockets × 15 MiB compressed frames held +166 MB for 40 s.
+- With `--ws-max-size 8192`: 1009 at once, peak +1 MB for the same floods.
+
+**Alternatives rejected.**
+- `--limit-concurrency`: counts WebSocket connections too, so a socket flood
+  would turn every HTTP request into a 503.
+- A shorter auth timeout: with the caps, one IP holds at most 20 slots however
+  long each lasts; an attacker reconnects, while slow mobile networks would
+  get 4408.
+- Accepting and then closing with 1013 over a cap: costs an upgrade and a
+  keepalive for a socket that is refused anyway.
+- A separate cap for unauthenticated sockets: owner decision, not added.
+- Turning off permessage-deflate: the size limit already bounds inflation, and
+  compression saves bandwidth on the event stream.
+
+Limits: counts are per process (single worker, as the rate limits). A flood
+of raw TCP connections below the WebSocket layer is not stopped by the app.
+Render's file limit and memory are not known.
+
+Tests: new `backend/tests/test_ws_limits.py` (caps, spoofed
+`X-Forwarded-For`, slot release on every exit path, 1008 for text and binary
+frames; 6 tests fail against the previous `main.py`, checked with a stash),
+`backend/tests/test_ws_max_size_uvicorn.py` (a real uvicorn with the flag:
+1009 for large and compressed frames; it does not depend on `main.py`, and
+its two limit tests fail when the flag is removed), and the frontend guard
+`threats.service.close-codes.spec.ts` (1006, 1009 and 1008 back off without
+signing out; the frontend did not change). No existing test changed.
+
+Files: `backend/main.py` (`threats_ws`, `_serve_stream`),
+`backend/rate_limit.py` (`client_ip` type hint), `frontend/e2e/serve.mjs`,
+`build.sh` (comment), `README.md`.
+
 ## 2026-11-18 · Incidents toast is a polite live region
 
 **Decision.** The incidents toast sits inside a `.toast-region` wrapper with
@@ -276,6 +351,15 @@ so an unauthenticated socket can stay open for up to 5 s
 (`WS_AUTH_TIMEOUT_SECONDS`) each, and there is no per-IP limit on WebSocket
 connections. Before, a bad ticket was refused at the handshake. Not
 addressed here; a per-IP connection cap is the likely fix if it matters.
+(Note, 2026-11-19: closed by "WebSocket connection caps, message size limit,
+one-way stream" above. Correction to the security review that reopened this
+gap: it assumed uvicorn buffers up to `ws_max_queue` (32) messages of 16 MiB
+per socket. uvicorn 0.54 with `ws="auto"` uses its sans-I/O WebSocket
+implementation, which never reads `ws_max_queue`: it pauses reading after
+each message until the app takes it, so a socket held one message, and its
+keepalive then closed it after about 40 s. The real costs were the 16 MiB
+first frame read before the 4096-character check and the missing connection
+cap.)
 
 E2E rate limit counts after this change (uvicorn access log, one pass each,
 every pass under 60 seconds): phone 36 `/auth/ws-ticket` and 34
