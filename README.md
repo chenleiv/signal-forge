@@ -402,6 +402,9 @@ SSRF, and demo mode. Security tests are mutation-checked: each check is broken o
   (never the IPs) for one real request **and for one WebSocket upgrade** (`/ws/threats`), set the variable to the
   number of proxies that append to the header, then remove the log. If the upgrade request has no entries while
   HTTP requests do, the WebSocket per-IP cap counts every user as one client: report it before relying on the cap.
+  Temporary helper (`backend/forwarded_diag.py`): set `DIAG_FORWARDED_COUNT=true` in the host's environment,
+  restart, open the app once in a browser, and read the lines starting with `[diag] forwarded-count` (at most 10:
+  kind, header present or absent, entry count, `TRUSTED_PROXY_HOPS`; never an address). Then remove the variable.
 - Never commit `backend/.env` or the local SQLite database (both are git-ignored; the database holds password hashes).
 
 ---
