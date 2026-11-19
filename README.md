@@ -275,6 +275,13 @@ The server is the security boundary. Everything the frontend does with permissio
   first WebSocket message, never in the URL, so it cannot appear in server or proxy access logs. The server answers
   `{"type":"ready"}`, closes with 4001 on a missing or invalid ticket, and with 4408 when none arrives within 5 seconds.
   The ticket carries the session's expiry (`sexp`): an open stream closes with 4001 when the 8-hour session expires.
+- **WebSocket limits:** at most 20 open sockets per client IP and 500 in total, authenticated or not; over either cap
+  the handshake is refused with `429` (the browser reports a failed connection and retries with backoff). Each
+  incoming message is limited to 8 KiB by uvicorn (`--ws-max-size 8192` in the start command; uvicorn's default is
+  16 MiB, decompressed size included): a larger one closes with 1009. The stream is one-way: any frame the client
+  sends after `ready` closes it with 1008. The per-IP cap uses the same client IP as the rate limits below, so it is
+  only per user if the proxy adds `X-Forwarded-For` to WebSocket upgrade requests and `TRUSTED_PROXY_HOPS` is right
+  (see the Deployment checklist); otherwise every user shares one count.
 - Every decode site accepts only `HS256` and only its own `typ`, so a ticket cannot be used as a session and vice versa.
   `alg: none`, forged signatures, expired tokens, and tampered claims (e.g. `role` changed to `admin`) are rejected.
 - Every request also checks the token against the **current** user record: the user must still exist, have
@@ -352,10 +359,14 @@ check, so the two cannot silently diverge.
 | Login failures: 10/minute, 100/hour | per account, across all IPs |
 | New cases: 5/minute, 30/hour | per user |
 | IP intelligence, block/unblock, console, stats | per client IP (10-50/minute depending on the route) |
+| WebSocket connections open at once: 20 | per client IP (and 500 in total) |
 
 - **Client IP** is the rightmost `X-Forwarded-For` entry added by the trusted proxies (`TRUSTED_PROXY_HOPS`,
   default 1), falling back to the socket address. Leftmost entries are client-controlled and never used, so a
-  spoofed header cannot rotate the key. Do not run uvicorn with `--forwarded-allow-ips='*'`.
+  spoofed header cannot rotate the key. Do not run uvicorn with `--forwarded-allow-ips='*'`. The WebSocket cap uses
+  the same rule on the upgrade request.
+- If `TRUSTED_PROXY_HOPS` is too high, a client-chosen entry becomes the key and per-IP limits can be bypassed; if it
+  is too low (or the proxy adds no `X-Forwarded-For`), every user shares the proxy's address and one count.
 - Every per-key limit has its own namespace, so counters can never be shared between limits.
 - Counters are **in memory, per process**: they are only correct with a single uvicorn worker.
 
@@ -384,10 +395,13 @@ SSRF, and demo mode. Security tests are mutation-checked: each check is broken o
 ### Deployment checklist
 
 - Set `JWT_SECRET` (random, at least 32 bytes: `python -c "import secrets; print(secrets.token_urlsafe(48))"`), and either leave demo mode on or set `DEMO_MODE=false` with `ADMIN_PASSWORD`.
-- Run a **single** uvicorn worker (rate-limit counters are per process).
+- Run a **single** uvicorn worker (rate-limit counters and WebSocket counts are per process).
+- Start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --ws-max-size 8192` (on Render:
+  Settings → Start Command). Without `--ws-max-size` each WebSocket message may be 16 MiB.
 - **Verify `TRUSTED_PROXY_HOPS`** on the host: temporarily log only the **number** of `X-Forwarded-For` entries
-  (never the IPs) for one real request, set the variable to the number of proxies that append to the header, then
-  remove the log.
+  (never the IPs) for one real request **and for one WebSocket upgrade** (`/ws/threats`), set the variable to the
+  number of proxies that append to the header, then remove the log. If the upgrade request has no entries while
+  HTTP requests do, the WebSocket per-IP cap counts every user as one client: report it before relying on the cap.
 - Never commit `backend/.env` or the local SQLite database (both are git-ignored; the database holds password hashes).
 
 ---

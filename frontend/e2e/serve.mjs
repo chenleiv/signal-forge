@@ -15,7 +15,8 @@ execSync('npx ng build', { cwd: frontend, stdio: 'inherit' });
 rmSync(resolve(backend, 'static'), { recursive: true, force: true });
 cpSync(resolve(frontend, 'dist/signal-forge/browser'), resolve(backend, 'static'), { recursive: true });
 
-const server = spawn(python, ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', port], {
+// --ws-max-size: the same WebSocket message limit as the Render start command.
+const server = spawn(python, ['-m', 'uvicorn', 'main:app', '--host', '127.0.0.1', '--port', port, '--ws-max-size', '8192'], {
   cwd: backend,
   stdio: 'inherit',
   env: {

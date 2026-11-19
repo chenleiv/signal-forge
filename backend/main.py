@@ -33,7 +33,7 @@ from store import (
     SECRET_KEY, DEMO_MODE, ADMIN_PASSWORD, verify_token,
 )
 import store as _store
-from rate_limit import limiter
+from rate_limit import client_ip, limiter
 from request_limits import BodySizeLimitMiddleware
 from security_headers import SecurityHeadersMiddleware
 from users import seed_users, sync_users_with_db
@@ -278,6 +278,17 @@ WS_AUTH_TIMEOUT_SECONDS = 5.0
 WS_AUTH_MAX_CHARS = 4096
 # Sent once the ticket is accepted; events follow.
 WS_READY = json.dumps({"type": "ready"})
+# Close code for any frame the client sends after its ticket: the stream is
+# one-way. The frontend treats it like any other drop (reconnect with backoff).
+WS_POLICY_VIOLATION = 1008
+# Open sockets, unauthenticated and streaming alike. Over either cap the
+# handshake is refused with HTTP 429 before the upgrade. Per IP means
+# rate_limit.client_ip, so it relies on TRUSTED_PROXY_HOPS like the HTTP limits.
+WS_MAX_PER_IP = 20
+WS_MAX_TOTAL = 500
+# client IP -> open sockets; an IP with none has no entry. Counted from before
+# accept() until the handler returns. One event loop: no locks needed.
+_ws_open_by_ip: dict[str, int] = {}
 
 
 def _ws_ticket_claims(message: dict) -> dict | None:
@@ -312,6 +323,25 @@ def _seconds_left(claims: dict) -> float:
 
 @app.websocket("/ws/threats")
 async def threats_ws(ws: WebSocket):
+    ip = client_ip(ws)
+    if _ws_open_by_ip.get(ip, 0) >= WS_MAX_PER_IP or sum(_ws_open_by_ip.values()) >= WS_MAX_TOTAL:
+        try:
+            await ws.send_denial_response(JSONResponse({"detail": "Too many open streams"}, status_code=429))
+        except RuntimeError:
+            await ws.close(code=1013)  # no denial-response support: refused with 403
+        return
+    _ws_open_by_ip[ip] = _ws_open_by_ip.get(ip, 0) + 1
+    try:
+        await _serve_stream(ws)
+    finally:
+        left = _ws_open_by_ip[ip] - 1
+        if left:
+            _ws_open_by_ip[ip] = left
+        else:
+            del _ws_open_by_ip[ip]
+
+
+async def _serve_stream(ws: WebSocket) -> None:
     # The ticket arrives as the first message, never in the URL, so it cannot
     # end up in server or proxy access logs.
     await ws.accept()
@@ -333,15 +363,26 @@ async def threats_ws(ws: WebSocket):
 
     queue: asyncio.Queue[str] = asyncio.Queue(maxsize=CLIENT_QUEUE_SIZE)
     _clients.add(queue)
+    # The client has nothing to send after its ticket. Reading anyway keeps
+    # uvicorn reading the socket (it stops while the app leaves a message
+    # untaken), and any text or binary frame ends the stream.
+    reader: asyncio.Task = asyncio.create_task(ws.receive())
+    getter: asyncio.Task | None = None
     try:
         while True:
             # Wake up no later than the session's expiry, so an idle stream
             # closes on time rather than up to WS_RECHECK_SECONDS late.
             timeout = max(0.0, min(WS_RECHECK_SECONDS, _seconds_left(claims)))
-            try:
-                message: str | None = await asyncio.wait_for(queue.get(), timeout=timeout)
-            except TimeoutError:
-                message = None
+            if getter is None:
+                getter = asyncio.create_task(queue.get())
+            done, _ = await asyncio.wait({getter, reader}, timeout=timeout, return_when=asyncio.FIRST_COMPLETED)
+            if reader in done:
+                if reader.result()["type"] != "websocket.disconnect":
+                    await ws.close(code=WS_POLICY_VIOLATION)
+                break
+            message: str | None = None
+            if getter in done:
+                message, getter = getter.result(), None
             # Same checks as every HTTP request: logout, deletion, role change
             # and password resets end an open stream too, and so does the
             # session's own expiry.
@@ -353,6 +394,9 @@ async def threats_ws(ws: WebSocket):
     except (WebSocketDisconnect, RuntimeError):
         pass
     finally:
+        reader.cancel()
+        if getter is not None:
+            getter.cancel()
         _clients.discard(queue)
 
 

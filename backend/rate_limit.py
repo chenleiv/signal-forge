@@ -6,7 +6,7 @@ from limits.storage import MemoryStorage
 from limits.strategies import FixedWindowRateLimiter
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from starlette.requests import Request
+from starlette.requests import HTTPConnection
 
 # Number of reverse proxies in front of the app that append to
 # X-Forwarded-For (Render: 1). 0 = ignore the header, use the socket address.
@@ -19,8 +19,9 @@ if TRUSTED_PROXY_HOPS < 0:
     raise RuntimeError("TRUSTED_PROXY_HOPS must be a non-negative integer")
 
 
-def client_ip(request: Request) -> str:
-    """The client address as seen by the outermost trusted proxy.
+def client_ip(request: HTTPConnection) -> str:
+    """The client address as seen by the outermost trusted proxy. Works for
+    HTTP requests and WebSocket handshakes alike (headers and client only).
 
     Each proxy APPENDS the address it received the request from, so only the
     rightmost TRUSTED_PROXY_HOPS entries are trustworthy; everything to their
