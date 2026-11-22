@@ -288,7 +288,7 @@ WS_READY = json.dumps({"type": "ready"})
 WS_POLICY_VIOLATION = 1008
 # Open sockets, unauthenticated and streaming alike. Over either cap the
 # handshake is refused with HTTP 429 before the upgrade. Per IP means
-# rate_limit.client_ip, so it relies on TRUSTED_PROXY_HOPS like the HTTP limits.
+# rate_limit.client_ip, so it relies on TRUSTED_PROXY_HOPS_WS.
 WS_MAX_PER_IP = 20
 WS_MAX_TOTAL = 500
 # client IP -> open sockets; an IP with none has no entry. Counted from before

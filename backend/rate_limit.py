@@ -9,14 +9,47 @@ from slowapi.util import get_remote_address
 from starlette.requests import HTTPConnection
 
 # Number of reverse proxies in front of the app that append to
-# X-Forwarded-For (Render: 1). 0 = ignore the header, use the socket address.
-try:
+# X-Forwarded-For, per connection type: on Render, HTTP requests and WebSocket
+# upgrades pass through a different number of proxies, so one value cannot fit
+# both (docs/DECISIONS.md). 0 = ignore the header, use the socket address.
+# Default 1: the only value that cannot be spoofed on either path.
+LEGACY_HOPS_VAR = "TRUSTED_PROXY_HOPS"
+
+
+def _hops_from_env(name: str) -> int:
     # An empty value (e.g. copied from .env.example) means "use the default".
-    TRUSTED_PROXY_HOPS = int(os.environ.get("TRUSTED_PROXY_HOPS") or "1")
-except ValueError:
-    TRUSTED_PROXY_HOPS = -1
-if TRUSTED_PROXY_HOPS < 0:
-    raise RuntimeError("TRUSTED_PROXY_HOPS must be a non-negative integer")
+    raw = os.environ.get(name, "").strip()
+    try:
+        hops = int(raw or "1")
+    except ValueError:
+        hops = -1
+    if hops < 0:
+        raise RuntimeError(f"{name} must be a non-negative integer")
+    return hops
+
+
+# The old single value is refused, never used as a fallback: a value right for
+# one path is wrong for the other, and a stale one would silently keep it.
+if os.environ.get("TRUSTED_PROXY_HOPS", "").strip():
+    raise RuntimeError(
+        f"{LEGACY_HOPS_VAR} was replaced by TRUSTED_PROXY_HOPS_HTTP and "
+        f"TRUSTED_PROXY_HOPS_WS; remove {LEGACY_HOPS_VAR} and set those two"
+    )
+
+TRUSTED_PROXY_HOPS_HTTP = _hops_from_env("TRUSTED_PROXY_HOPS_HTTP")
+TRUSTED_PROXY_HOPS_WS = _hops_from_env("TRUSTED_PROXY_HOPS_WS")
+
+
+def forwarded_entries(request: HTTPConnection) -> list[str]:
+    """Non-empty X-Forwarded-For entries over all header lines, in order.
+    A client can send its own header lines; the proxies' entries are still
+    last once all lines are joined in order."""
+    return [
+        e.strip()
+        for line in request.headers.getlist("x-forwarded-for")
+        for e in line.split(",")
+        if e.strip()
+    ]
 
 
 def client_ip(request: HTTPConnection) -> str:
@@ -24,21 +57,16 @@ def client_ip(request: HTTPConnection) -> str:
     HTTP requests and WebSocket handshakes alike (headers and client only).
 
     Each proxy APPENDS the address it received the request from, so only the
-    rightmost TRUSTED_PROXY_HOPS entries are trustworthy; everything to their
-    left is whatever the client chose to send. (uvicorn --forwarded-allow-ips='*'
-    takes the leftmost entry, which the client controls.)
+    rightmost `hops` entries are trustworthy; everything to their left is
+    whatever the client chose to send. (uvicorn --forwarded-allow-ips='*'
+    takes the leftmost entry, which the client controls.) `hops` is
+    TRUSTED_PROXY_HOPS_WS for WebSocket upgrades, else TRUSTED_PROXY_HOPS_HTTP.
     """
-    if TRUSTED_PROXY_HOPS:
-        # A client can also send its own X-Forwarded-For header lines; the
-        # proxy's entry is still last once all lines are joined in order.
-        entries = [
-            e.strip()
-            for line in request.headers.getlist("x-forwarded-for")
-            for e in line.split(",")
-            if e.strip()
-        ]
-        if len(entries) >= TRUSTED_PROXY_HOPS:
-            return entries[-TRUSTED_PROXY_HOPS]
+    hops = TRUSTED_PROXY_HOPS_WS if request.scope["type"] == "websocket" else TRUSTED_PROXY_HOPS_HTTP
+    if hops:
+        entries = forwarded_entries(request)
+        if len(entries) >= hops:
+            return entries[-hops]
     return get_remote_address(request)
 
 
