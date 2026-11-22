@@ -16,7 +16,115 @@ to anything listed here.
 
 ---
 
-## 2026-11-19 · Temporary X-Forwarded-For count diagnostic (to be removed)
+## 2026-11-22 · Separate proxy hop counts for HTTP and WebSocket
+
+**Decision.** `TRUSTED_PROXY_HOPS` is replaced by `TRUSTED_PROXY_HOPS_HTTP`
+and `TRUSTED_PROXY_HOPS_WS` (`backend/rate_limit.py`). `client_ip()` picks the
+WebSocket value when `request.scope["type"] == "websocket"`, else the HTTP
+value, and returns `entries[-hops]` or the socket address. Both default to 1.
+The server refuses to start while the old `TRUSTED_PROXY_HOPS` is set to a
+non-empty value; the message names the two new variables.
+
+**Reason.** Measured on Render with the count diagnostic (entry below): HTTP
+requests carry 2 `X-Forwarded-For` entries, WebSocket upgrades 1, and Render
+had `TRUSTED_PROXY_HOPS=3`. Honest header `[C, P]` for HTTP, `[C]` for
+WebSocket; a client that sends its own header adds X on the left:
+
+| Request | Entries | Hops | Key | Client chooses it? |
+|---|---|---|---|---|
+| HTTP honest | 2 | 3 | socket peer, shared by all | no |
+| HTTP honest | 2 | 2 | C | no |
+| HTTP honest | 2 | 1 | P, shared by everyone behind it | no |
+| WS honest | 1 | 3 or 2 | socket peer, shared by all | no |
+| WS honest | 1 | 1 | C | no |
+| HTTP forged | 3 | 3 | X | **yes** |
+| HTTP forged | 3 | 2 | C | no |
+| HTTP forged | 3 | 1 | P | no |
+| WS forged | 2 | 2 | X | **yes** |
+| WS forged | 2 | 1 | C | no |
+
+So no single value fits both: 2 makes the WebSocket key spoofable and puts
+every honest WebSocket user in one bucket; 1 is safe on both paths but keys
+HTTP on P. With 3 (the value on Render), honest users of both kinds shared one
+bucket and forged HTTP requests chose their own key.
+
+The old name is refused rather than used as a fallback: Render held 3, which
+a fallback would have silently applied to both paths.
+
+**Deploy order.**
+1. In Render, set `TRUSTED_PROXY_HOPS_HTTP=1` and `TRUSTED_PROXY_HOPS_WS=1`
+   and delete `TRUSTED_PROXY_HOPS`, before merging (old code then also uses
+   1, which is safe).
+2. Merge and deploy.
+3. Run the hash diagnostic (entry below). Only if the HTTP `entries[-2]` and
+   the WebSocket `entries[-1]` of one browser match, raise
+   `TRUSTED_PROXY_HOPS_HTTP` to 2. `TRUSTED_PROXY_HOPS_WS` stays 1.
+
+**Alternatives rejected.**
+- One value for both: wrong on one path whatever the value (table above).
+- Keeping `TRUSTED_PROXY_HOPS` as a fallback: silently keeps an unsafe value.
+- Ignoring the old name with a warning: safe, but leaves a variable that looks
+  like it still does something.
+- `uvicorn --forwarded-allow-ips='*'`: takes the leftmost, client-chosen entry.
+
+Result on Render: not recorded yet.
+
+Tests: new `backend/tests/test_proxy_hops.py` (every row above, split values,
+each value isolated to its path, env parsing, defaults, the old name refused);
+`test_rate_limit.py`, `test_ws_limits.py` and `test_env_example.py` moved to
+the new names. `test_env_example.py` skips `TRUSTED_PROXY_HOPS` (named in
+`LEGACY_VARS`): it is read only to refuse startup and is not in
+`backend/.env.example`, since a copied example with a value would refuse to
+start.
+
+Files: `backend/rate_limit.py`, `backend/main.py`, `README.md`, tests above.
+
+## 2026-11-22 · Temporary X-Forwarded-For hash diagnostic (to be removed)
+
+**TEMPORARY DIAGNOSTICS: remove `backend/forwarded_diag.py`, its two lines in
+`backend/main.py`, `backend/tests/test_forwarded_diag.py` and the diagnostic
+step in the README Deployment checklist once the check is done and its
+result recorded in the entry above.**
+
+**Decision.** Replaces the count diagnostic (entry below), same switch
+(`DIAG_FORWARDED_COUNT=true`, exact value, any case, read once at startup),
+same paths, at most 5 lines per kind and 10 per process. A line is logged
+only for a new combination of values, so one page load does not use up the
+cap:
+
+```
+[diag] forwarded-hash kind=http entries=2 pick=-2 pick_hash=3fa91c last_hash=a07e44 peer_hash=7d02be hops=1 line=1/10
+[diag] forwarded-hash kind=ws entries=1 pick=-1 pick_hash=3fa91c peer_hash=7d02be hops=1 line=2/10
+```
+
+Each hash is the first 6 hex characters of HMAC-SHA256 with a random 16-byte
+salt per process, never logged. HTTP lines hash `entries[-2]`,
+`entries[-1]` and the TCP peer; WebSocket lines hash `entries[-1]` and the
+peer. No address, header value, salt, cookie or ticket is logged.
+
+**Reason.** The counts show how many entries each path has, not which one
+is the client. Equal `pick_hash` values for HTTP and WebSocket in one browser
+show that HTTP `entries[-2]` is the same address as WebSocket `entries[-1]`,
+which `TRUSTED_PROXY_HOPS_HTTP=2` relies on. `last_hash` equal to the
+WebSocket `pick_hash` would show that the WebSocket entry is a shared proxy
+hop instead.
+
+**Alternatives rejected.**
+- Logging the addresses: personal data, and not needed for a comparison.
+- An unsalted or fixed-salt hash: IPv4 is small enough to reverse by hashing
+  every address.
+- Longer hashes: 6 characters are enough to compare a handful of addresses.
+
+Result on Render: not recorded yet.
+
+Tests: `backend/tests/test_forwarded_diag.py` replaced (off unless "true",
+exact line format, HTTP and WebSocket picks of one address match, no address,
+peer, salt, cookie, ticket or bearer value in any record, repeated values
+logged once, other paths ignored, 10-line cap shared across stacks).
+
+Files: `backend/forwarded_diag.py`, `backend/main.py`, `README.md`.
+
+## 2026-11-19 · Temporary X-Forwarded-For count diagnostic (superseded)
 
 **TEMPORARY DIAGNOSTICS: remove `backend/forwarded_diag.py`, its two lines in
 `backend/main.py`, `backend/tests/test_forwarded_diag.py` and the helper
@@ -58,7 +166,9 @@ trusted_proxy_hops=1` for both kinds. `entries` larger than
 for `kind=ws` while `kind=http` is present: the per-IP WebSocket cap counts
 all users as one client.
 
-Result on Render: not recorded yet.
+Result on Render: `kind=http entries=2`, `kind=ws entries=1`,
+`trusted_proxy_hops=3`. Led to the split hop counts and was replaced by the
+hash diagnostic (entries above, 2026-11-22).
 
 Tests: new `backend/tests/test_forwarded_diag.py` (off by default and for any
 value but "true", exact line content, no address, cookie, ticket or bearer

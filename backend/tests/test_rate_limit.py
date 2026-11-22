@@ -41,17 +41,17 @@ def test_no_header_falls_back_to_socket_address():
 
 
 def test_hops_are_configurable(monkeypatch):
-    monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS", 2)
+    monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS_HTTP", 2)
     assert client_ip(_request(["6.6.6.6, 198.51.100.1, 203.0.113.7"])) == "198.51.100.1"
 
 
 def test_fewer_entries_than_hops_falls_back_to_socket(monkeypatch):
-    monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS", 2)
+    monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS_HTTP", 2)
     assert client_ip(_request(["6.6.6.6"])) == "10.0.0.1"
 
 
 def test_zero_hops_ignores_the_header(monkeypatch):
-    monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS", 0)
+    monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS_HTTP", 0)
     assert client_ip(_request([PROXY_SEEN])) == "10.0.0.1"
 
 

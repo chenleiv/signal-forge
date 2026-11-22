@@ -280,7 +280,7 @@ The server is the security boundary. Everything the frontend does with permissio
   incoming message is limited to 8 KiB by uvicorn (`--ws-max-size 8192` in the start command; uvicorn's default is
   16 MiB, decompressed size included): a larger one closes with 1009. The stream is one-way: any frame the client
   sends after `ready` closes it with 1008. The per-IP cap uses the same client IP as the rate limits below, so it is
-  only per user if the proxy adds `X-Forwarded-For` to WebSocket upgrade requests and `TRUSTED_PROXY_HOPS` is right
+  only per user if the proxy adds `X-Forwarded-For` to WebSocket upgrade requests and `TRUSTED_PROXY_HOPS_WS` is right
   (see the Deployment checklist); otherwise every user shares one count.
 - Every decode site accepts only `HS256` and only its own `typ`, so a ticket cannot be used as a session and vice versa.
   `alg: none`, forged signatures, expired tokens, and tampered claims (e.g. `role` changed to `admin`) are rejected.
@@ -361,12 +361,22 @@ check, so the two cannot silently diverge.
 | IP intelligence, block/unblock, console, stats | per client IP (10-50/minute depending on the route) |
 | WebSocket connections open at once: 20 | per client IP (and 500 in total) |
 
-- **Client IP** is the rightmost `X-Forwarded-For` entry added by the trusted proxies (`TRUSTED_PROXY_HOPS`,
-  default 1), falling back to the socket address. Leftmost entries are client-controlled and never used, so a
-  spoofed header cannot rotate the key. Do not run uvicorn with `--forwarded-allow-ips='*'`. The WebSocket cap uses
-  the same rule on the upgrade request.
-- If `TRUSTED_PROXY_HOPS` is too high, a client-chosen entry becomes the key and per-IP limits can be bypassed; if it
-  is too low (or the proxy adds no `X-Forwarded-For`), every user shares the proxy's address and one count.
+- **Client IP** is the `X-Forwarded-For` entry at position `-hops` (counted from the right), falling back to the
+  socket address when there are fewer entries. Leftmost entries are client-controlled and never used, so a spoofed
+  header cannot rotate the key. Do not run uvicorn with `--forwarded-allow-ips='*'`.
+- `hops` differs per connection type, because on Render HTTP requests and WebSocket upgrades pass through a
+  different number of proxies (measured: HTTP 2 entries, WebSocket 1):
+
+  | Variable | Used for | Default | Render |
+  |---|---|---|---|
+  | `TRUSTED_PROXY_HOPS_HTTP` | every HTTP rate limit above | 1 | 1, then 2 once the diagnostic check confirms it |
+  | `TRUSTED_PROXY_HOPS_WS` | the WebSocket per-IP cap (upgrade request) | 1 | 1 |
+
+- Too high: a client-chosen entry becomes the key and per-IP limits can be bypassed. Too low: the key is a proxy's
+  address, so every user behind it shares one count. Fewer entries than `hops`: every user shares the socket
+  address and one count.
+- The old single `TRUSTED_PROXY_HOPS` is **refused**: the server will not start while it is set to a non-empty
+  value. No single value fits both paths (docs/DECISIONS.md).
 - Every per-key limit has its own namespace, so counters can never be shared between limits.
 - Counters are **in memory, per process**: they are only correct with a single uvicorn worker.
 
@@ -398,13 +408,21 @@ SSRF, and demo mode. Security tests are mutation-checked: each check is broken o
 - Run a **single** uvicorn worker (rate-limit counters and WebSocket counts are per process).
 - Start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --ws-max-size 8192` (on Render:
   Settings → Start Command). Without `--ws-max-size` each WebSocket message may be 16 MiB.
-- **Verify `TRUSTED_PROXY_HOPS`** on the host: temporarily log only the **number** of `X-Forwarded-For` entries
-  (never the IPs) for one real request **and for one WebSocket upgrade** (`/ws/threats`), set the variable to the
-  number of proxies that append to the header, then remove the log. If the upgrade request has no entries while
-  HTTP requests do, the WebSocket per-IP cap counts every user as one client: report it before relying on the cap.
-  Temporary helper (`backend/forwarded_diag.py`): set `DIAG_FORWARDED_COUNT=true` in the host's environment,
-  restart, open the app once in a browser, and read the lines starting with `[diag] forwarded-count` (at most 10:
-  kind, header present or absent, entry count, `TRUSTED_PROXY_HOPS`; never an address). Then remove the variable.
+- **Proxy hops.** Set `TRUSTED_PROXY_HOPS_HTTP=1` and `TRUSTED_PROXY_HOPS_WS=1`, and **delete** `TRUSTED_PROXY_HOPS`
+  before deploying (the server refuses to start while it is set). Raise only `TRUSTED_PROXY_HOPS_HTTP` to 2 after
+  the check below confirms that HTTP `entries[-2]` is the same address as the WebSocket `entries[-1]`.
+- **Verify the hops** on the host with the temporary helper (`backend/forwarded_diag.py`): set
+  `DIAG_FORWARDED_COUNT=true`, restart, open the app once in one browser and log in, then read the lines starting
+  with `[diag] forwarded-hash` (at most 10, one per new combination; never an address, only 6-character salted
+  hashes, with a salt that is random per process). Compare lines from the same run only:
+  - `kind=http pick_hash` equal to `kind=ws pick_hash`: the same address, so HTTP 2 / WebSocket 1 is right.
+  - Different: keep `TRUSTED_PROXY_HOPS_HTTP=1` and investigate.
+  - `kind=http last_hash` equal to `kind=ws pick_hash`: the WebSocket entry may be a shared proxy hop, not the
+    client. Report it before relying on the WebSocket cap.
+  - Optional: open the app from a second network (e.g. a phone on cellular). A changed `pick_hash` shows it is the
+    client's address; an unchanged one shows a shared proxy.
+
+  Then remove the variable.
 - Never commit `backend/.env` or the local SQLite database (both are git-ignored; the database holds password hashes).
 
 ---

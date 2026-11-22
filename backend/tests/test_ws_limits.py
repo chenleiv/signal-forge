@@ -28,9 +28,9 @@ async def _fake_refresh(**_) -> None:
 
 @pytest.fixture(autouse=True)
 def _one_trusted_proxy(monkeypatch):
-    # As on Render: the rightmost X-Forwarded-For entry is the client. Set
-    # here so a local .env cannot change it.
-    monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS", 1)
+    # As on Render: the rightmost X-Forwarded-For entry of a WebSocket
+    # upgrade is the client. Set here so a local .env cannot change it.
+    monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS_WS", 1)
 
 
 @pytest.fixture
