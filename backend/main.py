@@ -353,7 +353,7 @@ async def _serve_stream(ws: WebSocket) -> None:
     try:
         try:
             first = await asyncio.wait_for(ws.receive(), timeout=WS_AUTH_TIMEOUT_SECONDS)
-        except TimeoutError:
+        except asyncio.TimeoutError:  # the built-in TimeoutError only from Python 3.11
             await ws.close(code=WS_AUTH_TIMEOUT)
             return
         if first["type"] == "websocket.disconnect":
