@@ -21,6 +21,11 @@ cp -r dist/signal-forge/browser/. ../backend/static/
 
 echo "==> Installing Python dependencies..."
 cd ../backend
-pip install -r requirements.txt
+# The lock (requirements.txt) is built for Python 3.13, the version in the
+# repo's .python-version, which Render reads. Stop on any other version.
+python --version
+python -c 'import sys; sys.exit(0 if sys.version_info[:2] == (3, 13) else "Python 3.13 required (see .python-version)")'
+# Every package is pinned with hashes: pip refuses anything unlisted or altered.
+python -m pip install --require-hashes --no-deps -r requirements.txt
 
 echo "==> Build complete."
