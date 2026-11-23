@@ -1,17 +1,22 @@
 # Runs every check on each pull request and on master. A red check means:
-# do not merge.
+# do not merge. The weekly run repeats only the dependency checks
+# (python-lock, pip-audit), so a new advisory shows up without a code change.
 name: CI
 
 on:
   pull_request:
   push:
     branches: [master]
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   backend:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,13 +28,61 @@ jobs:
           python-version-file: .python-version
           cache: pip
           cache-dependency-path: backend/requirements*.txt
-      - run: pip install -r requirements-dev.txt
+      - run: python -m pip install --require-hashes --no-deps -r requirements-dev.txt
       - name: Lint (ruff)
         run: ruff check .
       - name: Tests (pytest)
         run: python -m pytest -q
 
+  # The locks are generated on macOS; Render runs Linux. Recompiling every
+  # .in file here must give the committed lock byte for byte.
+  python-lock:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - name: Install pip-tools from its lock
+        run: python -m pip install --require-hashes --no-deps -r requirements-tools.txt
+      - name: Recompile the locks
+        run: |
+          pip-compile -q requirements.in
+          pip-compile -q -o requirements-dev.txt requirements-dev.in
+          pip-compile -q -o requirements-tools.txt requirements-tools.in
+      - name: Locks match their .in files
+        run: git diff --exit-code -- requirements.txt requirements-dev.txt requirements-tools.txt
+
+  # Fails on any known advisory in the runtime lock (pip-audit has no
+  # severity filter). The dev and tools locks are only reported.
+  # pip-audit exits 1 on an advisory and on an error (fails closed).
+  pip-audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: python -m pip install --require-hashes --no-deps -r requirements-dev.txt
+      - name: Runtime lock (fails on any advisory)
+        run: pip-audit --require-hashes --disable-pip -r requirements.txt
+      - name: Dev lock (report only)
+        continue-on-error: true
+        run: pip-audit --require-hashes --disable-pip -r requirements-dev.txt
+      - name: pip-tools lock (report only)
+        continue-on-error: true
+        run: pip-audit --require-hashes --disable-pip -r requirements-tools.txt
+
   frontend:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -52,6 +105,7 @@ jobs:
         run: node scripts/check-og-tags.mjs
 
   e2e:
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -66,7 +120,7 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Backend environment
-        run: python -m venv backend/venv && backend/venv/bin/pip install -r backend/requirements.txt
+        run: python -m venv backend/venv && backend/venv/bin/python -m pip install --require-hashes --no-deps -r backend/requirements.txt
       - run: npm ci
         working-directory: frontend
       - run: npx playwright install --with-deps chromium
