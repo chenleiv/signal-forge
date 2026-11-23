@@ -369,7 +369,7 @@ check, so the two cannot silently diverge.
 
   | Variable | Used for | Default | Render |
   |---|---|---|---|
-  | `TRUSTED_PROXY_HOPS_HTTP` | every HTTP rate limit above | 1 | 1, then 2 once the diagnostic check confirms it |
+  | `TRUSTED_PROXY_HOPS_HTTP` | every HTTP rate limit above | 1 | 2 |
   | `TRUSTED_PROXY_HOPS_WS` | the WebSocket per-IP cap (upgrade request) | 1 | 1 |
 
 - Too high: a client-chosen entry becomes the key and per-IP limits can be bypassed. Too low: the key is a proxy's
@@ -408,21 +408,12 @@ SSRF, and demo mode. Security tests are mutation-checked: each check is broken o
 - Run a **single** uvicorn worker (rate-limit counters and WebSocket counts are per process).
 - Start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --ws-max-size 8192` (on Render:
   Settings → Start Command). Without `--ws-max-size` each WebSocket message may be 16 MiB.
-- **Proxy hops.** Set `TRUSTED_PROXY_HOPS_HTTP=1` and `TRUSTED_PROXY_HOPS_WS=1`, and **delete** `TRUSTED_PROXY_HOPS`
-  before deploying (the server refuses to start while it is set). Raise only `TRUSTED_PROXY_HOPS_HTTP` to 2 after
-  the check below confirms that HTTP `entries[-2]` is the same address as the WebSocket `entries[-1]`.
-- **Verify the hops** on the host with the temporary helper (`backend/forwarded_diag.py`): set
-  `DIAG_FORWARDED_COUNT=true`, restart, open the app once in one browser and log in, then read the lines starting
-  with `[diag] forwarded-hash` (at most 10, one per new combination; never an address, only 6-character salted
-  hashes, with a salt that is random per process). Compare lines from the same run only:
-  - `kind=http pick_hash` equal to `kind=ws pick_hash`: the same address, so HTTP 2 / WebSocket 1 is right.
-  - Different: keep `TRUSTED_PROXY_HOPS_HTTP=1` and investigate.
-  - `kind=http last_hash` equal to `kind=ws pick_hash`: the WebSocket entry may be a shared proxy hop, not the
-    client. Report it before relying on the WebSocket cap.
-  - Optional: open the app from a second network (e.g. a phone on cellular). A changed `pick_hash` shows it is the
-    client's address; an unchanged one shows a shared proxy.
-
-  Then remove the variable.
+- **Proxy hops.** On Render set `TRUSTED_PROXY_HOPS_HTTP=2` and `TRUSTED_PROXY_HOPS_WS=1` (measured, see
+  docs/DECISIONS.md), and **delete** `TRUSTED_PROXY_HOPS` (the server refuses to start while it is set). On another
+  host, or if Render changes its proxy chain, keep both at 1 until re-measured.
+- **Re-measuring the hops** needs the salted hash diagnostic, which was removed. Restore it from git history (last
+  present in `eede244`, the merge of PR #43) on a temporary branch, follow "How to re-measure" in docs/DECISIONS.md
+  ("Separate proxy hop counts for HTTP and WebSocket"), record the result there, then remove it again.
 - Never commit `backend/.env` or the local SQLite database (both are git-ignored; the database holds password hashes).
 
 ---
