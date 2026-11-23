@@ -208,7 +208,11 @@ async def lifespan(app: FastAPI):
 ENABLE_API_DOCS = os.environ.get("ENABLE_API_DOCS", "").strip().lower() == "true"
 _docs = {} if ENABLE_API_DOCS else {"docs_url": None, "redoc_url": None, "openapi_url": None}
 
-app = FastAPI(title="SignalForge API", lifespan=lifespan, **_docs)
+# redirect_slashes=False: with uvicorn --no-proxy-headers the scheme is the
+# one the proxy used to reach us (http), so a "/api/x/" -> "/api/x" redirect
+# would point at http://. The frontend never adds a trailing slash, so such a
+# path just gets the usual answer for an unknown path (docs/DECISIONS.md).
+app = FastAPI(title="SignalForge API", lifespan=lifespan, redirect_slashes=False, **_docs)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
