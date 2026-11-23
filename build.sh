@@ -12,6 +12,8 @@ echo "==> Building Angular frontend..."
 cd frontend
 npm ci
 npx ng build --configuration production
+# Stops the deploy if the link-preview tags or og-image.png are missing.
+node scripts/check-og-tags.mjs
 
 echo "==> Copying static files to backend..."
 mkdir -p ../backend/static

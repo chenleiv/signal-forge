@@ -48,6 +48,8 @@ jobs:
         run: npm test -- --watch=false
       - name: Production build
         run: npx ng build
+      - name: Link-preview tags in the build
+        run: node scripts/check-og-tags.mjs
 
   e2e:
     runs-on: ubuntu-latest
