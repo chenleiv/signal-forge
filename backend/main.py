@@ -462,7 +462,10 @@ _static = pathlib.Path(__file__).parent / "static"
 if _static.exists():
     from fastapi.responses import FileResponse
 
-    @app.get("/{full_path:path}")
+    # HEAD too: some link-preview crawlers send HEAD before GET, and a GET-only
+    # route answers it with 405. Not an API route, so kept out of the OpenAPI
+    # schema (two methods on one function also give a duplicate operation id).
+    @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     async def serve_spa(full_path: str):
         static_root = _static.resolve()
         try:

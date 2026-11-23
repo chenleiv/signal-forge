@@ -16,6 +16,66 @@ to anything listed here.
 
 ---
 
+## 2026-11-23 · Static link-preview tags (Open Graph, Twitter) in index.html
+
+**Decision.**
+- `frontend/src/index.html` carries static `description`, `og:*` and
+  `twitter:*` meta tags. `og:url` is `https://signalforge-api-ah1q.onrender.com/`
+  and `og:image` is the absolute URL of `/og-image.png` on the same host.
+- The image lives in `frontend/public/og-image.png`, so Angular copies it to
+  the build root and `build.sh` copies it to `backend/static/`. The source IP
+  addresses in the screenshot are covered. `og:image:width` and
+  `og:image:height` are the file's real size (2590x1442).
+- `frontend/scripts/check-og-tags.mjs` fails when a tag is missing or empty,
+  when the image URL is not the expected absolute https URL, or when the image
+  is missing, not a PNG, over 5 MB or a different size from the tags. It runs
+  after `ng build` in CI and in `build.sh`, so a deploy without the tags stops.
+- The SPA catch-all in `backend/main.py` answers HEAD as well as GET, and is
+  kept out of the OpenAPI schema (`include_in_schema=False`).
+- `backend/tests/test_og_preview.py`: with a build in `backend/static`, `/`
+  has the tags, `HEAD /` is 200, `/og-image.png` is `image/png` with the usual
+  security headers, and 60 fetches of each from one address are not limited.
+  It skips without a build, like the built-index checks.
+- Copy says what the code does: all events are simulated and no real network
+  is monitored; source IP addresses come from the AbuseIPDB blacklist when
+  that feed is available (otherwise a cached list, or in demo mode the bundled
+  Censys sample in `backend/threat_ips_sample.json`); public read-only demo
+  accounts, no sign-up.
+
+**Reason.** LinkedIn reported "We couldn't load a preview for this link".
+Link-preview crawlers do not run JavaScript, and the built `index.html` had
+only a title. Checked locally before the change: `GET /og-image.png` returned
+the SPA HTML with status 200 (the catch-all serves `index.html` for any
+missing file), and `HEAD /` returned 405 because the catch-all was GET only.
+The security headers (CSP, nosniff, X-Frame-Options, COOP, HSTS) only govern
+what a browser does with a page, so they do not stop a crawler reading the
+HTML, and nosniff is satisfied once the image is served as `image/png`. The
+per-IP rate limits apply only to decorated routes; the catch-all has none and
+the limiter has no default limits. Adding HEAD to the catch-all gave a
+duplicate OpenAPI operation id; the route is not an API route, so it is
+hidden from the schema rather than renamed.
+
+**Alternatives rejected.**
+- Server-side rendering or prerendering: a larger change for a few static
+  tags that are the same on every route.
+- Setting the tags at runtime with Angular's `Meta` service: crawlers never
+  see them.
+- Tags in `redirect-site/index.html`: that site is being deleted, and the
+  URL shared on LinkedIn is the API service.
+- Serving the image from a separate host: it would need its own deploy and
+  checks; the API service already serves static files.
+
+**Known issue.** The live demo UI itself shows real third-party IP addresses
+(from AbuseIPDB, or the Censys sample) next to randomly generated attacks,
+scores and regions. No code change for now.
+
+**Not verified.** Whether LinkedIn's crawler sends HEAD; that `DEMO_MODE` is
+on in Render (the copy says "read-only"); how long LinkedIn keeps a cached
+failed preview. The `/health` route still gives a duplicate operation id
+warning in the tests; it predates this change and was left alone.
+
+---
+
 ## 2026-11-23 · Fail closed on a short X-Forwarded-For chain; run uvicorn without proxy headers
 
 **Decision.**
