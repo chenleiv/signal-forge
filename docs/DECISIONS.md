@@ -16,6 +16,92 @@ to anything listed here.
 
 ---
 
+## 2026-11-23 · Frontend dependency updates, npm-audit in CI
+
+**Decision.**
+- Angular framework packages (`common`, `compiler`, `core`, `forms`,
+  `platform-browser`, `router`, `compiler-cli`) 21.2.24 to 21.2.26, the
+  newest 21.2.x. `@angular/build` and `@angular/cli` 21.2.24 to 21.2.31:
+  Angular publishes the CLI and build tooling on their own patch line, and
+  21.2.31 is the first that drops `piscina` 5.2.0 (critical
+  GHSA-67c8-pqhq-4rmx, `@angular/build` up to 21.2.28).
+- `dompurify` 3.4.16 to 3.5.0 with `npm update`, inside the range `jspdf`
+  allows (`^3.3.1`). `jspdf` stays at 4.2.1, the newest 4.x.
+- Dev tooling, patch and minor only: `@playwright/test` 1.65.1, `eslint`
+  10.15.0, `prettier` 3.10.1, `vitest` 4.1.12, `typescript-eslint` 8.74.0
+  (still an exact pin). `d3` and `tslib` are runtime packages with no
+  advisory, so they are left for the Dependabot PR.
+- The framework group has exact peer pins on each other, and npm refused to
+  move it while the 21.2.24 tree was in the lock (ERESOLVE). It was removed
+  and added back with `npm uninstall` and `npm install`, so npm wrote the
+  lock; it was never edited by hand.
+- `npm audit fix` (without `--force`), in its own commit, moved five
+  transitive dev packages to patch releases in range, lockfile only:
+  `fast-uri` 3.1.9, `glob` 13.0.7, `ip-address` 10.7.6, `undici` 6.29.1
+  (under `node-gyp`) and `source-map-js` 1.2.4. Full audit 23 findings
+  (21 moderate, 2 high) to 19 (all moderate).
+- CI (`.github/workflows/ci.yml`), new `npm-audit` job on the same triggers
+  as `pip-audit` (pull request, push to master, weekly Monday 06:00 UTC,
+  manual dispatch). `npm audit --omit=dev --audit-level=high` fails the job;
+  a full `npm audit` runs in a `continue-on-error` step (reported, never
+  failing). npm audit exits non-zero on a registry error too, so the job
+  fails closed; rerun it after an outage. Whether it is a required check is
+  decided in GitHub, not here.
+- Not affected, updated anyway:
+  - `@angular/router` GHSA-62vg-58rm-qff7 and GHSA-57xq-rjx2-v5xh (high,
+    fixed in 21.2.25): both are denial of service in server-side rendering.
+    This app has no SSR: no `@angular/ssr`, no `@angular/platform-server`,
+    no `provideServerRendering`; it is served as static files.
+  - `dompurify` GHSA-c6gr-qvv4-5v3f, GHSA-cg2g-xh64-v4q7,
+    GHSA-mrv2-3pqr-j5jr (low): `dompurify` is an optional dependency of
+    `jspdf` and is reachable only through `jspdf`'s `html()`. The app's only
+    `jspdf` use (`frontend/src/app/core/utils/export.utils.ts`) calls
+    `text`, `rect`, `addPage` and `save`, never `html()`.
+- Known report-only findings after the update and `npm audit fix` (19,
+  all moderate, dev tooling only; `npm audit --omit=dev` reports 0):
+  - `minimatch` GHSA-g3hv-75wg-m249 and `glob` GHSA-3g3m-2fjr-6pw4, through
+    `pacote` 21.5.1, which `@angular/cli` 21.2.31 pins. The chain flagged
+    with them: `@npmcli/package-json`, `@npmcli/run-script`, `pacote`,
+    `cacache`, `make-fetch-happen`, `@sigstore/sign`, `sigstore`,
+    `@sigstore/tuf`, `tuf-js`, `@tufjs/models`, `npm-registry-fetch`,
+    `ignore-walk`, `npm-packlist`, `@angular/cli`, and `angular-eslint`
+    21.4.0 with `@angular-eslint/builder` and `@angular-eslint/schematics`
+    (they depend on `@angular/cli`). npm's only fix is `@angular/cli` 22, a
+    major bump.
+  These run only on a developer machine or in CI (CLI, build, lint, unit
+  tests), never in the browser bundle.
+
+**Reason.** Before the update `npm audit --omit=dev` reported the two
+`@angular/router` advisories (high) and the three `dompurify` advisories
+(low); the full audit reported 41 findings, two critical (`piscina`,
+through `@angular/build`). Updating costs one patch bump per package, and
+keeps a not-affected call from depending on the app never adding SSR or
+`html()`. The audit job mirrors `pip-audit`: the runtime packages gate, the
+rest is visible without blocking.
+
+**Alternatives rejected.**
+- One 21.2.x version for every `@angular/*` package: the framework stops at
+  21.2.26 and the CLI and build packages at 21.2.31; at 21.2.26 the build
+  package would keep the critical `piscina` advisory.
+- `npm install --force` or `--legacy-peer-deps` to get past ERESOLVE: they
+  can write a lock with broken peers.
+- Deleting the lock and regenerating it: it would also move `d3`, `tslib`
+  and every other package to the newest version in range.
+- `npm audit fix --force`: installs `@angular/cli` 22, a major bump.
+- Failing CI on the full audit: the remaining findings are in dev tooling
+  and have no fix inside Angular 21.
+
+**Not verified.** That GitHub's runner reports the same audit results (the
+advisory database changes over time); that the weekly scheduled run of
+`npm-audit` starts as expected.
+
+Tests: no test changed. After each commit, from a clean `npm ci`: lint
+clean, unit tests 396 passed, production build and `check-og-tags.mjs` OK,
+`npm run e2e` phone 43, desktop 32, tablet 37 passed, none failed.
+
+Files: `frontend/package.json`, `frontend/package-lock.json`,
+`.github/workflows/ci.yml`, `docs/DECISIONS.md`.
+
 ## 2026-11-23 · Hashed Python lock, Python 3.13 guard, pip-audit in CI
 
 **Decision.**
