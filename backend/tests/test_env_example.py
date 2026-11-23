@@ -32,8 +32,10 @@ def test_every_variable_read_by_the_backend_is_in_the_example():
     sources = [*BACKEND.glob("*.py"), *BACKEND.glob("routers/*.py")]
     used = set()
     for path in sources:
-        used |= set(re.findall(r'os\.(?:environ\.get|getenv)\(\s*"([A-Z_]+)"', path.read_text()))
+        used |= set(re.findall(r'(?:os\.(?:environ\.get|getenv)|_hops_from_env)\(\s*"([A-Z_]+)"', path.read_text()))
     assert used, "found no environment variables: the pattern is wrong"
+    assert {"TRUSTED_PROXY_HOPS_HTTP", "TRUSTED_PROXY_HOPS_WS"} <= used, \
+        "proxy hop names not found: the _hops_from_env call pattern in rate_limit.py changed"
     assert LEGACY_VARS <= used, "a legacy name is no longer read: drop it from LEGACY_VARS"
     missing = _missing_from_example(used, set(_example_vars()))
     assert not missing, f"missing from .env.example: {missing}"

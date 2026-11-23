@@ -83,6 +83,17 @@ def test_the_websocket_value_does_not_apply_to_http_requests(monkeypatch):
     assert client_ip(_conn("http", HTTP_FORGED)) == P
 
 
+# ── Zero hops: the header is ignored, never indexed ───────────
+
+@pytest.mark.parametrize("kind, entries", [("http", HTTP_FORGED), ("websocket", WS_FORGED)])
+def test_zero_hops_keys_on_the_socket_address(monkeypatch, kind, entries):
+    # entries[-0] would be entries[0], the value the client wrote itself.
+    _hops(monkeypatch, http=0, ws=0)
+    key = client_ip(_conn(kind, entries))
+    assert key == PEER
+    assert key not in entries
+
+
 # ── Reading the environment ───────────────────────────────────
 
 @pytest.mark.parametrize("raw, expected", [(None, 1), ("", 1), ("  ", 1), ("0", 0), ("2", 2), (" 3 ", 3)])
