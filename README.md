@@ -101,7 +101,7 @@ signalforge/
 ### Prerequisites
 
 - Node.js 20.19+ (required by Angular 21)
-- Python 3.13 (pinned in `.python-version`; Render reads it too)
+- Python 3.13 (pinned in `.python-version`; CI and Render read it, and `build.sh` stops on any other version)
 - Angular CLI (`npm install -g @angular/cli`)
 
 ### Backend
@@ -110,7 +110,7 @@ signalforge/
 cd backend
 python3.13 -m venv venv
 source venv/bin/activate
-pip install -r requirements-dev.txt   # runtime deps + pytest and ruff
+pip install --require-hashes --no-deps -r requirements-dev.txt   # locked runtime deps + pytest, ruff, pip-audit
 
 cp .env.example .env
 # Edit .env. For local development set at least:
@@ -124,6 +124,28 @@ python3 -m uvicorn main:app --reload
 
 Backend runs on `http://localhost:8000`. API docs at `http://localhost:8000/docs`.
 Without `DATABASE_URL` everything is kept in memory; with it, migrations run on startup and a failed migration stops the server.
+
+### Updating Python dependencies
+
+`requirements.in` (runtime) and `requirements-dev.in` (tests, lint, audit) are the sources. `requirements.txt` and
+`requirements-dev.txt` are generated locks with hashes: never edit them by hand. `build.sh` installs `requirements.txt`
+with `--require-hashes`, so Render runs exactly the tested versions.
+
+```bash
+cd backend
+python3.13 -m venv ~/.venvs/sf-piptools            # outside the repo; a separate venv because pip-tools pins pip
+~/.venvs/sf-piptools/bin/python -m pip install --require-hashes --no-deps -r requirements-tools.txt
+~/.venvs/sf-piptools/bin/pip-compile requirements.in                               # after editing requirements.in
+~/.venvs/sf-piptools/bin/pip-compile -o requirements-dev.txt requirements-dev.in   # always after requirements.txt
+~/.venvs/sf-piptools/bin/pip-compile -P uvicorn requirements.in                    # upgrade one package; then rerun the
+                                                                                   # dev line with the same -P flag
+pip install --require-hashes --no-deps -r requirements-dev.txt && ruff check . && python -m pytest
+pip-audit --require-hashes --disable-pip -r requirements.txt
+```
+
+Options come from `backend/.pip-tools.toml`. Existing pins are kept unless `-P name` (or `-U`, all packages) is given.
+CI (`python-lock`) recompiles every lock on Linux and fails if the result differs from the committed file, so commit
+the `.in` file and its lock together.
 
 ### Frontend
 
@@ -166,7 +188,9 @@ cd frontend && npm test -- --watch=false          # all frontend tests (Vitest)
 cd frontend && npm run e2e                        # layout checks in a real browser (Playwright)
 ```
 
-**CI** (`.github/workflows/ci.yml`) runs all of the above on every pull request and on `master`.
+**CI** (`.github/workflows/ci.yml`) runs all of the above on every pull request and on `master`, plus two
+dependency jobs that also run weekly: `python-lock` (the locks match their `.in` files) and `pip-audit` (fails on any
+known advisory in `requirements.txt`; the dev and pip-tools locks are only reported).
 
 **Layout checks (`npm run e2e`).** Builds the frontend, serves it from the backend in demo mode (like on Render,
 no database), and checks every page on a phone (390 px), a tablet (820 px) and a desktop (1440 px), each in its own
@@ -419,9 +443,11 @@ SSRF, and demo mode. Security tests are mutation-checked: each check is broken o
 - Check after a deploy: `curl -H "X-Forwarded-For: 203.0.113.9" https://signalforge-api-ah1q.onrender.com/health`,
   then the Render logs of the API service: the access log line must not show `203.0.113.9`. The static site
   (`signal-forge-tane`) never reaches uvicorn, so check the API service URL.
-- **Known gap:** `uvicorn` is not pinned in `backend/requirements.txt` (`uvicorn[standard]`), so Render may run a
-  different version from the one tested. `tests/test_proxy_headers_uvicorn.py` and `tests/test_ws_max_size_uvicorn.py`
-  only check the installed one. Pinning belongs to the supply-chain branch.
+- `uvicorn` is pinned with every other package in `backend/requirements.txt` (0.54.0), so Render runs the version
+  that `tests/test_proxy_headers_uvicorn.py` and `tests/test_ws_max_size_uvicorn.py` checked. Upgrading it means
+  rerunning both (see Updating Python dependencies).
+- Render picks Python from `.python-version` (build log: "Using Python version 3.13.18 via .python-version"), with
+  no `PYTHON_VERSION` set. `build.sh` stops the build on any version other than 3.13.
 - **Proxy hops.** On Render set `TRUSTED_PROXY_HOPS_HTTP=2` and `TRUSTED_PROXY_HOPS_WS=1` (measured, see
   docs/DECISIONS.md), and **delete** `TRUSTED_PROXY_HOPS` (the server refuses to start while it is set). On another
   host, or if Render changes its proxy chain, keep both at 1 until re-measured.
