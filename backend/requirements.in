@@ -1,0 +1,25 @@
+# Runtime dependencies: the source of truth. requirements.txt is generated
+# from this file with hashes (see "Updating Python dependencies" in README.md);
+# never edit requirements.txt by hand.
+fastapi
+python-dotenv>=1.2.2
+# Pinned exactly in the lock: --ws-max-size and --no-proxy-headers were
+# measured against uvicorn 0.54 (docs/DECISIONS.md).
+uvicorn[standard]>=0.54.0
+httpx
+PyJWT>=2.10
+bcrypt>=4.1
+groq
+slowapi
+sqlalchemy[asyncio]>=2.0
+asyncpg
+alembic
+aiosqlite
+
+# Security floors for transitive dependencies (pip-audit, 2026-09-27).
+starlette>=1.3.1
+anyio>=4.14.2
+click>=8.3.3
+# PYSEC-2026-4320 (compromised emSign intermediates); 2026.10.19 restores the
+# unaffected emSign roots (pip-audit, 2026-11-23).
+certifi>=2026.10.19

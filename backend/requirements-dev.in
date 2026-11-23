@@ -1,0 +1,9 @@
+# Tests, lint and the dependency audit (CI and local development): the source
+# of truth for requirements-dev.txt, which is generated with hashes.
+# Runtime packages keep exactly the versions locked in requirements.txt.
+-r requirements.in
+-c requirements.txt
+pytest>=9.0.3
+pytest-asyncio
+ruff>=0.16
+pip-audit

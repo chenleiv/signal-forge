@@ -1,0 +1,7 @@
+# pip-compile options shared by local runs and the CI lock check, so both
+# produce the same file. See "Updating Python dependencies" in README.md.
+[tool.pip-tools]
+generate-hashes = true
+allow-unsafe = true
+strip-extras = true
+emit-index-url = false
