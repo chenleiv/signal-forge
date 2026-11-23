@@ -22,7 +22,8 @@ BACKEND = pathlib.Path(__file__).resolve().parents[1]
 C = "198.51.100.10"     # the real client, as the first proxy saw it
 P = "203.0.113.20"      # the entry the second HTTP proxy appends
 X = "6.6.6.6"           # a value the client wrote itself
-PEER = "10.0.0.1"       # the TCP peer (Render's proxy): one key for everyone
+PEER = "10.0.0.1"       # the TCP peer (Render's proxy), used only with hops 0
+SHORT = rate_limit.SHORT_CHAIN_KEY  # fewer entries than hops: one key for everyone
 
 HTTP_HONEST = [C, P]
 HTTP_FORGED = [X, C, P]
@@ -45,11 +46,11 @@ def _hops(monkeypatch, http: int, ws: int) -> None:
 # ── One value for both paths (what a single variable gives) ────
 
 @pytest.mark.parametrize("kind, entries, hops, expected", [
-    pytest.param("http", HTTP_HONEST, 3, PEER, id="http-honest-3-shared-peer"),
+    pytest.param("http", HTTP_HONEST, 3, SHORT, id="http-honest-3-shared-fixed-key"),
     pytest.param("http", HTTP_HONEST, 2, C, id="http-honest-2-client"),
     pytest.param("http", HTTP_HONEST, 1, P, id="http-honest-1-second-hop"),
-    pytest.param("websocket", WS_HONEST, 3, PEER, id="ws-honest-3-shared-peer"),
-    pytest.param("websocket", WS_HONEST, 2, PEER, id="ws-honest-2-shared-peer"),
+    pytest.param("websocket", WS_HONEST, 3, SHORT, id="ws-honest-3-shared-fixed-key"),
+    pytest.param("websocket", WS_HONEST, 2, SHORT, id="ws-honest-2-shared-fixed-key"),
     pytest.param("websocket", WS_HONEST, 1, C, id="ws-honest-1-client"),
     pytest.param("http", HTTP_FORGED, 3, X, id="http-forged-3-client-chooses"),
     pytest.param("http", HTTP_FORGED, 2, C, id="http-forged-2-client"),

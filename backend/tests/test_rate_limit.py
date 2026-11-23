@@ -36,8 +36,8 @@ def test_extra_client_sent_header_lines_do_not_change_the_key():
     assert client_ip(_request(["6.6.6.6", PROXY_SEEN])) == PROXY_SEEN
 
 
-def test_no_header_falls_back_to_socket_address():
-    assert client_ip(_request()) == "10.0.0.1"
+def test_no_header_uses_the_shared_fixed_key():
+    assert client_ip(_request()) == rate_limit.SHORT_CHAIN_KEY
 
 
 def test_hops_are_configurable(monkeypatch):
@@ -45,9 +45,9 @@ def test_hops_are_configurable(monkeypatch):
     assert client_ip(_request(["6.6.6.6, 198.51.100.1, 203.0.113.7"])) == "198.51.100.1"
 
 
-def test_fewer_entries_than_hops_falls_back_to_socket(monkeypatch):
+def test_fewer_entries_than_hops_uses_the_shared_fixed_key(monkeypatch):
     monkeypatch.setattr(rate_limit, "TRUSTED_PROXY_HOPS_HTTP", 2)
-    assert client_ip(_request(["6.6.6.6"])) == "10.0.0.1"
+    assert client_ip(_request(["6.6.6.6"])) == rate_limit.SHORT_CHAIN_KEY
 
 
 def test_zero_hops_ignores_the_header(monkeypatch):

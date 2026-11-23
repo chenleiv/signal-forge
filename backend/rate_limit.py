@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 import os
 
 from limits import parse_many
@@ -11,9 +12,20 @@ from starlette.requests import HTTPConnection
 # Number of reverse proxies in front of the app that append to
 # X-Forwarded-For, per connection type: on Render, HTTP requests and WebSocket
 # upgrades pass through a different number of proxies, so one value cannot fit
-# both (docs/DECISIONS.md). 0 = ignore the header, use the socket address.
-# Default 1: the only value that cannot be spoofed on either path.
+# both (docs/DECISIONS.md). 0 = ignore the header, use the socket address:
+# only safe with uvicorn --no-proxy-headers or no proxy in front, since
+# uvicorn's proxy headers handling can replace that address with a
+# client-chosen header entry. Fewer entries than hops: every client shares
+# one fixed key (fail closed). Default 1: the only value that cannot be
+# spoofed on either path.
 LEGACY_HOPS_VAR = "TRUSTED_PROXY_HOPS"
+
+# The key for a request whose X-Forwarded-For has fewer entries than `hops`.
+# Not an IP address, so it never equals a real client's key.
+SHORT_CHAIN_KEY = "xff-short-chain"
+
+_logger = logging.getLogger("uvicorn.error")
+_short_chain_warned = False
 
 
 def _hops_from_env(name: str) -> int:
@@ -52,22 +64,44 @@ def forwarded_entries(request: HTTPConnection) -> list[str]:
     ]
 
 
+def _warn_short_chain(variable: str, entries: int, hops: int) -> None:
+    """Once per process. Counts and the variable name only: never an
+    address or a header value."""
+    global _short_chain_warned
+    if _short_chain_warned:
+        return
+    _short_chain_warned = True
+    _logger.warning(
+        "X-Forwarded-For has %d entries, fewer than %s=%d; per-IP limits share one bucket",
+        entries, variable, hops,
+    )
+
+
 def client_ip(request: HTTPConnection) -> str:
     """The client address as seen by the outermost trusted proxy. Works for
     HTTP requests and WebSocket handshakes alike (headers and client only).
 
     Each proxy APPENDS the address it received the request from, so only the
     rightmost `hops` entries are trustworthy; everything to their left is
-    whatever the client chose to send. (uvicorn --forwarded-allow-ips='*'
-    takes the leftmost entry, which the client controls.) `hops` is
-    TRUSTED_PROXY_HOPS_WS for WebSocket upgrades, else TRUSTED_PROXY_HOPS_HTTP.
+    whatever the client chose to send. `hops` is TRUSTED_PROXY_HOPS_WS for
+    WebSocket upgrades, else TRUSTED_PROXY_HOPS_HTTP.
+
+    Fewer entries than `hops` (the proxy chain is not what was measured):
+    SHORT_CHAIN_KEY, one bucket for everyone, and one warning per process.
+    Never the socket address: uvicorn with FORWARDED_ALLOW_IPS='*' (as on
+    Render) replaces it with the leftmost entry, which the client controls.
+    With `hops` 0 the socket address is used; run uvicorn with
+    --no-proxy-headers so it is the real TCP peer.
     """
-    hops = TRUSTED_PROXY_HOPS_WS if request.scope["type"] == "websocket" else TRUSTED_PROXY_HOPS_HTTP
-    if hops:
-        entries = forwarded_entries(request)
-        if len(entries) >= hops:
-            return entries[-hops]
-    return get_remote_address(request)
+    websocket = request.scope["type"] == "websocket"
+    hops = TRUSTED_PROXY_HOPS_WS if websocket else TRUSTED_PROXY_HOPS_HTTP
+    if not hops:
+        return get_remote_address(request)
+    entries = forwarded_entries(request)
+    if len(entries) >= hops:
+        return entries[-hops]
+    _warn_short_chain("TRUSTED_PROXY_HOPS_WS" if websocket else "TRUSTED_PROXY_HOPS_HTTP", len(entries), hops)
+    return SHORT_CHAIN_KEY
 
 
 # Shared by main.py and the routers (a limiter defined in main.py cannot be
