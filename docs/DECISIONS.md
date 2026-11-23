@@ -56,8 +56,8 @@ a fallback would have silently applied to both paths.
    and delete `TRUSTED_PROXY_HOPS`, before merging (old code then also uses
    1, which is safe).
 2. Merge and deploy.
-3. Run the hash diagnostic (entry below). Only if the HTTP `entries[-2]` and
-   the WebSocket `entries[-1]` of one browser match, raise
+3. Run the hash diagnostic (entry below, now removed). Only if the HTTP
+   `entries[-2]` and the WebSocket `entries[-1]` of one browser match, raise
    `TRUSTED_PROXY_HOPS_HTTP` to 2. `TRUSTED_PROXY_HOPS_WS` stays 1.
 
 **Alternatives rejected.**
@@ -67,7 +67,39 @@ a fallback would have silently applied to both paths.
   like it still does something.
 - `uvicorn --forwarded-allow-ips='*'`: takes the leftmost, client-chosen entry.
 
-Result on Render: not recorded yet.
+**Result on Render** (measured with the hash diagnostic, which was then
+removed):
+- HTTP requests carry 2 `X-Forwarded-For` entries, WebSocket upgrades 1.
+- In one process, the same browser gave the same hash for the HTTP
+  `entries[-2]` and the WebSocket `entries[-1]`; the HTTP `entries[-1]` hash
+  was different.
+- From a phone on a cellular network the WebSocket hash changed, so the
+  WebSocket entry is the client address, not a shared proxy hop.
+- Render now has `TRUSTED_PROXY_HOPS_HTTP=2` and `TRUSTED_PROXY_HOPS_WS=1`.
+- Functional check passed: after 6 failed logins from the phone on cellular,
+  the phone was blocked, and a login from a desktop on Wi-Fi still worked, so
+  the login rate limit is per client address.
+
+**Open observation.** The peer address hash (`peer_hash`) was equal to the
+`pick_hash` in every line. This suggests uvicorn rewrites the client address
+from `X-Forwarded-For` (its proxy headers handling) before the app sees it.
+The pick from the header was still correct, so the result above stands, but
+the `client_ip()` fallback to the socket address may not be the TCP peer on
+Render. Not analysed yet.
+
+**How to re-measure** (after a Render proxy change or a move to another
+host):
+1. On a temporary branch, restore the diagnostic from git history. It was last
+   present in `eede244` (merge of PR #43):
+   `backend/forwarded_diag.py`, `backend/tests/test_forwarded_diag.py` and the
+   import and `app.add_middleware(ForwardedHashDiagnostic)` lines in
+   `backend/main.py`.
+2. Deploy it, set `DIAG_FORWARDED_COUNT=true` and restart.
+3. Open the app in one browser and log in, then again from a second network
+   (a phone on cellular). Read the `[diag] forwarded-hash` lines and compare
+   hashes within one process only (the salt is random per process).
+4. Set the hop values from the result, delete `DIAG_FORWARDED_COUNT`, record
+   the result here and remove the diagnostic again.
 
 Tests: new `backend/tests/test_proxy_hops.py` (every row above, split values,
 each value isolated to its path, env parsing, defaults, the old name refused);
@@ -79,12 +111,12 @@ start.
 
 Files: `backend/rate_limit.py`, `backend/main.py`, `README.md`, tests above.
 
-## 2026-11-22 · Temporary X-Forwarded-For hash diagnostic (to be removed)
+## 2026-11-22 · Temporary X-Forwarded-For hash diagnostic (removed)
 
-**TEMPORARY DIAGNOSTICS: remove `backend/forwarded_diag.py`, its two lines in
-`backend/main.py`, `backend/tests/test_forwarded_diag.py` and the diagnostic
-step in the README Deployment checklist once the check is done and its
-result recorded in the entry above.**
+**Removed** after the Render check: `backend/forwarded_diag.py`, its lines in
+`backend/main.py`, `backend/tests/test_forwarded_diag.py` and the README
+step are gone, and `DIAG_FORWARDED_COUNT` no longer does anything. The result
+and the re-measure procedure are in the entry above. Kept as history.
 
 **Decision.** Replaces the count diagnostic (entry below), same switch
 (`DIAG_FORWARDED_COUNT=true`, exact value, any case, read once at startup),
@@ -115,7 +147,7 @@ hop instead.
   every address.
 - Longer hashes: 6 characters are enough to compare a handful of addresses.
 
-Result on Render: not recorded yet.
+Result on Render: recorded in the entry above.
 
 Tests: `backend/tests/test_forwarded_diag.py` replaced (off unless "true",
 exact line format, HTTP and WebSocket picks of one address match, no address,
@@ -124,12 +156,10 @@ logged once, other paths ignored, 10-line cap shared across stacks).
 
 Files: `backend/forwarded_diag.py`, `backend/main.py`, `README.md`.
 
-## 2026-11-19 · Temporary X-Forwarded-For count diagnostic (superseded)
+## 2026-11-19 · Temporary X-Forwarded-For count diagnostic (superseded, removed)
 
-**TEMPORARY DIAGNOSTICS: remove `backend/forwarded_diag.py`, its two lines in
-`backend/main.py`, `backend/tests/test_forwarded_diag.py` and the helper
-sentence in the README Deployment checklist once the Render check below is
-done and recorded here.**
+**Removed**: replaced by the hash diagnostic (entry above), which was itself
+removed after the Render check. Kept as history.
 
 **Decision.** An ASGI middleware, outermost in `main.py`, off unless
 `DIAG_FORWARDED_COUNT=true` (exact value, any case; read once at startup).
