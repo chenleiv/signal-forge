@@ -361,9 +361,12 @@ check, so the two cannot silently diverge.
 | IP intelligence, block/unblock, console, stats | per client IP (10-50/minute depending on the route) |
 | WebSocket connections open at once: 20 | per client IP (and 500 in total) |
 
-- **Client IP** is the `X-Forwarded-For` entry at position `-hops` (counted from the right), falling back to the
-  socket address when there are fewer entries. Leftmost entries are client-controlled and never used, so a spoofed
-  header cannot rotate the key. Do not run uvicorn with `--forwarded-allow-ips='*'`.
+- **Client IP** is the `X-Forwarded-For` entry at position `-hops` (counted from the right). Leftmost entries are
+  client-controlled and never used, so a spoofed header cannot rotate the key.
+- Start uvicorn with `--no-proxy-headers`. Render's uvicorn trusts every peer (`FORWARDED_ALLOW_IPS='*'`), so without
+  the flag uvicorn replaces the client address with the leftmost, client-chosen entry: measured on Render, a forged
+  `X-Forwarded-For: 203.0.113.9` showed up in the access log as `203.0.113.9:0`. With the flag the client address is
+  the real TCP peer (Render's proxy) and the access log shows that instead of a client IP.
 - `hops` differs per connection type, because on Render HTTP requests and WebSocket upgrades pass through a
   different number of proxies (measured: HTTP 2 entries, WebSocket 1):
 
@@ -373,8 +376,10 @@ check, so the two cannot silently diverge.
   | `TRUSTED_PROXY_HOPS_WS` | the WebSocket per-IP cap (upgrade request) | 1 | 1 |
 
 - Too high: a client-chosen entry becomes the key and per-IP limits can be bypassed. Too low: the key is a proxy's
-  address, so every user behind it shares one count. Fewer entries than `hops`: every user shares the socket
-  address and one count.
+  address, so every user behind it shares one count. Fewer entries than `hops`: the limit fails closed, every user
+  shares one fixed key (`xff-short-chain`) and one count, and the server logs one warning per process (counts only,
+  never an address). `0` ignores the header and uses the connection address, which is only safe with
+  `--no-proxy-headers` or no proxy in front.
 - The old single `TRUSTED_PROXY_HOPS` is **refused**: the server will not start while it is set to a non-empty
   value. No single value fits both paths (docs/DECISIONS.md).
 - Every per-key limit has its own namespace, so counters can never be shared between limits.
@@ -406,8 +411,17 @@ SSRF, and demo mode. Security tests are mutation-checked: each check is broken o
 
 - Set `JWT_SECRET` (random, at least 32 bytes: `python -c "import secrets; print(secrets.token_urlsafe(48))"`), and either leave demo mode on or set `DEMO_MODE=false` with `ADMIN_PASSWORD`.
 - Run a **single** uvicorn worker (rate-limit counters and WebSocket counts are per process).
-- Start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --ws-max-size 8192` (on Render:
-  Settings → Start Command). Without `--ws-max-size` each WebSocket message may be 16 MiB.
+- Start command: `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --ws-max-size 8192 --no-proxy-headers`
+  (on Render: the API service, Settings → Start Command). Without `--ws-max-size` each WebSocket message may be
+  16 MiB. Without `--no-proxy-headers` the client address uvicorn reports is client-chosen (Client IP above).
+  FastAPI's trailing-slash redirect is off (`redirect_slashes=False` in `main.py`): with the flag it would point at
+  `http://`. A path with a trailing slash gets 404, or the SPA when `backend/static` exists.
+- Check after a deploy: `curl -H "X-Forwarded-For: 203.0.113.9" https://signalforge-api-ah1q.onrender.com/health`,
+  then the Render logs of the API service: the access log line must not show `203.0.113.9`. The static site
+  (`signal-forge-tane`) never reaches uvicorn, so check the API service URL.
+- **Known gap:** `uvicorn` is not pinned in `backend/requirements.txt` (`uvicorn[standard]`), so Render may run a
+  different version from the one tested. `tests/test_proxy_headers_uvicorn.py` and `tests/test_ws_max_size_uvicorn.py`
+  only check the installed one. Pinning belongs to the supply-chain branch.
 - **Proxy hops.** On Render set `TRUSTED_PROXY_HOPS_HTTP=2` and `TRUSTED_PROXY_HOPS_WS=1` (measured, see
   docs/DECISIONS.md), and **delete** `TRUSTED_PROXY_HOPS` (the server refuses to start while it is set). On another
   host, or if Render changes its proxy chain, keep both at 1 until re-measured.

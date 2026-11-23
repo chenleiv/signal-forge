@@ -16,6 +16,97 @@ to anything listed here.
 
 ---
 
+## 2026-11-23 · Fail closed on a short X-Forwarded-For chain; run uvicorn without proxy headers
+
+**Decision.**
+- `client_ip()` (`backend/rate_limit.py`): when `hops` is above 0 and
+  `X-Forwarded-For` has fewer entries than `hops`, it returns the fixed key
+  `xff-short-chain` instead of the socket address. Every such request shares
+  one bucket. One warning per process names the variable and the two counts,
+  never an address or a header value. With `hops` 0 the socket address is
+  still used.
+- The Render start command (API service), `build.sh` and
+  `frontend/e2e/serve.mjs` pass `--no-proxy-headers`:
+  `cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT --ws-max-size 8192 --no-proxy-headers`
+- `FastAPI(..., redirect_slashes=False)` in `backend/main.py`.
+
+**Reason.** Measured on Render: a request with a forged
+`X-Forwarded-For: 203.0.113.9` showed `203.0.113.9:0` as the client in
+uvicorn's access log. So Render's uvicorn trusts every peer
+(`FORWARDED_ALLOW_IPS='*'`), uvicorn replaces `scope["client"]` with the
+leftmost, client-chosen entry, and Render appends its own entries to a forged
+header instead of replacing it. The socket address was therefore not a safe
+fallback: on a short chain, a client chose its own key.
+
+From the uvicorn 0.54 source (`middleware/proxy_headers.py`, `config.py`):
+`--no-proxy-headers` only skips `ProxyHeadersMiddleware`, which changes
+exactly `scope["client"]` (from `X-Forwarded-For`; with `*` the leftmost
+entry, port 0 for a bare IP) and `scope["scheme"]` (from `X-Forwarded-Proto`).
+Nothing else in the app depends on them: `is_https()` falls back to the last
+`X-Forwarded-Proto` value, so HSTS stays; the cookie `Secure` flag comes from
+`ENV`; CORS reads the `Origin` header; the WebSocket handler only uses
+`client_ip()`.
+
+The one exception was FastAPI's trailing-slash redirect. Checked locally
+with a real uvicorn and an app routed like `main.py` without
+`backend/static`: with the flag, `GET /api/stats/` redirected to
+`http://signalforge-api-ah1q.onrender.com/api/stats`, without it to
+`https://`. So slash redirects are switched off. The frontend never calls an
+API path ending in a slash, and no e2e test, README example or script does.
+With `backend/static` present the SPA catch-all answers such GET paths
+anyway, so no redirect happens there. Verified on Render: the API service
+has `backend/static` (`GET /login` on it returns the SPA HTML), and it
+redirects HTTP to HTTPS (`http://signalforge-api-ah1q.onrender.com/health`
+returns 301 to https). Slash redirects stay off so the app never builds an
+`http://` URL itself.
+
+Effect: the access log shows Render's proxy instead of a client address,
+forged or real.
+
+**Deploy order.**
+1. Merge and deploy the code. Check: login works, the LIVE chip goes live,
+   and the API service logs have no `xff-short-chain` warning (one would mean
+   the hop values no longer match the chain). Forged addresses still appear
+   in the access log until step 2.
+2. Set the start command above on the API service and redeploy. Check:
+   `curl -H "X-Forwarded-For: 203.0.113.9" https://signalforge-api-ah1q.onrender.com/health`,
+   and the access log line no longer shows `203.0.113.9`;
+   `curl -sI https://signalforge-api-ah1q.onrender.com/health` still has
+   `Strict-Transport-Security`; login and the LIVE chip work. The static site
+   (`signal-forge-tane`) never reaches uvicorn and cannot be used for this
+   check.
+
+Rollback: step 2, remove the flag from the start command and redeploy;
+step 1, revert the merge or roll back the deploy on Render.
+
+**Alternatives rejected.**
+- Keep the socket fallback: client-chosen under `FORWARDED_ALLOW_IPS='*'`.
+- Narrow `FORWARDED_ALLOW_IPS` to Render's proxy addresses: no stable
+  published range is known (not verified).
+- Refuse the request (429) on a short chain: locks everyone out if the
+  chain changes; one shared bucket degrades instead.
+- Keep slash redirects with the flag: they would point at `http://`.
+- A startup warning when `hops` is 0 on a real host: the app cannot tell
+  whether a proxy is in front; with the flag, 0 is coarse but not spoofable.
+
+**Known gap.** `uvicorn` is not pinned (`backend/requirements.txt`), so Render
+may run another version than the one tested; pinning belongs to the
+supply-chain branch.
+
+Tests: new `backend/tests/test_client_ip_fail_closed.py` (fixed key on both
+paths, peer ignored, hops 0 unchanged, one warning, no address in it), new
+`backend/tests/test_proxy_headers_uvicorn.py` (real uvicorn with
+`FORWARDED_ALLOW_IPS='*'`, with and without the flag: client, scheme, access
+log, no slash redirect, where the default redirect would point; app in
+`backend/tests/_scope_echo_app.py`), new `backend/tests/test_slash_redirects.py`
+(real app). Changed with approval: two cases in `test_rate_limit.py` and three
+rows in `test_proxy_hops.py` that expected the socket address on a short
+chain.
+
+Files: `backend/rate_limit.py`, `backend/main.py`, `build.sh`,
+`frontend/e2e/serve.mjs`, `backend/.env.example` (comments), `README.md`,
+tests above.
+
 ## 2026-11-22 · Separate proxy hop counts for HTTP and WebSocket
 
 **Decision.** `TRUSTED_PROXY_HOPS` is replaced by `TRUSTED_PROXY_HOPS_HTTP`
@@ -80,12 +171,13 @@ removed):
   the phone was blocked, and a login from a desktop on Wi-Fi still worked, so
   the login rate limit is per client address.
 
-**Open observation.** The peer address hash (`peer_hash`) was equal to the
-`pick_hash` in every line. This suggests uvicorn rewrites the client address
-from `X-Forwarded-For` (its proxy headers handling) before the app sees it.
-The pick from the header was still correct, so the result above stands, but
-the `client_ip()` fallback to the socket address may not be the TCP peer on
-Render. Not analysed yet.
+**Observation (resolved 2026-11-23).** The peer address hash (`peer_hash`)
+was equal to the `pick_hash` in every line. Explained by a later measurement:
+Render's uvicorn trusts every peer and puts the leftmost entry into the
+client address. For an honest `[C, P]` request that entry is C, the same
+address as the pick. The pick from the header was correct, so the result
+above stands; the socket fallback was not. Fixed in the entry above (fixed
+key on a short chain, `--no-proxy-headers`).
 
 **How to re-measure** (after a Render proxy change or a move to another
 host):
