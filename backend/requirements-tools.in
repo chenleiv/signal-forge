@@ -1,0 +1,4 @@
+# pip-tools for regenerating the Python locks, kept in its own venv (it pins
+# pip). requirements-tools.txt is generated from this file with hashes; CI
+# installs it to check that the locks match their .in files.
+pip-tools==7.7.0
