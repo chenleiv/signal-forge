@@ -35,6 +35,11 @@ to anything listed here.
   move it while the 21.2.24 tree was in the lock (ERESOLVE). It was removed
   and added back with `npm uninstall` and `npm install`, so npm wrote the
   lock; it was never edited by hand.
+- `npm audit fix` (without `--force`), in its own commit, moved five
+  transitive dev packages to patch releases in range, lockfile only:
+  `fast-uri` 3.1.9, `glob` 13.0.7, `ip-address` 10.7.6, `undici` 6.29.1
+  (under `node-gyp`) and `source-map-js` 1.2.4. Full audit 23 findings
+  (21 moderate, 2 high) to 19 (all moderate).
 - CI (`.github/workflows/ci.yml`), new `npm-audit` job on the same triggers
   as `pip-audit` (pull request, push to master, weekly Monday 06:00 UTC,
   manual dispatch). `npm audit --omit=dev --audit-level=high` fails the job;
@@ -52,20 +57,17 @@ to anything listed here.
     `jspdf` and is reachable only through `jspdf`'s `html()`. The app's only
     `jspdf` use (`frontend/src/app/core/utils/export.utils.ts`) calls
     `text`, `rect`, `addPage` and `save`, never `html()`.
-- Known report-only findings after the update (dev tooling only, none in
-  the runtime packages; `npm audit --omit=dev` reports 0):
-  - `pacote` 21.5.1, pinned by `@angular/cli` 21.2.31, and its chain:
-    `glob`, `minimatch`, `cacache`, `make-fetch-happen`, `sigstore`,
-    `@sigstore/tuf`, `tuf-js`, `@tufjs/models`, `ignore-walk`,
-    `npm-packlist`, `npm-registry-fetch`, `@npmcli/package-json`,
-    `@npmcli/run-script` (moderate). npm's only fix is `@angular/cli` 22, a
-    major bump; `angular-eslint` 21.4.0 is listed because it depends on
-    `@angular/cli`.
-  - `undici` 6.29.0 under `pacote`'s `node-gyp` (high).
-  - `source-map-js` 1.2.1 under `postcss`, `sass` and `jsdom` (high).
-  - `fast-uri` 3.1.8 under `@angular-devkit/core` (moderate).
-  - `ip-address` 10.7.2 under `@modelcontextprotocol/sdk` and `socks`
-    (moderate).
+- Known report-only findings after the update and `npm audit fix` (19,
+  all moderate, dev tooling only; `npm audit --omit=dev` reports 0):
+  - `minimatch` GHSA-g3hv-75wg-m249 and `glob` GHSA-3g3m-2fjr-6pw4, through
+    `pacote` 21.5.1, which `@angular/cli` 21.2.31 pins. The chain flagged
+    with them: `@npmcli/package-json`, `@npmcli/run-script`, `pacote`,
+    `cacache`, `make-fetch-happen`, `@sigstore/sign`, `sigstore`,
+    `@sigstore/tuf`, `tuf-js`, `@tufjs/models`, `npm-registry-fetch`,
+    `ignore-walk`, `npm-packlist`, `@angular/cli`, and `angular-eslint`
+    21.4.0 with `@angular-eslint/builder` and `@angular-eslint/schematics`
+    (they depend on `@angular/cli`). npm's only fix is `@angular/cli` 22, a
+    major bump.
   These run only on a developer machine or in CI (CLI, build, lint, unit
   tests), never in the browser bundle.
 
@@ -92,6 +94,10 @@ rest is visible without blocking.
 **Not verified.** That GitHub's runner reports the same audit results (the
 advisory database changes over time); that the weekly scheduled run of
 `npm-audit` starts as expected.
+
+Tests: no test changed. After each commit, from a clean `npm ci`: lint
+clean, unit tests 396 passed, production build and `check-og-tags.mjs` OK,
+`npm run e2e` phone 43, desktop 32, tablet 37 passed, none failed.
 
 Files: `frontend/package.json`, `frontend/package-lock.json`,
 `.github/workflows/ci.yml`, `docs/DECISIONS.md`.
