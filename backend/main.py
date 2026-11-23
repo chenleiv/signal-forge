@@ -23,7 +23,7 @@ from sqlalchemy import text as _sa_text
 from starlette.requests import Request
 
 from database import AsyncSessionLocal, engine as db_engine
-from forwarded_diag import ForwardedCountDiagnostic  # TEMPORARY DIAGNOSTIC
+from forwarded_diag import ForwardedHashDiagnostic  # TEMPORARY DIAGNOSTIC
 from db_ops import db_get_rules, db_get_behavioral_settings
 import simulation
 from simulation import (
@@ -255,7 +255,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 # TEMPORARY DIAGNOSTIC, remove after the Render check (forwarded_diag.py):
 # off unless DIAG_FORWARDED_COUNT=true. Outermost, so it sees every request.
-app.add_middleware(ForwardedCountDiagnostic)
+app.add_middleware(ForwardedHashDiagnostic)
 
 app.include_router(auth.router)
 app.include_router(ip.router)
@@ -288,7 +288,7 @@ WS_READY = json.dumps({"type": "ready"})
 WS_POLICY_VIOLATION = 1008
 # Open sockets, unauthenticated and streaming alike. Over either cap the
 # handshake is refused with HTTP 429 before the upgrade. Per IP means
-# rate_limit.client_ip, so it relies on TRUSTED_PROXY_HOPS like the HTTP limits.
+# rate_limit.client_ip, so it relies on TRUSTED_PROXY_HOPS_WS.
 WS_MAX_PER_IP = 20
 WS_MAX_TOTAL = 500
 # client IP -> open sockets; an IP with none has no entry. Counted from before
@@ -353,7 +353,7 @@ async def _serve_stream(ws: WebSocket) -> None:
     try:
         try:
             first = await asyncio.wait_for(ws.receive(), timeout=WS_AUTH_TIMEOUT_SECONDS)
-        except TimeoutError:
+        except asyncio.TimeoutError:  # the built-in TimeoutError only from Python 3.11
             await ws.close(code=WS_AUTH_TIMEOUT)
             return
         if first["type"] == "websocket.disconnect":

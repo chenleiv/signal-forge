@@ -1,26 +1,35 @@
-"""TEMPORARY DIAGNOSTIC: remove once TRUSTED_PROXY_HOPS is verified on Render.
-See docs/DECISIONS.md, "Temporary X-Forwarded-For count diagnostic".
+"""TEMPORARY DIAGNOSTIC: remove once TRUSTED_PROXY_HOPS_HTTP is verified on
+Render. See docs/DECISIONS.md, "Temporary X-Forwarded-For hash diagnostic".
 
 Off unless DIAG_FORWARDED_COUNT=true (set in the Render dashboard, then
-removed). When on, it logs one short line for each of the first
-MAX_PER_KIND API requests (/api/, /auth/) and the first MAX_PER_KIND
-WebSocket upgrades to /ws/threats: the request kind, whether X-Forwarded-For
-is present, how many comma-separated entries it has (counted like
-rate_limit.client_ip), and TRUSTED_PROXY_HOPS. At most MAX_LINES lines per
-process.
+removed). When on, it logs one short line per NEW combination of values for
+API requests (/api/, /auth/) and for WebSocket upgrades to /ws/threats, at
+most MAX_PER_KIND lines per kind and MAX_LINES lines per process.
 
-It never logs an address, a header value, a ticket, a cookie or any other
-header: the line is built only from fixed words and integers.
+Each line carries the number of X-Forwarded-For entries (counted like
+rate_limit.client_ip) and short salted hashes of:
+- HTTP: entries[-2] (pick_hash), entries[-1] (last_hash) and the TCP peer;
+- WebSocket: entries[-1] (pick_hash) and the TCP peer.
+Equal hashes in one process mean equal addresses, so the HTTP and WebSocket
+picks can be compared without logging either one.
+
+It never logs an address, a header value, the salt, a ticket, a cookie or any
+other header: the line is built only from fixed words, integers and hashes.
+The salt is random per process, so hashes cannot be compared across restarts
+and cannot be reversed by hashing candidate addresses offline.
 
 /health is not counted: Render's own health checker may call it without
-going through the proxy, which would log a misleading "absent".
+going through the proxy.
 """
 from __future__ import annotations
 
+import hashlib
+import hmac
 import logging
 import os
-from typing import Iterable
+import secrets
 
+from starlette.requests import HTTPConnection
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 import rate_limit
@@ -30,11 +39,18 @@ MAX_PER_KIND = 5
 MAX_LINES = 2 * MAX_PER_KIND        # 10 per process
 HTTP_PREFIXES = ("/api/", "/auth/")
 WS_PATH = "/ws/threats"
+HASH_CHARS = 6
+NONE = "none"
 
 logger = logging.getLogger("uvicorn.error")
 
-# Lines logged so far in this process, per kind.
+# Random per process; never logged.
+_SALT = secrets.token_bytes(16)
+
+# Lines logged so far in this process, per kind, and the value tuples (hashes
+# only) already logged, so repeated identical requests do not use up the cap.
 _logged: dict[str, int] = {"http": 0, "ws": 0}
+_seen: dict[str, set[tuple]] = {"http": set(), "ws": set()}
 
 
 def enabled() -> bool:
@@ -42,13 +58,11 @@ def enabled() -> bool:
     return os.environ.get(ENV_FLAG, "").strip().lower() == "true"
 
 
-def forwarded_entry_count(headers: Iterable[tuple[bytes, bytes]]) -> int | None:
-    """Non-empty comma-separated X-Forwarded-For entries over all header
-    lines; None when the header is absent. Only the count leaves here."""
-    lines = [value for name, value in headers if name.lower() == b"x-forwarded-for"]
-    if not lines:
-        return None
-    return sum(1 for line in lines for entry in line.split(b",") if entry.strip())
+def short_hash(value: str | None) -> str:
+    """First HASH_CHARS hex chars of HMAC-SHA256(_SALT, value); "none" if absent."""
+    if value is None:
+        return NONE
+    return hmac.new(_SALT, value.encode(), hashlib.sha256).hexdigest()[:HASH_CHARS]
 
 
 def _kind(scope: Scope) -> str | None:
@@ -60,20 +74,40 @@ def _kind(scope: Scope) -> str | None:
     return None
 
 
+def _entry(entries: list[str], index: int) -> str | None:
+    return entries[index] if len(entries) >= -index else None
+
+
 def record(scope: Scope) -> None:
     kind = _kind(scope)
     if kind is None or _logged[kind] >= MAX_PER_KIND:
         return
+    entries = rate_limit.forwarded_entries(HTTPConnection(scope))
+    client = scope.get("client")
+    peer_hash = short_hash(client[0] if client else None)
+    if kind == "http":
+        values = (len(entries), short_hash(_entry(entries, -2)), short_hash(_entry(entries, -1)), peer_hash)
+    else:
+        values = (len(entries), short_hash(_entry(entries, -1)), peer_hash)
+    if values in _seen[kind]:
+        return
+    _seen[kind].add(values)
     _logged[kind] += 1
-    count = forwarded_entry_count(scope.get("headers", []))
-    logger.info(
-        "[diag] forwarded-count kind=%s xff=%s entries=%d trusted_proxy_hops=%d line=%d/%d",
-        kind, "present" if count is not None else "absent", count or 0,
-        rate_limit.TRUSTED_PROXY_HOPS, sum(_logged.values()), MAX_LINES,
-    )
+    line = (sum(_logged.values()), MAX_LINES)
+    if kind == "http":
+        logger.info(
+            "[diag] forwarded-hash kind=http entries=%d pick=-2 pick_hash=%s last_hash=%s peer_hash=%s "
+            "hops=%d line=%d/%d",
+            *values, rate_limit.TRUSTED_PROXY_HOPS_HTTP, *line,
+        )
+    else:
+        logger.info(
+            "[diag] forwarded-hash kind=ws entries=%d pick=-1 pick_hash=%s peer_hash=%s hops=%d line=%d/%d",
+            *values, rate_limit.TRUSTED_PROXY_HOPS_WS, *line,
+        )
 
 
-class ForwardedCountDiagnostic:
+class ForwardedHashDiagnostic:
     """TEMPORARY. Pass-through ASGI middleware; reads the flag once, when the
     middleware stack is built at startup."""
 
