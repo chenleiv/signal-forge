@@ -78,6 +78,27 @@ async def _stream_loop() -> None:
         await asyncio.sleep(random.uniform(*STREAM_INTERVAL))
 
 
+MIGRATION_ERROR_MAX_CHARS = 300
+# "module.ExceptionName: message", the line a traceback ends its error with.
+_EXCEPTION_LINE_RE = re.compile(r"[A-Za-z_][\w.]*: ")
+# user:password@ in a connection URL.
+_URL_CREDENTIALS_RE = re.compile(r"://[^/\s:@]+:[^@\s]+@")
+
+
+def _migration_error_summary(stderr: str) -> str:
+    """One short line from Alembic's stderr: the last exception line (else the
+    last line), credentials in a URL masked, capped in length. The full output
+    is a traceback that can carry SQL, parameters and connection details."""
+    lines = [line.strip() for line in (stderr or "").splitlines() if line.strip()]
+    if not lines:
+        return "no error output"
+    picked = next((line for line in reversed(lines) if _EXCEPTION_LINE_RE.match(line)), lines[-1])
+    picked = _URL_CREDENTIALS_RE.sub("://***@", picked)
+    if len(picked) > MIGRATION_ERROR_MAX_CHARS:
+        picked = picked[:MIGRATION_ERROR_MAX_CHARS] + "..."
+    return picked
+
+
 def _run_migrations() -> None:
     """Bring the schema up to date, or refuse to start: running on an unknown
     schema risks failed requests and bad writes."""
@@ -86,7 +107,7 @@ def _run_migrations() -> None:
         capture_output=True, text=True, cwd=pathlib.Path(__file__).parent
     )
     if result.returncode != 0:
-        print(f"[Alembic] Migration failed:\n{result.stderr}")
+        print(f"[Alembic] Migration failed: {_migration_error_summary(result.stderr)}")
         raise RuntimeError("Database migration failed, refusing to start")
     print("[Alembic] Migrations up to date")
 
