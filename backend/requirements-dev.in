@@ -5,5 +5,5 @@
 -c requirements.txt
 pytest>=9.2.0
 pytest-asyncio
-ruff>=0.16
+ruff>=0.17.6
 pip-audit
