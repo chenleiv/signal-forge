@@ -407,7 +407,9 @@ forged or real.
    `curl -sI https://signalforge-api-ah1q.onrender.com/health` still has
    `Strict-Transport-Security`; login and the LIVE chip work. The static site
    (`signal-forge-tane`) never reaches uvicorn and cannot be used for this
-   check.
+   check. (Note, 2026-11-24: the static site was deleted in Render, and its
+   redirect page `redirect-site/index.html` and CORS origin were removed;
+   see "Small hardening" at the top.)
 
 Rollback: step 2, remove the flag from the start command and redeploy;
 step 1, revert the merge or roll back the deploy on Render.

@@ -441,8 +441,7 @@ SSRF, and demo mode. Security tests are mutation-checked: each check is broken o
   FastAPI's trailing-slash redirect is off (`redirect_slashes=False` in `main.py`): with the flag it would point at
   `http://`. A path with a trailing slash gets 404, or the SPA when `backend/static` exists.
 - Check after a deploy: `curl -H "X-Forwarded-For: 203.0.113.9" https://signalforge-api-ah1q.onrender.com/health`,
-  then the Render logs of the API service: the access log line must not show `203.0.113.9`. The static site
-  (`signal-forge-tane`) never reaches uvicorn, so check the API service URL.
+  then the Render logs of the API service: the access log line must not show `203.0.113.9`.
 - `uvicorn` is pinned with every other package in `backend/requirements.txt` (0.54.0), so Render runs the version
   that `tests/test_proxy_headers_uvicorn.py` and `tests/test_ws_max_size_uvicorn.py` checked. Upgrading it means
   rerunning both (see Updating Python dependencies).
