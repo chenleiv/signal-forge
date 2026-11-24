@@ -6,6 +6,7 @@ import json
 import os
 import pathlib
 import random
+import re
 import subprocess
 import sys
 import time
@@ -77,6 +78,27 @@ async def _stream_loop() -> None:
         await asyncio.sleep(random.uniform(*STREAM_INTERVAL))
 
 
+MIGRATION_ERROR_MAX_CHARS = 300
+# "module.ExceptionName: message", the line a traceback ends its error with.
+_EXCEPTION_LINE_RE = re.compile(r"[A-Za-z_][\w.]*: ")
+# user:password@ in a connection URL.
+_URL_CREDENTIALS_RE = re.compile(r"://[^/\s:@]+:[^@\s]+@")
+
+
+def _migration_error_summary(stderr: str) -> str:
+    """One short line from Alembic's stderr: the last exception line (else the
+    last line), credentials in a URL masked, capped in length. The full output
+    is a traceback that can carry SQL, parameters and connection details."""
+    lines = [line.strip() for line in (stderr or "").splitlines() if line.strip()]
+    if not lines:
+        return "no error output"
+    picked = next((line for line in reversed(lines) if _EXCEPTION_LINE_RE.match(line)), lines[-1])
+    picked = _URL_CREDENTIALS_RE.sub("://***@", picked)
+    if len(picked) > MIGRATION_ERROR_MAX_CHARS:
+        picked = picked[:MIGRATION_ERROR_MAX_CHARS] + "..."
+    return picked
+
+
 def _run_migrations() -> None:
     """Bring the schema up to date, or refuse to start: running on an unknown
     schema risks failed requests and bad writes."""
@@ -85,7 +107,7 @@ def _run_migrations() -> None:
         capture_output=True, text=True, cwd=pathlib.Path(__file__).parent
     )
     if result.returncode != 0:
-        print(f"[Alembic] Migration failed:\n{result.stderr}")
+        print(f"[Alembic] Migration failed: {_migration_error_summary(result.stderr)}")
         raise RuntimeError("Database migration failed, refusing to start")
     print("[Alembic] Migrations up to date")
 
@@ -228,6 +250,31 @@ ALLOWED_WRITES = {
 }
 
 
+# ── CORS ──────────────────────────────────────────────────────
+# The deployed SPA is served by this app (same origin), so it needs no CORS.
+# Cross-origin callers, such as `ng serve` on another port in development,
+# are listed in CORS_ORIGINS: exact origins, comma-separated. Unset or empty
+# means none. A malformed entry stops startup rather than being skipped.
+_ORIGIN_RE = re.compile(r"https?://[a-z0-9.-]+(:[0-9]{1,5})?")
+# Exactly what the routes and the frontend use.
+CORS_METHODS = ["GET", "POST", "PATCH", "DELETE"]
+CORS_HEADERS = ["Content-Type"]
+
+
+def _cors_origins(raw: str) -> list[str]:
+    origins = [entry.strip() for entry in raw.split(",") if entry.strip()]
+    for origin in origins:
+        if not _ORIGIN_RE.fullmatch(origin):
+            raise RuntimeError(
+                "CORS_ORIGINS: each entry must be an exact origin such as https://example.com "
+                "(lowercase, no path, no trailing slash, no wildcard)"
+            )
+    return origins
+
+
+CORS_ORIGINS = _cors_origins(os.environ.get("CORS_ORIGINS", ""))
+
+
 # Registered before CORSMiddleware so CORS stays the outer layer and
 # 403 responses still carry CORS headers.
 @app.middleware("http")
@@ -246,15 +293,19 @@ app.add_middleware(BodySizeLimitMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://signal-forge-tane.onrender.com", "http://localhost:4200"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_methods=CORS_METHODS,
+    allow_headers=CORS_HEADERS,
     allow_credentials=True,
 )
 
 # Added last, so it is the outermost layer: every response gets the headers,
-# including CORS preflights, demo-mode 403s and rate-limit 429s.
-app.add_middleware(SecurityHeadersMiddleware)
+# including CORS preflights, demo-mode 403s and rate-limit 429s. Only the exact
+# docs paths skip the CSP, and only while the docs are served.
+_docs_paths = frozenset(
+    path for path in (app.docs_url, app.docs_url and app.swagger_ui_oauth2_redirect_url, app.redoc_url) if path
+)
+app.add_middleware(SecurityHeadersMiddleware, docs_paths=_docs_paths)
 
 app.include_router(auth.router)
 app.include_router(ip.router)
@@ -452,7 +503,10 @@ async def get_threat_feed(_=Depends(verify_token)):
     return dict(simulation.FEED_STATUS)
 
 
-@app.api_route("/health", methods=["GET", "HEAD"])
+# HEAD for uptime monitors. Two methods on one route give both the same
+# OpenAPI operation id, so HEAD is its own route, kept out of the schema.
+@app.get("/health")
+@app.head("/health", include_in_schema=False)
 def health():
     return {"status": "ok"}
 

@@ -16,6 +16,83 @@ to anything listed here.
 
 ---
 
+## 2026-11-24 · Small hardening: docs CSP, CORS from the environment, ipinfo header, short migration errors
+
+**Decision.**
+- CSP for the API docs (`backend/security_headers.py`): only the exact paths
+  `/docs`, `/docs/oauth2-redirect` and `/redoc` skip the CSP, and only while
+  `ENABLE_API_DOCS` is on; `main.py` passes them to the middleware. Before,
+  any path starting with `/docs` or `/redoc` skipped it, also with the docs
+  off, when those paths fall through to the SPA `index.html`.
+- CORS (`backend/main.py`): origins come from `CORS_ORIGINS`, exact origins
+  separated by commas, none when unset. An entry that is not
+  `http(s)://host[:port]` in lowercase (a wildcard, a path, a trailing slash)
+  stops startup. Methods `GET`, `POST`, `PATCH`, `DELETE`; the only allowed
+  header is `Content-Type`. The hardcoded static-site origin and
+  `http://localhost:4200` are gone. Production serves the SPA from the API
+  service (same origin) and needs no value; local `ng serve` sets
+  `CORS_ORIGINS=http://localhost:4200` in `backend/.env`, and the test suite
+  sets the same value in `tests/conftest.py`.
+- `create_user` (`backend/user_admin.py`) hashes with `run_in_threadpool`, like
+  `update_user`, and checks the username again after the await: 409 if the
+  same name was created meanwhile.
+- ipinfo (`backend/simulation.py`): the token is sent as
+  `Authorization: Bearer`, not as a `token` query parameter. A failed lookup,
+  silent before, logs `ipinfo lookup failed for <ip>: <exception type>
+  status=<code>`, never the exception text, URL or body.
+- A failed migration prints one line: the last `module.Error: message` line
+  of Alembic's stderr (or its last line), URL credentials masked, at most 300
+  characters. Startup still stops.
+- `/health` is two routes: GET in the OpenAPI schema, HEAD hidden, so the
+  schema no longer has a duplicate operation id.
+- `httpx2` in `requirements-dev.in` only: Starlette 1.10's `TestClient`
+  prefers it and warns when it falls back to `httpx`. The app's outgoing calls
+  keep `httpx`; the runtime lock did not change. The dev lock gained `httpx2`
+  2.16.2, `httpcore2` 2.16.2 and `truststore` 0.10.5.
+- The Render static site `signal-forge-tane` was deleted by the owner;
+  `redirect-site/index.html` and the README sentence about it are removed.
+
+**Reason.** Findings L1, L2, L4, L6 and L9 of the last security review. With
+the docs off, `/docs` served the SPA with no CSP. CORS allowed every method and
+header and an origin that no longer exists. bcrypt (about 0.25 s at 12 rounds)
+on the event loop paused every request and stream during a user creation. A
+token in the URL ends up in request lines and in httpx error messages. A
+migration traceback can carry SQL, bound parameters and connection details.
+
+FastAPI 0.164 and 0.165 (checked in the installed 0.165.0 source and the
+release notes, 2026-11-24): 0.164.0 added `max_body_size` (app, router or
+route), unlimited unless set; 0.165.0 added `form_limits` (`max_fields`,
+`max_files`, `max_part_size`; the parser keeps Starlette's defaults of 1000,
+1000 and 1 MiB). Neither is configured here: `BodySizeLimitMiddleware` already
+answers 413 over 64 KB for every request, and the app has no form or file
+parameters and does not install `python-multipart`, so forms are never parsed.
+
+**Alternatives rejected.**
+- Keeping the docs prefix rule: it left SPA pages without a CSP in production.
+- Origins as a JSON list, or skipping a malformed origin with a warning: a
+  typo would silently drop an origin, or an `*` would allow every site.
+- `allow_headers=["*"]`: the frontend sends no custom header.
+- Filtering the `StarletteDeprecationWarning` in pytest: hides the cause.
+- Moving the app's own HTTP calls to `httpx2`: not needed for the warning.
+- FastAPI's `max_body_size` instead of our middleware: no gain while ours is
+  stricter and already tested; revisit if a route ever needs a larger body.
+
+**Not verified.** That ipinfo accepts Bearer authentication for this token on
+Render (documented by ipinfo, not called from here; see the PR checks); the
+first Render deploy with `CORS_ORIGINS` unset.
+
+Tests: new `test_docs_csp.py`, `test_cors.py`, `test_create_user_threadpool.py`,
+`test_ipinfo_token.py`, `test_migration_output.py`, `test_health_route.py`;
+each was checked to fail against the previous code. Changed with approval:
+`tests/conftest.py` sets `CORS_ORIGINS`, so the existing preflight test keeps
+its origin. No existing test changed.
+
+Files: `backend/security_headers.py`, `backend/main.py`, `backend/user_admin.py`,
+`backend/simulation.py`, `backend/requirements-dev.in`,
+`backend/requirements-dev.txt`, `backend/tests/conftest.py`, `README.md`,
+`redirect-site/index.html` (deleted), tests above. `backend/.env.example`
+(`CORS_ORIGINS=`) is added by the owner.
+
 ## 2026-11-24 · GitHub Actions pinned to commit SHAs, Dependabot version updates, Node 26
 
 **Decision.**
@@ -407,7 +484,9 @@ forged or real.
    `curl -sI https://signalforge-api-ah1q.onrender.com/health` still has
    `Strict-Transport-Security`; login and the LIVE chip work. The static site
    (`signal-forge-tane`) never reaches uvicorn and cannot be used for this
-   check.
+   check. (Note, 2026-11-24: the static site was deleted in Render, and its
+   redirect page `redirect-site/index.html` and CORS origin were removed;
+   see "Small hardening" at the top.)
 
 Rollback: step 2, remove the flag from the start command and redeploy;
 step 1, revert the merge or roll back the deploy on Render.

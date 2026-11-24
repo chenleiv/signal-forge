@@ -13,6 +13,8 @@ for _key in ("DATABASE_URL", "ABUSEIPDB_API_KEY", "IPINFO_TOKEN", "GROQ_API_KEY"
 os.environ["ENV"] = "development"
 os.environ["DEMO_MODE"] = "false"
 os.environ["ADMIN_PASSWORD"] = "test-admin-password"
+# The cross-origin dev frontend, the one CORS origin the suite allows.
+os.environ["CORS_ORIGINS"] = "http://localhost:4200"
 
 import users  # noqa: E402
 
