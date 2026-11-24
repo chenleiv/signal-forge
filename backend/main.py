@@ -6,6 +6,7 @@ import json
 import os
 import pathlib
 import random
+import re
 import subprocess
 import sys
 import time
@@ -228,6 +229,31 @@ ALLOWED_WRITES = {
 }
 
 
+# ── CORS ──────────────────────────────────────────────────────
+# The deployed SPA is served by this app (same origin), so it needs no CORS.
+# Cross-origin callers, such as `ng serve` on another port in development,
+# are listed in CORS_ORIGINS: exact origins, comma-separated. Unset or empty
+# means none. A malformed entry stops startup rather than being skipped.
+_ORIGIN_RE = re.compile(r"https?://[a-z0-9.-]+(:[0-9]{1,5})?")
+# Exactly what the routes and the frontend use.
+CORS_METHODS = ["GET", "POST", "PATCH", "DELETE"]
+CORS_HEADERS = ["Content-Type"]
+
+
+def _cors_origins(raw: str) -> list[str]:
+    origins = [entry.strip() for entry in raw.split(",") if entry.strip()]
+    for origin in origins:
+        if not _ORIGIN_RE.fullmatch(origin):
+            raise RuntimeError(
+                "CORS_ORIGINS: each entry must be an exact origin such as https://example.com "
+                "(lowercase, no path, no trailing slash, no wildcard)"
+            )
+    return origins
+
+
+CORS_ORIGINS = _cors_origins(os.environ.get("CORS_ORIGINS", ""))
+
+
 # Registered before CORSMiddleware so CORS stays the outer layer and
 # 403 responses still carry CORS headers.
 @app.middleware("http")
@@ -246,9 +272,9 @@ app.add_middleware(BodySizeLimitMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://signal-forge-tane.onrender.com", "http://localhost:4200"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=CORS_ORIGINS,
+    allow_methods=CORS_METHODS,
+    allow_headers=CORS_HEADERS,
     allow_credentials=True,
 )
 
