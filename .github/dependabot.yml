@@ -1,0 +1,108 @@
+# Weekly version updates, Monday 05:00 UTC, an hour before the weekly audit
+# run in ci.yml. See docs/DECISIONS.md ("GitHub Actions pinned to commit
+# SHAs, Dependabot version updates").
+#
+# A package goes into the first group whose patterns match it, so the
+# specific groups come before the catch-all ones. A package in no group gets
+# its own pull request.
+#
+# cooldown: a new release is proposed only after it has been public for a
+# few days, so a compromised release that is pulled quickly never reaches a
+# pull request. Security updates are not delayed.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
+    groups:
+      # Minor and patch releases together; each major gets its own PR.
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
+    cooldown:
+      default-days: 3
+    groups:
+      # Must move together. The framework packages pin each other exactly
+      # (@angular/core needs the same @angular/compiler); @angular/build and
+      # @angular/cli follow their own 21.2.x patch line; angular-eslint needs
+      # @angular/cli < 22; @angular/build needs typescript >=5.9 <6.0;
+      # ngx-echarts majors follow Angular majors.
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-eslint/*"
+          - angular-eslint
+          - ngx-echarts
+          - typescript
+      # typescript-eslint needs eslint ^8.57 || ^9 || ^10 and typescript
+      # <6.1; @eslint/js follows eslint.
+      lint:
+        patterns:
+          - eslint
+          - "@eslint/*"
+          - typescript-eslint
+          - "@typescript-eslint/*"
+      # Everything else, minor and patch only. Majors get their own PR.
+      npm-minor-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    ignore:
+      # Angular majors need `ng update` and its code migrations, which
+      # Dependabot cannot run. Move them by hand, together with typescript.
+      - dependency-name: "@angular/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@angular-eslint/*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: angular-eslint
+        update-types: ["version-update:semver-major"]
+      - dependency-name: ngx-echarts
+        update-types: ["version-update:semver-major"]
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+
+  # The locks are pip-compile output with hashes. Dependabot recompiles them
+  # with the options in each file's header (--generate-hashes included),
+  # requirements.in before requirements-dev.in, on the Python version in the
+  # root .python-version. The python-lock job in ci.yml fails any PR whose
+  # lock differs from a fresh pip-compile with the repo's pip-tools.
+  - package-ecosystem: pip
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "05:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 3
+    groups:
+      # pytest-asyncio declares a pytest range.
+      pytest:
+        patterns:
+          - pytest
+          - pytest-asyncio
+      # Not uvicorn: the start command flags (--ws-max-size,
+      # --no-proxy-headers) were measured against 0.54, so a bump needs a
+      # re-check. Not pip-tools: it writes the locks, so it moves alone.
+      pip-minor-patch:
+        patterns: ["*"]
+        exclude-patterns:
+          - uvicorn
+          - pip-tools
+        update-types: [minor, patch]
