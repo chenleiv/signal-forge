@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import logging
 import os
 import pathlib
 import random
@@ -18,6 +19,8 @@ from store import _ip_coords, is_public_ip, record_backfill
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 IPINFO_TOKEN      = os.environ.get("IPINFO_TOKEN", "")
+
+logger = logging.getLogger("uvicorn.error")
 
 THREAT_IPS: dict[str, int] = {}
 
@@ -100,9 +103,11 @@ def _save_cache(ip_scores: dict[str, int]) -> None:
 
 async def fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
     try:
+        # The token goes in a header, never in the URL, so it stays out of
+        # request lines and error messages (httpx puts the URL in them).
         r = await client.get(
             f"https://ipinfo.io/{ip}/json",
-            params={"token": IPINFO_TOKEN},
+            headers={"Authorization": f"Bearer {IPINFO_TOKEN}"},
             timeout=5.0,
         )
         r.raise_for_status()   # an error body (quota, bad token) is not geolocation data
@@ -126,7 +131,13 @@ async def fetch_ipinfo(client: httpx.AsyncClient, ip: str) -> Optional[dict]:
             result["lat"] = lat
             result["lng"] = lng
         return result
-    except Exception:
+    except Exception as exc:
+        # Type and status only: an exception's text can carry the URL or the
+        # response body, and neither belongs in a log line.
+        response = getattr(exc, "response", None)
+        status = getattr(response, "status_code", None)
+        logger.warning("ipinfo lookup failed for %s: %s status=%s", ip, type(exc).__name__,
+                       status if isinstance(status, int) else None)
         return None
 
 
