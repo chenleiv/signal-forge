@@ -16,6 +16,113 @@ to anything listed here.
 
 ---
 
+## 2026-11-24 · GitHub Actions pinned to commit SHAs, Dependabot version updates, Node 26
+
+**Decision.**
+- Every `uses:` in `.github/workflows/` names a full 40-character commit SHA
+  with the exact tag in a trailing comment, for example
+  `actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0`.
+  Each SHA was resolved from the tag with the GitHub API
+  (`git/matching-refs/tags`, all lightweight tags pointing at commits) and
+  checked to be the same commit as the floating major tag (`v4`, `v5`) the
+  workflow used before, so behaviour did not change: `checkout` v4.4.0,
+  `setup-python` v5.6.0, `setup-node` v4.4.0. Newer majors are left to
+  Dependabot. There is no CodeQL or other workflow.
+- `.github/dependabot.yml`: weekly version updates, Monday 05:00 UTC (an hour
+  before the weekly audit run), for `github-actions` at `/` (limit 5), `npm`
+  at `/frontend` (limit 5) and `pip` at `/backend` (limit 3), each with a
+  3-day `cooldown` (version updates only; security updates are not delayed).
+  Dependabot updates the SHA and the tag comment together.
+- Groups. A package goes into the first matching group, so specific groups
+  come first:
+  - npm `angular`: `@angular/*`, `@angular-eslint/*`, `angular-eslint`,
+    `ngx-echarts`, `typescript`. The framework packages pin each other
+    exactly; `@angular/build` and `@angular/cli` follow their own patch line
+    (21.2.31, framework 21.2.26, see the 2026-11-23 entry); `angular-eslint`
+    21.4.0 needs `@angular/cli` below 22; `@angular/build` needs `typescript`
+    `>=5.9 <6.0`; `ngx-echarts` majors follow Angular majors. Majors of all
+    of these are ignored: an Angular major needs `ng update` and its code
+    migrations.
+  - npm `lint`: `eslint`, `@eslint/*`, `typescript-eslint`,
+    `@typescript-eslint/*` (`typescript-eslint` 8.74.0 needs eslint
+    `^8.57 || ^9 || ^10` and typescript `<6.1`).
+  - npm `npm-minor-patch`: everything else, minor and patch; majors alone.
+  - pip `pytest`: `pytest`, `pytest-asyncio`.
+  - pip `pip-minor-patch`: everything else, minor and patch, except
+    `uvicorn` (the start command flags were measured against 0.54, so a bump
+    needs a re-check) and `pip-tools` (it writes the locks), which always
+    get their own pull request.
+  - actions `actions`: minor and patch; majors alone.
+  - `vitest` and `@vitest/*` must match, but only `vitest` is a direct
+    dependency, so no group is needed.
+- Node 26 in a root `.node-version`. CI reads it (`node-version-file`),
+  replacing a hardcoded 22 in three jobs; the README says 26. Before, CI used
+  22, the README said 20.19+, and `build.sh` and Render set nothing (no
+  `.node-version`, `.nvmrc` or `engines`), so Render used its own default.
+- `ci.yml` concurrency group `ci-<event name>-<ref>`, with
+  `cancel-in-progress` only for `pull_request`. There was no group before.
+  With the event name in the group, a scheduled or manual run never cancels
+  or queues behind a pull request run.
+
+**Reason.** A tag can be moved to other code by whoever controls the action's
+repository; a commit SHA cannot. The comment keeps the version readable and
+lets Dependabot propose the next one, so pinning does not freeze the actions.
+Grouping stops Dependabot from opening a pull request for one package of a
+set that must match, which fails `npm ci` with ERESOLVE (as happened by hand
+on 2026-11-23).
+
+Dependabot and the hashed pip-compile lock, checked in the dependabot-core
+source (`python/lib/dependabot/python/file_updater/pip_compile_file_updater.rb`,
+`shared_file_fetcher.rb`, `language_version_manager.rb`, `language.rb`,
+`python/helpers/requirements.txt`) on 2026-11-24:
+- It runs `pip-compile` with the options read from each lock:
+  `--generate-hashes` when the file has `--hash=sha`, `--allow-unsafe`,
+  `--strip-extras`, `--no-emit-index-url`, `--output-file`, and merges
+  `.pip-tools.toml`. It passes `-P <package>==<version>`, so only that
+  package moves. Hashes are regenerated, not dropped; the original header is
+  kept.
+- It compiles `requirements.in` before `requirements-dev.in` (ordered by the
+  `-r` reference), so the dev lock is compiled against the new
+  `requirements.txt` that its `-c requirements.txt` reads.
+- It reads `.python-version` from `/backend` or, failing that, the repository
+  root, and has 3.13.18 preinstalled.
+- It runs its own pip-tools, 7.6.1, not the repo's 7.7.0. The 7.7.0 release
+  notes list no change to the output format (bug fixes, Python 3.15, pip
+  26.2.2 minimum).
+- The `python-lock` job recompiles every lock with the repo's pip-tools and
+  fails on any difference, and every install uses `--require-hashes`, so a
+  wrong lock from Dependabot cannot merge.
+
+**Alternatives rejected.**
+- Pinning to tags only: a tag can be repointed.
+- SHA without a comment: unreadable, and Dependabot cannot show the version.
+- A scheduled workflow that runs `pip-compile --upgrade` and opens a pull
+  request: needs a write-scoped token and loses Dependabot's release notes;
+  not needed, since Dependabot handles the pip-compile lock.
+- One group per ecosystem for everything: a single failing package would
+  block every other update.
+- Letting Dependabot propose Angular majors: it cannot run the `ng update`
+  migrations.
+- Node 24: Node 26 is the current LTS and inside Angular 21's engines
+  (`^20.19 || ^22.12 || >=24`); lint, unit tests and the build passed on it.
+- `cancel-in-progress` for every event: a push to master or the weekly audit
+  could be cut off.
+
+**Not verified.** That Render reads the root `.node-version` for this Python
+service (check the build log after the deploy); that a real Dependabot pip
+pull request passes `python-lock` byte for byte; that Dependabot's npm honours
+`packageManager: npm@11.12.1` when it writes the lock; how a group update
+behaves when one member has a peer conflict; the GitHub runner on Node 26
+(checked locally on 26.0.0 only).
+
+Tests: no test changed. `actionlint` clean on `ci.yml`. Backend: `ruff check
+.` clean, 941 passed (`--ignore=tests/test_env_example.py`). Frontend on Node
+26.0.0 with the existing `node_modules`: lint clean, 396 unit tests passed,
+production build and `check-og-tags.mjs` OK. e2e not run.
+
+Files: `.github/workflows/ci.yml`, `.github/dependabot.yml`, `.node-version`,
+`README.md`, `docs/DECISIONS.md`.
+
 ## 2026-11-23 · Frontend dependency updates, npm-audit in CI
 
 **Decision.**
