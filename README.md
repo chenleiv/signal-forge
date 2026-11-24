@@ -100,7 +100,7 @@ signalforge/
 
 ### Prerequisites
 
-- Node.js 20.19+ (required by Angular 21)
+- Node.js 26 (pinned in `.node-version`; CI reads it, and Render should too: check the build log after a deploy)
 - Python 3.13 (pinned in `.python-version`; CI and Render read it, and `build.sh` stops on any other version)
 - Angular CLI (`npm install -g @angular/cli`)
 
