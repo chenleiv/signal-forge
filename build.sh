@@ -10,6 +10,9 @@ set -e
 
 echo "==> Building Angular frontend..."
 cd frontend
+# A Python service on Render may ignore .node-version, so the build log
+# records which Node actually ran (expected 26.x, see the repo's .node-version).
+echo "Node.js version: $(node --version)"
 npm ci
 npx ng build --configuration production
 # Stops the deploy if the link-preview tags or og-image.png are missing.
