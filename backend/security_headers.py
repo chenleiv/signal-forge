@@ -39,9 +39,6 @@ COMMON_HEADERS = {
 }
 
 API_PREFIXES = ("/api/", "/auth/", "/health")
-# Swagger UI and ReDoc load scripts from a CDN and run inline code. They are
-# served only when ENABLE_API_DOCS is on (local development), without a CSP.
-DOCS_PATHS = ("/docs", "/redoc")
 
 
 def is_https(scope: Scope) -> bool:
@@ -55,8 +52,15 @@ def is_https(scope: Scope) -> bool:
 
 
 class SecurityHeadersMiddleware:
-    def __init__(self, app: ASGIApp) -> None:
+    """docs_paths: the exact paths served without a CSP. Swagger UI and ReDoc
+    load scripts from a CDN and run inline code; main.py passes their paths
+    only when ENABLE_API_DOCS is on (local development). Any other path,
+    these included when the docs are off (they fall through to the SPA),
+    gets a CSP."""
+
+    def __init__(self, app: ASGIApp, docs_paths: frozenset[str] = frozenset()) -> None:
         self.app = app
+        self.docs_paths = docs_paths
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -65,7 +69,7 @@ class SecurityHeadersMiddleware:
 
         path: str = scope.get("path", "")
         api = path.startswith(API_PREFIXES)
-        docs = path.startswith(DOCS_PATHS)
+        docs = path in self.docs_paths
         https = is_https(scope)
 
         async def send_with_headers(message: Message) -> None:

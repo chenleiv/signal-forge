@@ -253,8 +253,12 @@ app.add_middleware(
 )
 
 # Added last, so it is the outermost layer: every response gets the headers,
-# including CORS preflights, demo-mode 403s and rate-limit 429s.
-app.add_middleware(SecurityHeadersMiddleware)
+# including CORS preflights, demo-mode 403s and rate-limit 429s. Only the exact
+# docs paths skip the CSP, and only while the docs are served.
+_docs_paths = frozenset(
+    path for path in (app.docs_url, app.docs_url and app.swagger_ui_oauth2_redirect_url, app.redoc_url) if path
+)
+app.add_middleware(SecurityHeadersMiddleware, docs_paths=_docs_paths)
 
 app.include_router(auth.router)
 app.include_router(ip.router)
