@@ -5,5 +5,8 @@
 -c requirements.txt
 pytest>=9.2.0
 pytest-asyncio
+# Starlette's TestClient prefers httpx2 and warns when it falls back to httpx.
+# Tests only: the app's own outgoing calls keep using httpx (requirements.in).
+httpx2
 ruff>=0.17.6
 pip-audit
