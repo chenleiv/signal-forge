@@ -116,6 +116,8 @@ cp .env.example .env
 # Edit .env. For local development set at least:
 #   JWT_SECRET=<random, at least 32 bytes>   (required, startup fails without it)
 #   ENV=development                     (allows the session cookie over plain HTTP)
+#   CORS_ORIGINS=http://localhost:4200  (ng serve calls the API on port 8000, another origin;
+#                                        exact origins, comma-separated; unset allows none)
 # Leave DEMO_MODE unset (demo mode is ON by default), or set DEMO_MODE=false
 # together with ADMIN_PASSWORD (12-72 bytes) to run with writes enabled.
 
