@@ -79,11 +79,18 @@ async def create_user(db: Optional[AsyncSession], body: dict) -> dict:
     if get_user_record(username) is not None:
         raise HTTPException(status_code=409, detail="Username is already taken")
 
+    # bcrypt is CPU-bound: keep it off the event loop (as update_user does).
+    password_hash = await run_in_threadpool(hash_password, password)
+    # The await let other requests run: the same username may have been
+    # created meanwhile, and the first one must not be overwritten.
+    if get_user_record(username) is not None:
+        raise HTTPException(status_code=409, detail="Username is already taken")
+
     user = {
         "username": username,
         "display_name": display_name.strip(),
         "role": role,
-        "password_hash": hash_password(password),
+        "password_hash": password_hash,
         "session_key": new_session_key(),
         "deleted_at": None,
     }
