@@ -3,7 +3,7 @@
 # Runtime packages keep exactly the versions locked in requirements.txt.
 -r requirements.in
 -c requirements.txt
-pytest>=9.0.3
+pytest>=9.2.0
 pytest-asyncio
 ruff>=0.16
 pip-audit
