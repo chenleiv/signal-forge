@@ -503,7 +503,10 @@ async def get_threat_feed(_=Depends(verify_token)):
     return dict(simulation.FEED_STATUS)
 
 
-@app.api_route("/health", methods=["GET", "HEAD"])
+# HEAD for uptime monitors. Two methods on one route give both the same
+# OpenAPI operation id, so HEAD is its own route, kept out of the schema.
+@app.get("/health")
+@app.head("/health", include_in_schema=False)
 def health():
     return {"status": "ok"}
 
