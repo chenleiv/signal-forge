@@ -107,9 +107,9 @@ add requests.
 counts on Render; that the browser reads `Retry-After` under the local
 `ng serve` CORS setup (it is not a CORS-safelisted header and is not in
 `expose_headers`; the client then falls back to 60 s; production is same
-origin). Frontend checks ran with the installed `node_modules` (vitest
-4.1.12, jsdom 28.1.0), not the versions master now asks for (vitest ^5.1.1,
-jsdom ^31.0.1), which need `npm ci`.
+origin). Frontend lint, unit tests, production build and `npm run e2e` were
+run again after `npm ci` on vitest 5.1.1 and jsdom 31.0.1: all passed, no
+spec changed.
 
 Tests: new `backend/tests/test_retry_after.py`, `test_read_limits.py`,
 `test_groq_timeout.py`, `test_external_quotas.py`, and frontend
