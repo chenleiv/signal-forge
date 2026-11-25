@@ -1,4 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Subscription, timer, switchMap, catchError, filter, EMPTY } from 'rxjs';
 import { ThreatStoreService } from './threat-store.service';
 import { ThreatEvent } from '../../shared/models/threat.models';
@@ -12,9 +13,14 @@ export type StreamStatus = 'connected' | 'reconnecting' | 'disconnected' | 'sign
 
 /** Stats polling interval. */
 export const STATS_INTERVAL_MS = 5000;
-/** Pause after a 429 on /api/stats. The server limit is a fixed one-minute
- *  window per IP and sends no Retry-After, so wait one full window. */
+/** Alerts polling interval. */
+export const ALERTS_INTERVAL_MS = 15_000;
+/** Pause after a 429 on /api/stats or /api/alerts when the response has no
+ *  usable Retry-After: the server limits are fixed one-minute windows per IP,
+ *  so wait one full window. */
 export const STATS_PAUSE_MS = 60_000;
+/** Longest pause taken from a Retry-After header. */
+export const MAX_PAUSE_MS = 3_600_000;
 /** Upper bound for the reconnect backoff. */
 export const MAX_RECONNECT_MS = 30_000;
 
@@ -30,6 +36,16 @@ function isReady(data: unknown): boolean {
 function statusOf(err: unknown): number | undefined {
   const status = (err as { status?: unknown } | null)?.status;
   return typeof status === 'number' ? status : undefined;
+}
+
+/** The wait a 429 asks for, from its Retry-After header (whole seconds),
+ *  capped at MAX_PAUSE_MS; `fallbackMs` when the header is missing or not a
+ *  positive integer. */
+export function retryAfterMs(err: unknown, fallbackMs: number): number {
+  const headers = err instanceof HttpErrorResponse ? err.headers : undefined;
+  const value = headers?.get('Retry-After')?.trim() ?? '';
+  const seconds = /^\d+$/.test(value) ? Number(value) : 0;
+  return seconds > 0 ? Math.min(seconds * 1000, MAX_PAUSE_MS) : fallbackMs;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -50,8 +66,9 @@ export class ThreatsService {
   // MAX_RECONNECT_MS, and resets when the server accepts a ticket.
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  // Stats polls are skipped until this time after a 429.
+  // Stats and alerts polls are skipped until these times after a 429.
   private statsPausedUntil = 0;
+  private alertsPausedUntil = 0;
 
   readonly status         = signal<StreamStatus>('disconnected');
   readonly slowConnection = signal(false);
@@ -160,15 +177,20 @@ export class ThreatsService {
         if (statusOf(err) === 429) {
           // Rate limited (often many users behind one IP): say so and wait
           // out the window instead of polling into the limit.
-          this.statsPausedUntil = Date.now() + STATS_PAUSE_MS;
+          this.statsPausedUntil = Date.now() + retryAfterMs(err, STATS_PAUSE_MS);
           this.statsLimited.set(true);
         }
         return EMPTY;
       }))),
     ).subscribe((s) => { this.statsLimited.set(false); this.store.stats.set(s); });
 
-    this.alertSub = timer(0, 15_000).pipe(
-      switchMap(() => this.store.fetchAlerts().pipe(catchError(() => EMPTY))),
+    this.alertSub = timer(0, ALERTS_INTERVAL_MS).pipe(
+      filter(() => Date.now() >= this.alertsPausedUntil),
+      switchMap(() => this.store.fetchAlerts().pipe(catchError((err: unknown) => {
+        // Rate limited: wait out the window; the list keeps its last value.
+        if (statusOf(err) === 429) this.alertsPausedUntil = Date.now() + retryAfterMs(err, STATS_PAUSE_MS);
+        return EMPTY;
+      }))),
     ).subscribe(alerts => this.store.alerts.set(alerts));
   }
 
