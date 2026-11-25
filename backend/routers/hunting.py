@@ -14,6 +14,8 @@ from users import CurrentUser
 MAX_HUNT_RESULTS = 500
 # In memory only: without a cap any user could grow the list without limit.
 MAX_SAVED_HUNTS = 100
+# Per creator, so one user cannot fill the global cap alone.
+MAX_SAVED_HUNTS_PER_USER = 20
 
 router = APIRouter()
 
@@ -55,8 +57,16 @@ async def get_saved_hunts(_=Depends(verify_token)):
 @router.post("/api/hunts")
 @limiter.limit(WRITE_LIMIT)
 async def save_hunt(request: Request, body: SavedHuntBody, user: CurrentUser = Depends(verify_token)):
+    if sum(1 for h in _saved_hunts if h.get("created_by") == user.username) >= MAX_SAVED_HUNTS_PER_USER:
+        raise HTTPException(
+            status_code=409,
+            detail=f"You have {MAX_SAVED_HUNTS_PER_USER} saved hunts, the most allowed. Delete one of yours first",
+        )
     if len(_saved_hunts) >= MAX_SAVED_HUNTS:
-        raise HTTPException(status_code=409, detail=f"Saved hunts are limited to {MAX_SAVED_HUNTS}, delete one first")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Saved hunts are limited to {MAX_SAVED_HUNTS} in total. Ask an admin to delete old ones",
+        )
     hunt = {
         "id": str(uuid4())[:8],
         "name": body.name,

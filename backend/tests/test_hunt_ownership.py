@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 import store
+from routers.hunting import MAX_SAVED_HUNTS, MAX_SAVED_HUNTS_PER_USER
 from tests.conftest import session_client
 
 
@@ -89,6 +90,50 @@ def test_delete_unknown_hunt_is_404():
     assert r.status_code == 404
     assert r.json() == {"detail": "Saved hunt not found"}
     assert [h["id"] for h in store._saved_hunts] == ["h1"]
+
+
+def _fill(owner: str | None, count: int, start: int = 0) -> None:
+    store._saved_hunts.extend(_hunt(f"{owner}-{i}", owner) for i in range(start, start + count))
+
+
+# ── Caps: per user and in total ───────────────────────────────
+
+def test_per_user_cap():
+    _fill("alice", MAX_SAVED_HUNTS_PER_USER)
+    r = _client("alice").post("/api/hunts", json={"name": "one more"})
+    assert r.status_code == 409
+    assert r.json() == {"detail": f"You have {MAX_SAVED_HUNTS_PER_USER} saved hunts, the most allowed. "
+                                  "Delete one of yours first"}
+    assert len(store._saved_hunts) == MAX_SAVED_HUNTS_PER_USER
+
+
+def test_per_user_cap_does_not_block_other_users():
+    _fill("alice", MAX_SAVED_HUNTS_PER_USER)
+    assert _client("bob").post("/api/hunts", json={"name": "b"}).status_code == 200
+
+
+def test_deleting_one_of_yours_frees_a_place():
+    _fill("alice", MAX_SAVED_HUNTS_PER_USER)
+    assert _client("alice").delete("/api/hunts/alice-0").status_code == 200
+    assert _client("alice").post("/api/hunts", json={"name": "again"}).status_code == 200
+
+
+def test_one_user_cannot_fill_the_global_cap_alone():
+    assert MAX_SAVED_HUNTS_PER_USER < MAX_SAVED_HUNTS
+    alice = _client("alice")
+    codes = [alice.post("/api/hunts", json={"name": f"a{i}"}).status_code for i in range(MAX_SAVED_HUNTS_PER_USER + 1)]
+    assert codes == [200] * MAX_SAVED_HUNTS_PER_USER + [409]
+    assert len(store._saved_hunts) == MAX_SAVED_HUNTS_PER_USER
+
+
+def test_global_cap_message():
+    _fill("bob", MAX_SAVED_HUNTS_PER_USER)
+    _fill(None, MAX_SAVED_HUNTS - MAX_SAVED_HUNTS_PER_USER)
+    r = _client("alice").post("/api/hunts", json={"name": "one more"})
+    assert r.status_code == 409
+    assert r.json() == {"detail": f"Saved hunts are limited to {MAX_SAVED_HUNTS} in total. "
+                                  "Ask an admin to delete old ones"}
+    assert len(store._saved_hunts) == MAX_SAVED_HUNTS
 
 
 def test_delete_twice_is_404_the_second_time():
