@@ -16,8 +16,9 @@ export function toCsv(headers: string[], rows: string[][]): string {
 
 /**
  * One Markdown table cell: line breaks become a space (a newline ends the
- * row), and `\ | ` [ ] <` get a backslash, so a value cannot split the
- * table, open a code span, form a link or start an HTML tag.
+ * row), and backslash, pipe, backtick, square brackets and less-than get a
+ * backslash (backslash first), so a value cannot split the table, open a
+ * code span, form a link or start an HTML tag.
  */
 export function markdownCell(cell: unknown): string {
   return String(cell ?? '')
