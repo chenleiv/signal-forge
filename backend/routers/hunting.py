@@ -6,7 +6,7 @@ from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from authz import check_delete_hunt
-from rate_limit import WRITE_LIMIT, limiter
+from rate_limit import READ_LIMIT, WRITE_LIMIT, limiter
 from schemas import SavedHuntBody
 from store import ip_store, _saved_hunts, verify_token
 from users import CurrentUser
@@ -49,7 +49,8 @@ async def run_hunt(
 
 
 @router.get("/api/hunts")
-async def get_saved_hunts(_=Depends(verify_token)):
+@limiter.limit(READ_LIMIT)
+async def get_saved_hunts(request: Request, _=Depends(verify_token)):
     # Hunts saved before owners were recorded answer created_by: null.
     return [{"created_by": None, **h} for h in _saved_hunts]
 

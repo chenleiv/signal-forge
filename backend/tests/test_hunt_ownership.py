@@ -136,6 +136,27 @@ def test_global_cap_message():
     assert len(store._saved_hunts) == MAX_SAVED_HUNTS
 
 
+# ── Read limit on the list ────────────────────────────────────
+
+def test_list_is_limited_per_ip():
+    client = _client("alice")
+    headers = {"X-Forwarded-For": "198.51.100.40"}
+    assert [client.get("/api/hunts", headers=headers).status_code for _ in range(120)] == [200] * 120
+    r = client.get("/api/hunts", headers=headers)
+    assert r.status_code == 429
+    assert r.json() == {"error": "Rate limit exceeded: 120 per 1 minute"}
+    assert 1 <= int(r.headers["Retry-After"]) <= 60
+
+
+def test_list_unauthenticated_is_401_and_uses_no_budget():
+    from fastapi.testclient import TestClient
+    import main
+    headers = {"X-Forwarded-For": "198.51.100.41"}
+    anonymous = TestClient(main.app)
+    assert {anonymous.get("/api/hunts", headers=headers).status_code for _ in range(130)} == {401}
+    assert _client("alice").get("/api/hunts", headers=headers).status_code == 200
+
+
 def test_delete_twice_is_404_the_second_time():
     _client("alice").post("/api/hunts", json={"name": "a"})
     hunt_id = store._saved_hunts[0]["id"]
