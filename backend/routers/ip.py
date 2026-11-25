@@ -10,8 +10,12 @@ from fastapi import APIRouter, Depends, HTTPException
 from starlette.requests import Request
 
 from constants import GEO_DATA, MITRE_MAP
-from rate_limit import limiter
+from rate_limit import (
+    AI_SUMMARY_GLOBAL, AI_SUMMARY_PER_USER_IP, GEO_PER_USER_IP, GLOBAL_KEY,
+    HISTORY_PER_USER_IP, KeyedLimit, limiter, user_ip_key,
+)
 from schemas import CommandBody
+from users import CurrentUser
 from store import (
     ip_store, _blocked_ips, _ip_coords, _score_to_level, block_ip as _block_ip,
     validate_ip, verify_token, MAX_BLOCKED_IPS,
@@ -41,6 +45,24 @@ def _cache_put(cache: dict, key: str, value) -> None:
 
 router = APIRouter()
 logger = logging.getLogger("uvicorn.error")
+
+
+def _take(*quotas: tuple[KeyedLimit, str]) -> int:
+    """All or nothing: 0 after counting one on every quota, or the seconds to
+    wait (Retry-After) when any is used up, counting none. No await between
+    the check and the count, so concurrent requests cannot overshoot."""
+    for limit, key in quotas:
+        if limit.exceeded(key):
+            return limit.retry_after(key)
+    for limit, key in quotas:
+        limit.hit(key)
+    return 0
+
+
+def _take_or_429(detail: str, *quotas: tuple[KeyedLimit, str]) -> None:
+    wait = _take(*quotas)
+    if wait:
+        raise HTTPException(status_code=429, detail=detail, headers={"Retry-After": str(wait)})
 
 
 _SAFE_CODE = re.compile(r"^[a-z0-9_]{1,64}$")
@@ -91,7 +113,7 @@ async def enrich_ip(ip: str) -> Optional[dict]:
 @router.get("/api/ip/{ip}/history")
 @limiter.limit("30/minute")
 async def get_ip_history(
-    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+    request: Request, ip: str = Depends(validate_ip), user: CurrentUser = Depends(verify_token)
 ):
     events = list(ip_store.get(ip, []))
     if not events:
@@ -100,7 +122,13 @@ async def get_ip_history(
     avg = sum(e["score"] for e in events) / len(events)
     regions   = list({e.get("region", "US") for e in events})
     mitre_tags = list({tag for e in events for tag in MITRE_MAP.get(e.get("attack_type", ""), [])})
-    enrichment = await enrich_ip(ip) or {}
+    # A used-up quota skips only the AbuseIPDB lookup: the events are the
+    # main content of the panel and come from memory.
+    lookup_allowed = (
+        ip in _abuse_cache or not ABUSEIPDB_API_KEY
+        or not _take((HISTORY_PER_USER_IP, user_ip_key(user.username, request)))
+    )
+    enrichment = (await enrich_ip(ip) or {}) if lookup_allowed else {}
 
     return {
         "ip": ip,
@@ -116,12 +144,17 @@ async def get_ip_history(
 @router.get("/api/ip/{ip}/ai-summary")
 @limiter.limit("10/minute")
 async def get_ip_ai_summary(
-    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+    request: Request, ip: str = Depends(validate_ip), user: CurrentUser = Depends(verify_token)
 ):
     if ip in _ai_summary_cache:
         return {"summary": _ai_summary_cache[ip]}
     if not GROQ_API_KEY:
         return {"summary": None}
+    _take_or_429(
+        "AI summary limit reached, try again later",
+        (AI_SUMMARY_PER_USER_IP, user_ip_key(user.username, request)),
+        (AI_SUMMARY_GLOBAL, GLOBAL_KEY),
+    )
 
     events = list(ip_store.get(ip, []))
     context = {
@@ -160,12 +193,16 @@ async def get_ip_ai_summary(
 @router.get("/api/ip/{ip}/geo")
 @limiter.limit("30/minute")
 async def get_ip_geo(
-    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+    request: Request, ip: str = Depends(validate_ip), user: CurrentUser = Depends(verify_token)
 ):
     if ip in _geo_cache:
         return _geo_cache[ip]
 
     if IPINFO_TOKEN:
+        _take_or_429(
+            "Geolocation limit reached, try again later",
+            (GEO_PER_USER_IP, user_ip_key(user.username, request)),
+        )
         async with httpx.AsyncClient() as client:
             data = await fetch_ipinfo(client, ip)
         if data:

@@ -1,4 +1,5 @@
 from __future__ import annotations
+import hashlib
 import logging
 import math
 import os
@@ -198,6 +199,26 @@ CASES_PER_USER = KeyedLimit("case-user", "5/minute;30/hour")
 # ── Per-user wrong current password (self-service password change) ──
 # Stops a stolen session from brute-forcing the account's current password.
 PASSWORD_CHANGE_FAILURES = KeyedLimit("password-change", "5/minute;20/hour")
+
+# ── Quotas for external lookups (AbuseIPDB, ipinfo, Groq) ─────
+# Keyed by user AND client IP together (`user_ip_key`): the public demo
+# accounts are shared, so one visitor cannot use up another's quota. Counted
+# only when the request will call the service (not cached, key configured),
+# before the call, so a failed or slow call still counts. The per-IP route
+# limits still apply on top. AI summaries also have one daily cap for the
+# whole server, to bound Groq cost across many users and addresses.
+AI_SUMMARY_PER_USER_IP = KeyedLimit("ai-summary-user-ip", "5/minute;50/day")
+AI_SUMMARY_GLOBAL = KeyedLimit("ai-summary-global", "500/day")
+GEO_PER_USER_IP = KeyedLimit("geo-user-ip", "20/minute;300/day")
+HISTORY_PER_USER_IP = KeyedLimit("history-user-ip", "20/minute;300/day")
+GLOBAL_KEY = "all"
+
+
+def user_ip_key(username: str, request: HTTPConnection) -> str:
+    """The quota key for one user at one client address. A SHA-256 hex digest
+    is exactly KeyedLimit's 64-character key, so a long username never cuts
+    the address off, and no address is held in memory as text."""
+    return hashlib.sha256(f"{username}\0{client_ip(request)}".encode()).hexdigest()
 
 
 def login_locked(username: str) -> bool:
