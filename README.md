@@ -231,7 +231,8 @@ screen edge (only wide tables scroll sideways, inside `.h-scroll`), the phone me
 is reachable. Behaviour specs in `frontend/e2e/` also cover the WebSocket ticket and session expiry, failed
 incident updates and saving settings. Tests only talk to the local server: every other request is blocked. First run:
 `npx playwright install chromium`. The backend virtualenv is expected at `backend/venv` (override with
-`BACKEND_PYTHON`).
+`BACKEND_PYTHON`). When the e2e job fails in CI, the traces and screenshots of the failed tests are uploaded as the
+`e2e-results-attempt-N` artifact for 7 days; open a trace with `npx playwright show-trace <trace.zip>`.
 
 ---
 

@@ -159,3 +159,14 @@ jobs:
       - name: Layout checks (Playwright, phone, desktop, tablet)
         run: npm run e2e
         working-directory: frontend
+      # Traces and screenshots of failed tests only. This job must stay free of
+      # real secrets: anything the browser sees can end up in a trace, and the
+      # artifact is downloadable from this public repository.
+      - name: Upload Playwright traces and screenshots
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-results-attempt-${{ github.run_attempt }}
+          path: frontend/test-results/
+          retention-days: 7
+          if-no-files-found: ignore

@@ -16,6 +16,62 @@ to anything listed here.
 
 ---
 
+## 2026-11-25 · Playwright traces and screenshots uploaded on a CI e2e failure
+
+**Decision.**
+- `frontend/playwright.config.ts` sets `trace: 'retain-on-failure'` and
+  `screenshot: 'only-on-failure'` for every project, setup included. No video:
+  the trace already holds screen frames and DOM snapshots, and a video only
+  adds size. `outputDir` stays the default `test-results/`.
+- The `e2e` job in `.github/workflows/ci.yml` uploads `frontend/test-results/`
+  with `actions/upload-artifact` v7.0.2 (pinned to its commit SHA) only when
+  the job failed. Artifact name `e2e-results-attempt-<run_attempt>`, so a
+  re-run never collides with an earlier attempt. Retention 7 days.
+  `if-no-files-found: ignore`, so a job that failed before the tests (for
+  example in `npm ci`) does not report a second error.
+- One output folder is enough: `npm run e2e` joins the phone, desktop and
+  tablet passes with `&&`, so it stops at the first failing pass and no later
+  pass clears the folder that holds the failure. Passing tests leave no files.
+- The job needs no new permission: the upload uses the runner's own artifact
+  token, not `GITHUB_TOKEN`, so `permissions: contents: read` is unchanged.
+
+**Reason.** A failed e2e test in CI could only be analysed from the log. A
+trace shows every step, request and DOM state of the failure.
+
+**Why it is safe in a public repository.** Anyone signed in to GitHub can
+download the artifact, and a trace records the browser's requests, headers,
+cookies and request bodies. What it can hold:
+- The `sf_session` cookie and the WebSocket ticket, signed with the e2e-only
+  `JWT_SECRET` from `frontend/e2e/serve.mjs`; they work only on the short-lived
+  test server.
+- The demo admin login body, only if the setup test fails. That password is
+  already public in the frontend bundle (`login.ts`) and is rejected outside
+  demo mode.
+- Demo data from the committed `frontend/e2e/threat-ips.json`, the runner's
+  file paths and the source code, all public.
+No real key is present: the job has no `env:` and no `secrets.*`, and
+`serve.mjs` sets `DATABASE_URL`, `ABUSEIPDB_API_KEY`, `IPINFO_TOKEN` and
+`GROQ_API_KEY` to empty strings, so every outbound backend call is skipped;
+`e2e/fixtures.ts` aborts every browser request to any other host.
+The saved session (`e2e/.auth/admin.json`) is outside `test-results/` and is
+never uploaded.
+
+**Rule.** The `e2e` job and `frontend/e2e/serve.mjs` must stay free of real
+secrets (API keys, tokens, `JWT_SECRET`, `DATABASE_URL`). Anything in them can
+end up in a trace, and the trace is public.
+
+**Alternatives rejected.**
+- Video recording: larger, and adds nothing a trace lacks.
+- One output folder per pass: not needed while the passes stop at the first
+  failure.
+- A step that scans `test-results/` for key patterns before the upload: no
+  secret reaches the job, so it would guard nothing; the rule above does.
+
+Files: `frontend/playwright.config.ts`, `.github/workflows/ci.yml`,
+`README.md`.
+
+---
+
 ## 2026-11-25 · Documentation audit against the code
 
 **Decision.**
