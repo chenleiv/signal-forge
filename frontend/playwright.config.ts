@@ -14,6 +14,10 @@ export default defineConfig({
   use: {
     baseURL: `http://127.0.0.1:${port}`,
     browserName: 'chromium',
+    // Kept only for failed tests, in test-results/; CI uploads that folder
+    // when the e2e job fails (see docs/DECISIONS.md).
+    trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
