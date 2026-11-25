@@ -1,12 +1,15 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { ThreatHuntingComponent } from './threat-hunting.component';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
+import { AuthService } from '../../core/services/auth';
 import { HuntResult, SavedHunt } from '../../shared/models/threat.models';
 
 const SAVED: SavedHunt[] = [
-  { id: 'h1', name: 'Russian scans', query: { region: 'RU' }, created_at: '2026-11-16T10:00:00Z', result_count: 4 },
+  { id: 'h1', name: 'Russian scans', query: { region: 'RU' }, created_at: '2026-11-16T10:00:00Z', result_count: 4,
+    created_by: 'alice' },
 ];
 const RESULTS: HuntResult[] = [
   { ip: '185.220.101.34', score: 91, threat_level: 'critical', attack_type: 'BruteForce',
@@ -24,6 +27,10 @@ describe('ThreatHuntingComponent: icon buttons have accessible names', () => {
           runHunt: () => of({ results: RESULTS, total: RESULTS.length }),
           saveHunt: () => of(SAVED[0]),
           deleteHunt: () => of(void 0),
+        } },
+        // Signed in as the hunt's creator, so the delete button is shown.
+        { provide: AuthService, useValue: {
+          currentUser: signal({ username: 'alice', display_name: 'Alice Chen', role: 'analyst' }),
         } },
       ],
     });

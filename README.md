@@ -236,8 +236,9 @@ All endpoints require a session except those marked *public*. Role requirements 
 | POST, PATCH, DELETE | `/api/rules`, `/api/rules/{id}` | Create / edit / toggle / delete rules | admin |
 | GET | `/api/behavioral/settings` | Behavioral detection settings | any user |
 | PATCH | `/api/behavioral/settings` | Change behavioral detection settings | admin |
-| GET | `/api/hunt`, `/api/hunts` | Run a hunt / list saved hunts | any user |
-| POST, DELETE | `/api/hunts`, `/api/hunts/{id}` | Save / delete a hunt | any user |
+| GET | `/api/hunt`, `/api/hunts` | Run a hunt / list saved hunts (shared, each with its `created_by`) | any user |
+| POST | `/api/hunts` | Save a hunt (20 per user, 100 in total, `409` past either) | any user |
+| DELETE | `/api/hunts/{id}` | Delete a saved hunt (`404` if it does not exist) | its creator or admin |
 | GET | `/api/ip/{ip}/history`, `/geo`, `/related`, `/case`, `/block` | IP intelligence and status | any user |
 | GET | `/api/ip/{ip}/ai-summary` | AI-generated threat summary | any user |
 | POST, DELETE | `/api/ip/{ip}/block` | Block / unblock an IP | any user |
@@ -333,13 +334,16 @@ The server is the security boundary. Everything the frontend does with permissio
 | Assign / reassign / unassign any incident | ✗ | ✓ | ✓ |
 | Open a case from an IP or an alert (assigned to the creator) | ✓ | ✓ | ✓ |
 | Acknowledge / dismiss alerts | ✓ | ✓ | ✓ |
-| Block / unblock IPs, command console, saved hunts | ✓ | ✓ | ✓ |
+| Block / unblock IPs, command console, save hunts | ✓ | ✓ | ✓ |
+| Delete a saved hunt | own only | own only | ✓ |
 | Detection rules (create / edit / toggle / delete) | ✗ | ✗ | ✓ |
 | Behavioral detection settings | ✗ | ✗ | ✓ |
 | Reset a user's password | ✗ | analysts only | ✓ |
 | Create users, change roles (analyst ↔ manager), delete users (never the admin) | ✗ | ✗ | ✓ |
 
 "Own" means `incident.assigned_to` is the caller. `assigned_to` must be an existing user (`422` otherwise).
+For a saved hunt, "own" means `created_by` is the caller; a hunt with no `created_by` can be deleted by the admin
+only. Managers have no extra rights over other users' hunts. The saved hunts list is shared and shows every owner.
 Denied actions return `403` with a clear message. Every field of a request is checked against the incident's
 current state; with a database, the write is conditional on the assignee the check saw (`409` if it changed).
 
@@ -385,7 +389,7 @@ check, so the two cannot silently diverge.
 | Login failures: 10/minute, 100/hour | per account, across all IPs |
 | New cases: 5/minute, 30/hour | per user |
 | IP intelligence, block/unblock, console, stats | per client IP (10-50/minute depending on the route) |
-| Reads: alerts, alerts summary, users, user directory, `/auth/me`, threat feed status, `/api/config`: 120/minute | per client IP, per route |
+| Reads: alerts, alerts summary, saved hunts, users, user directory, `/auth/me`, threat feed status, `/api/config`: 120/minute | per client IP, per route |
 | Database reads: incidents, rules, behavioral settings, open case for an IP: 60/minute | per client IP, per route |
 | AI summaries that call Groq: 5/minute, 50/day | per user and client IP together |
 | AI summaries that call Groq, whole server: 500/day | all users |
@@ -401,7 +405,7 @@ check, so the two cannot silently diverge.
   visitors sharing a demo account keep separate quotas. A used-up AI summary or geolocation quota answers `429`;
   a used-up history quota still returns the events, without the AbuseIPDB fields. The Groq client times out after
   10 seconds with no retries.
-- `/health`, the SPA files and `/api/hunts` have no limit. Unauthenticated requests are refused (`401`) before the
+- `/health` and the SPA files have no limit. Unauthenticated requests are refused (`401`) before the
   read limits count them.
 
 - **Client IP** is the `X-Forwarded-For` entry at position `-hops` (counted from the right). Leftmost entries are

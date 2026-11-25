@@ -139,6 +139,8 @@ export interface SavedHunt {
   query: HuntQuery;
   created_at: string;
   result_count: number;
+  /** Username of the creator; null for a hunt with no recorded owner. */
+  created_by?: string | null;
 }
 
 export type HuntResult = ThreatEvent;

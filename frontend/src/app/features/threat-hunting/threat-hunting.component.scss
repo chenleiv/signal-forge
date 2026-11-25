@@ -197,10 +197,23 @@
   white-space: nowrap;
 }
 
-.saved-meta {
+.saved-meta,
+.saved-owner {
   font-size: 9px;
   color: $muted;
   font-family: monospace;
+}
+
+.saved-owner {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.save-error {
+  margin: 0;
+  font-size: 10px;
+  color: $text;
 }
 
 .saved-del {

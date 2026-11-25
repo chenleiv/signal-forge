@@ -75,6 +75,7 @@ describe('permission matrix (shared with the backend)', () => {
         source_region: 'US', event_count: 1, assigned_to: owner, created_at: 'x', updated_at: 'x',
         mitre_tags: [], notes: [], completed_tasks: [],
       } as Incident]);
+      sim.overlay('/api/hunts', [{ id: 'h1', name: 'h', query: {}, created_at: 'x', result_count: 0, created_by: owner }]);
       const names = {
         self: people.self.username, other: people.other, third: people.third, self_password: 'unused-client-side',
         incident: 'INC-M001', alert: 'ALT-1', rule: 'r1', hunt: 'h1', ip: '8.8.8.8',

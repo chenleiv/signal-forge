@@ -17,6 +17,7 @@ MANAGER_RESET_ONLY = "Managers can only reset analysts' passwords"
 ADMIN_ROLE_FIXED = "There is exactly one admin: the admin role cannot be granted or removed"
 ADMIN_UNDELETABLE = "The admin account cannot be deleted"
 OWN_PASSWORD_IN_SETTINGS = "Change your own password in Settings (it asks for your current password)"
+HUNT_OWNER_ONLY = "Only the hunt's creator or an admin can delete this hunt"
 
 _UNSET = object()
 
@@ -79,6 +80,20 @@ def check_incident_patch(user: CurrentUser, incident: dict, body: dict) -> dict:
         patch["assigned_to"] = new_assignee
 
     return patch
+
+
+def can_delete_hunt(user: CurrentUser, hunt: dict) -> bool:
+    """The creator or the admin. A hunt with no recorded creator: the admin
+    only. Managers have no extra rights over other users' hunts."""
+    if user.role == "admin":
+        return True
+    creator = hunt.get("created_by")
+    return creator is not None and creator == user.username
+
+
+def check_delete_hunt(user: CurrentUser, hunt: dict) -> None:
+    if not can_delete_hunt(user, hunt):
+        raise HTTPException(status_code=403, detail=HUNT_OWNER_ONLY)
 
 
 def check_user_update(actor: CurrentUser, target: Optional[dict], body: dict) -> dict:

@@ -10,7 +10,10 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
+import { AuthService } from '../../core/services/auth';
+import { canDeleteHunt } from '../../core/auth/permissions';
 import { HuntQuery, HuntResult, SavedHunt, ATTACK_TYPES, REGIONS, scoreToColor } from '../../shared/models/threat.models';
 
 @Component({
@@ -35,6 +38,7 @@ export class ThreatHuntingComponent {
   savedHunts  = signal<SavedHunt[]>([]);
   saveName    = signal('');
   showSave    = signal(false);
+  saveError   = signal<string | null>(null);
 
   readonly query = computed<HuntQuery>(() => ({
     ip:          this.ip()          || undefined,
@@ -49,6 +53,7 @@ export class ThreatHuntingComponent {
 
   // ── private injections ────────────────────────────────────────
   private readonly store      = inject(ThreatStoreService);
+  private readonly auth       = inject(AuthService);
   private readonly router     = inject(Router);
   private readonly route      = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -92,9 +97,22 @@ export class ThreatHuntingComponent {
   saveHunt() {
     const name = this.saveName().trim();
     if (!name) return;
+    this.saveError.set(null);
     this.store.saveHunt(name, this.query(), this.total())
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(h => { this.savedHunts.update(list => [h, ...list]); this.saveName.set(''); this.showSave.set(false); });
+      .subscribe({
+        next: h => { this.savedHunts.update(list => [h, ...list]); this.saveName.set(''); this.showSave.set(false); },
+        error: (err: HttpErrorResponse) => {
+          // 409: a saved hunts cap was hit; the server says which one.
+          const detail: unknown = err.error?.detail;
+          if (err.status === 409 && typeof detail === 'string') this.saveError.set(detail);
+        },
+      });
+  }
+
+  /** Only the creator or the admin sees the delete button (the server re-checks). */
+  canDelete(hunt: SavedHunt): boolean {
+    return canDeleteHunt(this.auth.currentUser(), hunt).allowed;
   }
 
   loadHunt(hunt: SavedHunt) {
@@ -109,9 +127,15 @@ export class ThreatHuntingComponent {
 
   deleteHunt(id: string, e: Event) {
     e.stopPropagation();
+    const remove = () => this.savedHunts.update(list => list.filter(h => h.id !== id));
     this.store.deleteHunt(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.savedHunts.update(list => list.filter(h => h.id !== id)));
+      .subscribe({
+        next: remove,
+        // 404: already gone (deleted elsewhere or lost on a server restart).
+        // Any other error (a 403 shows its reason as a notice) keeps the hunt.
+        error: (err: HttpErrorResponse) => { if (err.status === 404) remove(); },
+      });
   }
 
   investigateIp(ip: string) { this.router.navigate(['/threats'], { queryParams: { ip } }); }

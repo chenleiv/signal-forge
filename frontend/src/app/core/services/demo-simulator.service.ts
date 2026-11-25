@@ -6,6 +6,7 @@ import {
   Decision,
   canManageConfiguration,
   canCreateUser,
+  canDeleteHunt,
   canDeleteUser,
   canUpdateUser,
   canPatchIncident,
@@ -15,6 +16,7 @@ import {
   AttackType,
   Incident,
   IncidentNote,
+  SavedHunt,
   ThreatAlert,
   ThreatLevel,
   UserSummary,
@@ -45,6 +47,7 @@ export class DemoSimulatorService {
   private seenAlerts    = new Map<string, ThreatAlert>();
   private seenIncidents = new Map<string, Incident>();
   private seenUsers     = new Map<string, UserSummary>();
+  private seenHunts     = new Map<string, SavedHunt>();
 
   // Local overlay.
   private blocked        = new Map<string, boolean>();
@@ -71,6 +74,10 @@ export class DemoSimulatorService {
       const target = this.seenUsers.get(decodeURIComponent(p[1]));
       if (m === 'DELETE') return canDeleteUser(user, target);
       if (m === 'PATCH') return canUpdateUser(user, target, body);
+    }
+    if ((p = path.match(/^\/api\/hunts\/([^/]+)$/)) && m === 'DELETE') {
+      const hunt = this.seenHunts.get(decodeURIComponent(p[1]));
+      if (hunt) return canDeleteHunt(user, hunt);
     }
     if ((p = path.match(/^\/api\/incidents\/([^/]+)\/(notes|tasks)$/))) {
       const inc = this.currentIncident(p[1]);
@@ -158,6 +165,11 @@ export class DemoSimulatorService {
 
     if (path === '/api/users' && Array.isArray(body)) {
       (body as UserSummary[]).forEach(u => this.seenUsers.set(u.username, u));
+      return body;
+    }
+
+    if (path === '/api/hunts' && Array.isArray(body)) {
+      (body as SavedHunt[]).forEach(h => this.seenHunts.set(h.id, h));
       return body;
     }
 

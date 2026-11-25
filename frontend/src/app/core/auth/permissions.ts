@@ -1,4 +1,4 @@
-import { Incident, UserRole, UserSummary } from '../../shared/models/threat.models';
+import { Incident, SavedHunt, UserRole, UserSummary } from '../../shared/models/threat.models';
 
 /**
  * Client-side mirror of backend/authz.py, used by the UI and the demo
@@ -19,6 +19,7 @@ export const DENY_REASONS = {
   adminRoleFixed: 'There is exactly one admin: the admin role cannot be granted or removed',
   adminUndeletable: 'The admin account cannot be deleted',
   ownPasswordInSettings: 'Change your own password in Settings (it asks for your current password)',
+  huntOwner: "Only the hunt's creator or an admin can delete this hunt",
 } as const;
 
 /** Roles that work on and assign any incident (backend: INCIDENT_LEADS). */
@@ -137,6 +138,18 @@ export function canUpdateUser(
   const keys = Object.keys(body);
   const passwordOnly = keys.length === 1 && keys[0] === 'password';
   return passwordOnly && target?.role === 'analyst' ? ALLOW : deny(DENY_REASONS.managerResetOnly);
+}
+
+/**
+ * DELETE /api/hunts/{id} (backend: can_delete_hunt): the creator or the
+ * admin. A hunt with no recorded creator: the admin only. Managers have no
+ * extra rights over other users' hunts.
+ */
+export function canDeleteHunt(user: CurrentUser | null, hunt: Pick<SavedHunt, 'created_by'>): Decision {
+  if (!user) return deny(DENY_REASONS.notAuthenticated);
+  if (user.role === 'admin') return ALLOW;
+  const creator = hunt.created_by ?? null;
+  return creator !== null && creator === user.username ? ALLOW : deny(DENY_REASONS.huntOwner);
 }
 
 /** Detection rules and behavioral settings. */

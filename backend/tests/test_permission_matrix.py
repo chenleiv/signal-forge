@@ -74,6 +74,7 @@ def _fixtures(owner_username: str | None) -> dict:
     assert admin.patch(f"/api/incidents/{incident}", json={"assigned_to": owner_username}).status_code == 200
     rule = admin.post("/api/rules", json={"name": "matrix"}).json()["id"]
     hunt = admin.post("/api/hunts", json={"name": "h", "query": {}}).json()["id"]
+    store._saved_hunts[0]["created_by"] = owner_username   # hunts live in memory; owner as for the incident
     alert = store._create_alert("test", "SQLi", "high", "9.9.9.9", "matrix alert")["id"]   # alerts live in memory
     return {"incident": incident, "alert": alert, "rule": rule, "hunt": hunt, "ip": PUBLIC_IP}
 
