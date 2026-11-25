@@ -16,6 +16,65 @@ to anything listed here.
 
 ---
 
+## 2026-11-25 · Saved hunts have an owner (finding L3)
+
+**Decision.**
+- `POST /api/hunts` records `created_by` (the caller's username, from the
+  session; a `created_by` in the body is still a `422`). `GET /api/hunts`
+  stays shared and returns `created_by` on every hunt, `null` for a hunt with
+  no owner.
+- `DELETE /api/hunts/{id}`: the creator or the admin
+  (`authz.check_delete_hunt`, `403` "Only the hunt's creator or an admin can
+  delete this hunt"). A hunt with no owner: the admin only. Managers get no
+  extra rights here, unlike incidents. An unknown id answers `404` "Saved
+  hunt not found" instead of `{"ok": true}`; the 404 comes before the
+  permission check, because the list is visible to every signed-in user.
+- A per-user cap of 20 (`MAX_SAVED_HUNTS_PER_USER`) before the global cap of
+  100, so one user cannot fill the global cap alone. Both answer `409` with
+  a message naming the cap: "You have 20 saved hunts, the most allowed.
+  Delete one of yours first" and "Saved hunts are limited to 100 in total.
+  Ask an admin to delete old ones".
+- `GET /api/hunts` gets `READ_LIMIT` (120/minute per client IP), the read
+  left open by the read limits entry below.
+- Frontend: `canDeleteHunt` in `permissions.ts` mirrors the rule and gates
+  the demo simulator. The hunting page shows "by {username}" ("by unknown"
+  without an owner) and shows the delete button only when the rule allows
+  it. A `404` on delete drops the hunt from the list; a `409` on save shows
+  the server message.
+- `testing/permission-matrix.json`: "delete hunt" has owner rows (self /
+  other / none) for each role, 9 rows in place of 3.
+- Hunts stay in memory (option A, a code fix only): a restart or deploy
+  clears them, so after this change every stored hunt has an owner. The
+  admin-only rule for hunts with no owner covers tests and any later change.
+
+**Reason.** Finding L3 of the last security review: any signed-in user could
+delete any other user's saved hunts, and one user could fill the global cap
+of 100. Owner decisions: owner or admin only, no extra rights for managers;
+20 per user; show the username; include the read limit in the same pull
+request.
+
+Scope: the public demo runs with demo mode on, where the middleware in
+`main.py` refuses every hunt write (`403 "Read-only demo"`) and the saved
+hunts list is always empty. The issue was not exploitable on the live demo.
+The fix matters for deployments with `DEMO_MODE=false` and for local runs.
+
+**Alternatives rejected.**
+- Storing hunts in the database (option B): a migration and a repository
+  for data that is meant to be short-lived; not needed to close L3.
+- Per-user private lists: hunts are shared on purpose, so analysts can
+  reuse each other's queries.
+- Letting managers delete any hunt, like incidents: not requested, and an
+  extra right with no use case.
+- `403` before `404` for unknown ids: hides nothing, since every signed-in
+  user can list every hunt id.
+
+Files: `backend/routers/hunting.py`, `backend/authz.py`,
+`frontend/src/app/core/auth/permissions.ts`,
+`frontend/src/app/core/services/demo-simulator.service.ts`,
+`frontend/src/app/features/threat-hunting/`, `testing/permission-matrix.json`.
+
+---
+
 ## 2026-11-25 · Read limits, external lookup quotas, Retry-After on every 429
 
 **Decision.**
