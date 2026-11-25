@@ -138,7 +138,7 @@
         </div>
       }
 
-      @if (aiLoading() || aiSummary()) {
+      @if (aiLoading() || aiSummary() || aiLimited()) {
         <div class="section">
           <button class="section-toggle" (click)="aiOpen.update(v => !v)">
             <span class="section-title">AI ANALYSIS</span>
@@ -150,6 +150,8 @@
                 <span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span>
                 Analyzing threat intelligence...
               </div>
+            } @else if (aiLimited()) {
+              <p class="ai-summary ai-limited" role="status">AI summary limit reached. Try again later.</p>
             } @else {
               <p class="ai-summary">{{ aiSummary() }}</p>
             }

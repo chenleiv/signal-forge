@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from authz import require_admin
 from database import get_db
-from rate_limit import ADMIN_WRITE_LIMIT, limiter
+from rate_limit import ADMIN_WRITE_LIMIT, DB_READ_LIMIT, limiter
 from schemas import RuleCreate, RulePatch
 from repositories import RULE_FIELDS, rules
 from store import verify_token
@@ -17,7 +17,8 @@ router = APIRouter()
 
 
 @router.get("/api/rules")
-async def get_rules(db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
+@limiter.limit(DB_READ_LIMIT)
+async def get_rules(request: Request, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
     return await rules(db).list()
 
 

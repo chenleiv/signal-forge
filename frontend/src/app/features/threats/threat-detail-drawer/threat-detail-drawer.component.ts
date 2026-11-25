@@ -34,6 +34,8 @@ export class ThreatDetailDrawerComponent {
   loading        = signal(false);
   aiSummary      = signal<string | null>(null);
   aiLoading      = signal(false);
+  /** The server refused the AI summary (429): the user's quota is used up. */
+  aiLimited      = signal(false);
   geoData        = signal<IpGeo | null>(null);
   relatedIps     = signal<RelatedIp[]>([]);
   geoOpen        = signal(true);
@@ -88,6 +90,7 @@ export class ThreatDetailDrawerComponent {
       this.eventsOpen.set(true);
       this.loading.set(true);
       this.aiSummary.set(null);
+      this.aiLimited.set(false);
       this.existingCaseId.set(null);
       this.eventFilter.set('');
       this.typeFilter.set('all');
@@ -107,7 +110,11 @@ export class ThreatDetailDrawerComponent {
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe({
             next:  res => { this.summaryCache.set(ip, res.summary); this.aiSummary.set(res.summary); this.aiLoading.set(false); },
-            error: ()  => this.aiLoading.set(false),
+            // Not cached: the next open of this IP asks again.
+            error: (err: unknown) => {
+              this.aiLimited.set((err as { status?: unknown } | null)?.status === 429);
+              this.aiLoading.set(false);
+            },
           });
       }
 

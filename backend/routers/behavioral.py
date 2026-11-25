@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from constants import BEHAVIORAL_LIMITS
 from database import get_db
-from rate_limit import ADMIN_WRITE_LIMIT, limiter
+from rate_limit import ADMIN_WRITE_LIMIT, DB_READ_LIMIT, limiter
 from schemas import BehavioralPatch
 from authz import require_admin
 from repositories import behavioral
@@ -16,8 +16,9 @@ router = APIRouter()
 
 
 @router.get("/api/behavioral/settings")
+@limiter.limit(DB_READ_LIMIT)
 async def get_behavioral_settings(
-    db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
+    request: Request, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
 ):
     return await behavioral(db).get()
 

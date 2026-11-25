@@ -12,7 +12,7 @@ from db_ops import StaleIncident
 from repositories import incidents
 from store import ip_store, _score_to_level, validate_ip, verify_token
 import store as _store
-from rate_limit import CASES_PER_USER, WRITE_LIMIT, limiter
+from rate_limit import CASES_PER_USER, DB_READ_LIMIT, WRITE_LIMIT, limiter
 from schemas import IncidentFromIp, IncidentPatch, NoteBody, TasksBody
 from authz import check_incident_patch, check_work_on_incident
 from users import CurrentUser
@@ -65,7 +65,8 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
         return {**existing, "existing": True}
 
     if CASES_PER_USER.exceeded(creator.username):
-        raise HTTPException(status_code=429, detail="Too many new cases, try again later")
+        raise HTTPException(status_code=429, detail="Too many new cases, try again later",
+                            headers={"Retry-After": str(CASES_PER_USER.retry_after(creator.username))})
     CASES_PER_USER.hit(creator.username)
 
     events = list(ip_store.get(ip, deque()))
@@ -99,7 +100,8 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
 
 
 @router.get("/api/incidents")
-async def get_incidents(db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
+@limiter.limit(DB_READ_LIMIT)
+async def get_incidents(request: Request, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
     return await incidents(db).list()
 
 
@@ -122,7 +124,9 @@ async def patch_incident(
 
 
 @router.get("/api/ip/{ip}/case")
+@limiter.limit(DB_READ_LIMIT)
 async def get_ip_case(
+    request: Request,
     ip: str = Depends(validate_ip),
     db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
 ):

@@ -18,7 +18,6 @@ from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import jwt
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text as _sa_text
 from starlette.requests import Request
@@ -34,7 +33,7 @@ from store import (
     SECRET_KEY, DEMO_MODE, ADMIN_PASSWORD, verify_token,
 )
 import store as _store
-from rate_limit import client_ip, limiter
+from rate_limit import READ_LIMIT, client_ip, limiter, rate_limit_exceeded_handler
 from request_limits import BodySizeLimitMiddleware
 from security_headers import SecurityHeadersMiddleware
 from users import seed_users, sync_users_with_db
@@ -237,7 +236,7 @@ _docs = {} if ENABLE_API_DOCS else {"docs_url": None, "redoc_url": None, "openap
 app = FastAPI(title="SignalForge API", lifespan=lifespan, redirect_slashes=False, **_docs)
 
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
 # ── Read-only demo mode ───────────────────────────────────────
 # Public demo: block every state-changing request server-side.
@@ -492,13 +491,15 @@ async def get_stats(request: Request, _=Depends(verify_token)):
 
 
 @app.get("/api/config")
-async def get_config():
+@limiter.limit(READ_LIMIT)
+async def get_config(request: Request):
     # Public, non-sensitive: lets the UI explain read-only demo mode up front.
     return {"demo_mode": DEMO_MODE}
 
 
 @app.get("/api/threat-feed")
-async def get_threat_feed(_=Depends(verify_token)):
+@limiter.limit(READ_LIMIT)
+async def get_threat_feed(request: Request, _=Depends(verify_token)):
     # Lets the UI explain a paused or sample feed instead of empty charts.
     return dict(simulation.FEED_STATUS)
 

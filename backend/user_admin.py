@@ -170,7 +170,8 @@ async def change_own_password(db: Optional[AsyncSession], username: str, body: d
     user = _require_existing(username)
 
     if PASSWORD_CHANGE_FAILURES.exceeded(username):
-        raise HTTPException(status_code=429, detail="Too many attempts, try again later")
+        raise HTTPException(status_code=429, detail="Too many attempts, try again later",
+                            headers={"Retry-After": str(PASSWORD_CHANGE_FAILURES.retry_after(username))})
     if not await run_in_threadpool(verify_password, current, user["password_hash"]):
         PASSWORD_CHANGE_FAILURES.hit(username)
         raise HTTPException(status_code=403, detail="Current password is incorrect")

@@ -16,6 +16,115 @@ to anything listed here.
 
 ---
 
+## 2026-11-25 · Read limits, external lookup quotas, Retry-After on every 429
+
+**Decision.**
+- Per-IP limits (`rate_limit.client_ip`, slowapi) on the GET routes that had
+  none: `READ_LIMIT` 120/minute for in-memory reads (`/api/alerts`,
+  `/api/alerts/summary`, `/api/users`, `/api/users/directory`, `/auth/me`,
+  `/api/threat-feed`) and the public `/api/config`; `DB_READ_LIMIT`
+  60/minute for reads that query the database when `DATABASE_URL` is set
+  (`/api/incidents`, `/api/rules`, `/api/behavioral/settings`,
+  `/api/ip/{ip}/case`). Each route counts separately. `/health` and the SPA
+  stay unlimited (uptime checks, link crawlers). `/api/hunts` is left for
+  the saved-hunts owner change (L3), a separate pull request.
+- Quotas for the routes that call external services, with `KeyedLimit`,
+  keyed by user AND client IP together (`user_ip_key`: SHA-256 of both,
+  exactly the 64-character key, no address held as text):
+  AI summary 5/minute and 50/day, plus `AI_SUMMARY_GLOBAL` 500/day for the
+  whole server; geolocation 20/minute and 300/day; the AbuseIPDB lookup in
+  `/api/ip/{ip}/history` 20/minute and 300/day. Counted only when the service
+  is really called (not cached, key configured), before the call, all or
+  nothing (a refusal by the global cap uses no user quota). A used-up AI
+  summary or geolocation quota answers 429; a used-up history quota returns
+  the events without the AbuseIPDB fields. The per-IP route limits stay.
+- `AsyncGroq(timeout=10.0, max_retries=0)`. The client defaults were a 60 s
+  timeout and 2 retries. A timeout returns `{"summary": null}`, not cached.
+- Every rate-limit 429 has `Retry-After` in whole seconds:
+  `rate_limit_exceeded_handler` wraps slowapi's handler and reads the window
+  that was hit (`request.state.view_rate_limit`); `KeyedLimit.retry_after`
+  gives the longest wait of the exceeded windows, used by the login lockout,
+  new cases, password change and the new quotas. Bodies are unchanged.
+- Frontend: stats and alerts polling pause for `Retry-After` after a 429
+  (60 s when missing or invalid, at most an hour). Alerts polling used to
+  poll straight into a 429. The threat drawer shows "AI summary limit
+  reached. Try again later." (`role="status"`) and does not cache it.
+- No new environment variables: the limits are constants, like the others.
+
+**Reason.** Findings L7 (reads with no limit) and L8 (external services with
+a cost and a quota, reachable by any signed-in user) of the last security
+review. Owner decisions: quotas per user and IP, because the public demo
+accounts are shared and a per-account quota would let one visitor use it up
+for all; a global Groq cap for cost; `/api/config` 120/minute; existing 429
+bodies kept; history degraded instead of refused, because its events are the
+main content of the drawer and come from memory (implementer's choice,
+reported in the pull request).
+
+Memory: both storages are `limits` `MemoryStorage`. Every key has an expiry,
+and a sweep (scheduled by any hit) drops expired keys, so per-IP keys are
+bounded by the addresses seen per window and route, and quota keys by
+users times addresses; a quota key is made only after the session check.
+A day window keeps its keys for a day. Counters are per process and reset
+on restart (single worker, as before).
+
+slowapi checks a limit inside the endpoint wrapper, after FastAPI resolved
+the dependencies, so a request without a session gets 401 and is not
+counted (tested).
+
+E2E headroom, measured before the change (uvicorn access log through
+`DEBUG=pw:webserver`, one pass each, every pass under 60 s, no 429):
+
+| Route | Phone | Desktop | Tablet | Limit |
+| --- | --- | --- | --- | --- |
+| `/api/config` | 45 | 32 | 39 | 120 |
+| `/auth/me` | 43 | 31 | 39 | 120 |
+| `/api/threat-feed` | 40 | 29 | 36 | 120 |
+| `/api/alerts` | 38 | 29 | 35 | 120 |
+| `/api/users` | 7 | 4 | 5 | 120 |
+| `/api/users/directory` | 5 | 3 | 4 | 120 |
+| `/api/alerts/summary` | 1 | 1 | 1 | 120 |
+| `/api/rules` | 3 | 2 | 2 | 60 |
+| `/api/incidents` | 2 | 1 | 2 | 60 |
+| `/api/ip/{ip}/case` | 1 | 1 | 2 | 60 |
+| `/api/ip/{ip}/ai-summary`, `geo`, `history` | 1 | 1 | 2 | quotas count nothing: no keys in e2e |
+
+The largest is 38% of its limit. For reference in the same runs:
+`/auth/ws-ticket` 37, 27, 33 and `/api/stats` 35, 25, 31. After the change
+`npm run e2e` passed (phone 43, desktop 32, tablet 37); the changes do not
+add requests.
+
+**Alternatives rejected.**
+- Quotas per account only: the shared demo accounts (owner decision).
+- slowapi's `headers_enabled`: needs a `response` parameter on every limited
+  route, and adds `X-RateLimit-*` headers to every response.
+- A slowapi `key_func` that decodes the session for per-user keys: a second
+  copy of the session check; `KeyedLimit` already takes any key.
+- Unifying the 429 bodies to `{"detail": ...}`: owner decision to keep them.
+- A 429 for a used-up history quota: the drawer would lose its events too.
+- Limiting `/health` or the SPA: uptime checks and link crawlers.
+
+**Not verified.** The free-tier quotas of Groq, ipinfo and AbuseIPDB; the
+counts on Render; that the browser reads `Retry-After` under the local
+`ng serve` CORS setup (it is not a CORS-safelisted header and is not in
+`expose_headers`; the client then falls back to 60 s; production is same
+origin). Frontend lint, unit tests, production build and `npm run e2e` were
+run again after `npm ci` on vitest 5.1.1 and jsdom 31.0.1: all passed, no
+spec changed.
+
+Tests: new `backend/tests/test_retry_after.py`, `test_read_limits.py`,
+`test_groq_timeout.py`, `test_external_quotas.py`, and frontend
+`threats.service.retry-after.spec.ts`, `threat-detail-drawer.ai-limit.spec.ts`.
+Checked against the previous code: 6 of 7, 12 of 16, 1 of 2 and 6 of 15
+fail (the rest are guards: no headers on success, unauthenticated requests,
+`/health`, separate buckets, cached answers free, key format, key expiry);
+the service spec does not compile and 1 of 3 drawer cases fails. No
+existing test changed, and none started getting 429.
+
+Files: `backend/rate_limit.py`, `backend/main.py`, `backend/routers/alerts.py`,
+`auth.py`, `behavioral.py`, `incidents.py`, `ip.py`, `rules.py`, `users.py`,
+`backend/user_admin.py`, `frontend/src/app/core/services/threats.service.ts`,
+`threat-detail-drawer.component.ts` and `.html`, `README.md`, tests above.
+
 ## 2026-11-24 · Small hardening: docs CSP, CORS from the environment, ipinfo header, short migration errors
 
 **Decision.**
