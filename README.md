@@ -385,7 +385,24 @@ check, so the two cannot silently diverge.
 | Login failures: 10/minute, 100/hour | per account, across all IPs |
 | New cases: 5/minute, 30/hour | per user |
 | IP intelligence, block/unblock, console, stats | per client IP (10-50/minute depending on the route) |
+| Reads: alerts, alerts summary, users, user directory, `/auth/me`, threat feed status, `/api/config`: 120/minute | per client IP, per route |
+| Database reads: incidents, rules, behavioral settings, open case for an IP: 60/minute | per client IP, per route |
+| AI summaries that call Groq: 5/minute, 50/day | per user and client IP together |
+| AI summaries that call Groq, whole server: 500/day | all users |
+| Geolocation lookups that call ipinfo: 20/minute, 300/day | per user and client IP together |
+| AbuseIPDB lookups for IP history: 20/minute, 300/day | per user and client IP together |
 | WebSocket connections open at once: 20 | per client IP (and 500 in total) |
+
+- Every rate-limit `429` carries `Retry-After` (seconds). Per-IP limits answer `{"error": "Rate limit exceeded: ..."}`,
+  the per-account and per-user ones `{"detail": "..."}`. The frontend pauses stats and alerts polling for that time
+  (one minute when the header is missing).
+- The external lookup quotas count only requests that really call the service: a cached answer or a missing API key
+  costs nothing, and a failed or timed-out call still counts. They are keyed by user and client IP together, so
+  visitors sharing a demo account keep separate quotas. A used-up AI summary or geolocation quota answers `429`;
+  a used-up history quota still returns the events, without the AbuseIPDB fields. The Groq client times out after
+  10 seconds with no retries.
+- `/health`, the SPA files and `/api/hunts` have no limit. Unauthenticated requests are refused (`401`) before the
+  read limits count them.
 
 - **Client IP** is the `X-Forwarded-For` entry at position `-hops` (counted from the right). Leftmost entries are
   client-controlled and never used, so a spoofed header cannot rotate the key.
