@@ -18,10 +18,10 @@
   &:hover { background: color-mix(in srgb, var(--c-accent) 20%, transparent); }
 }
 
+// Fixed, not absolute: the table containers above it clip with overflow:
+// hidden. top and right come from the component (the button's viewport rect).
 .export-dropdown {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
+  position: fixed;
   background: $panel;
   border: 1px solid $border;
   border-radius: 4px;
