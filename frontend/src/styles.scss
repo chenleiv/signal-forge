@@ -10,7 +10,7 @@ html, body {
 }
 
 body {
-  background: var(--c-bg, #0d1117);
+  background: var(--c-bg, #050608);
 }
 
 // WCAG AA: text tokens reach 4.5:1 on --c-bg and --c-panel, *-fill tokens
@@ -27,16 +27,16 @@ body {
 
 .theme-dark,
 :root[data-theme="dark"] {
-  --c-bg:     #0d1117;
-  --c-panel:  #151b24;
-  --c-border: #2a3444;
-  --c-text:   #e6edf3;
-  --c-text-2: #a3aebb;
-  --c-muted:  #8b96a5;
-  --c-accent: #4c8dff;
-  --c-accent-hover: #6ea3ff;
-  --c-on-accent:    #0d1117;
-  --c-input:  #0b0f15;
+  --c-bg:     #050608;
+  --c-panel:  #0e1114;
+  --c-border: #252c33;
+  --c-text:   #e7eef2;
+  --c-text-2: #a4b0b8;
+  --c-muted:  #87939b;
+  --c-accent: #06b6d4;
+  --c-accent-hover: #22d3ee;
+  --c-on-accent:    #050608;
+  --c-input:  #000000;
   --c-success: #4ade80;
   --c-warning: #fbbf24;
 
@@ -62,8 +62,8 @@ body {
   --c-text:   #1f2937;
   --c-text-2: #4b5563;
   --c-muted:  #5b6575;
-  --c-accent: #2f5fc4;
-  --c-accent-hover: #244c9e;
+  --c-accent: #0e7490;
+  --c-accent-hover: #155e75;
   --c-on-accent:    #ffffff;
   --c-input:  #ffffff;
   --c-success: #166534;
