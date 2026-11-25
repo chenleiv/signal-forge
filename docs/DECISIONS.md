@@ -16,6 +16,101 @@ to anything listed here.
 
 ---
 
+## 2026-11-25 · Export hardening: CSV formula neutralisation, JSON and Markdown export
+
+**Decision.**
+- CSV (`frontend/src/app/core/utils/export.utils.ts`, `csvCell`): a cell
+  whose first character is `=`, `+`, `-`, `@`, a tab or a carriage return
+  gets a leading apostrophe. Then the existing quoting applies unchanged
+  (`"` doubled, every cell in quotes). Header cells are treated the same.
+  Everything else in the file is unchanged: `\n` line endings, headers, file
+  names, MIME type `text/csv;charset=utf-8;`.
+- Effect on today's exports: the threat table never has such a cell (IPs,
+  non-negative scores, counts, levels, `—`), so its CSV is byte for byte the
+  same. In the incident CSV a value that starts with one of the six
+  characters (for example a title like `-2+3 …`) now starts with `'`, and
+  spreadsheets show the apostrophe.
+- JSON is the format for machines (a SIEM). It is built from typed items,
+  not from the display rows: `{ kind, generated_at (ISO), count, items }`.
+  Threats: `ip`, `avg_score`, `events`, `threat_level`. Incidents: `id`,
+  `title`, `severity`, `status`, `attack_type`, `source_region`,
+  `event_count`, `assigned_to` (`null`, not `—`), `created_at` (ISO, not the
+  local time string). No apostrophe: `JSON.stringify` does the escaping.
+- Markdown: a title, a `Generated <ISO time>` line and a GFM table built from
+  the same rows as CSV and PDF. In the title and every cell, `\` is escaped
+  first, then `|`, `` ` ``, `[`, `]` and `<` get a backslash, and every line
+  break becomes a space. So a value cannot split a row, open a code span,
+  form a link or start an HTML tag. No apostrophe.
+- No defanging in any format (owner decision).
+- The export menu (`shared/ui/export-menu.component.ts`) lists CSV, PDF, JSON
+  and Markdown, in that order, on the threat table and on incidents. Files:
+  `threats.json`, `threats.md`, `incidents.json`, `incidents.md`.
+- PDF is not changed. jspdf's `text()` draws glyphs. Nothing in a PDF is run
+  as a formula, and the app never calls `html()` (see "Frontend dependency
+  updates", 2026-11-23). The only path is a person copying text out of the
+  PDF into a spreadsheet, which no change to the PDF could stop.
+
+**Reason.** The feature audit found that `downloadCsv` quoted cells but did
+not neutralise formulas, and spreadsheets still run a quoted `=…` cell
+(CSV injection, CWE-1236). Incident titles come from alerts and rules, so
+in a deployment with `DEMO_MODE=false` a rule name can reach that column.
+JSON and Markdown were requested for SIEM ingestion and short reports.
+
+**Not covered (known gaps, kept to the agreed rule).**
+- Leading spaces before a formula character (` =1+1`). Some spreadsheets trim
+  them on import and then run the formula.
+- Full-width or other look-alike characters (`＝`, U+FF1D, and full-width
+  `＋`, `－`, `＠`). A spreadsheet with an East Asian locale may treat them as
+  formula starts.
+- `*` and `_` in Markdown can still change emphasis. They cannot inject a
+  link or HTML, so they are left as they are.
+A unit test pins the first two gaps (`csvCell(' =1+1')` and the full-width
+`＝` stay unprefixed), so a change to the rule is a visible decision.
+
+**Alternatives rejected.**
+- A tab or space prefix instead of `'`: less widely recognised, and changes
+  the value just as much.
+- Stripping the characters: loses data; `-2` and `+1` are real values.
+- Prefixing every cell: changes every CSV for no gain.
+- A CSV or Markdown library: no new dependencies (owner decision).
+- JSON made from the display rows: strings for numbers, `—` for null, and
+  local times that a machine cannot parse.
+- Neutralising JSON and Markdown too: they are not opened in a spreadsheet,
+  and an apostrophe would corrupt the values for machines.
+
+**Not verified.**
+- How Excel, LibreOffice and Google Sheets show the leading `'` on import, and
+  whether any of them still runs a formula after it.
+- How a given SIEM ingests the JSON (field mapping, the envelope).
+- Whether real incident titles start with `-` or `+`.
+- The Markdown rendering in a specific viewer (GitHub, Jira, Confluence);
+  checked only against the CommonMark and GFM escape rules.
+
+Tests: new `core/utils/export.utils.spec.ts` (34: each of the six characters,
+characters not in first place, empty and nullish cells, the two documented
+gaps, quote doubling and its order with the apostrophe, header cells, each
+Markdown character and the backslash order, line breaks, links, the JSON
+envelope and types, and the Blob type and file name of each download),
+`shared/ui/export-menu.formats.spec.ts` (6), `threat-table.export.spec.ts`
+(3, including the unchanged threat CSV) and `incidents.export.spec.ts` (4),
+and `frontend/e2e/export-menu.e2e.ts`: every menu item fully inside the
+viewport, not clipped or covered (the element at its centre is the item),
+and no sideways page scroll, on every project and at 360px on phones.
+Checked: with the apostrophe rule removed, 10 tests fail; with the Markdown
+escaping removed, 10 fail; with the dropdown moved 400px to the right, both
+threat table e2e cases fail on the phone project (incidents not re-run with
+that change). No existing test changed. Frontend unit tests 471 passed
+(424 before, 47 new); `npm run e2e` phone 47, desktop 34, tablet 39 passed,
+none failed.
+
+Files: `frontend/src/app/core/utils/export.utils.ts`,
+`frontend/src/app/shared/ui/export-menu.component.ts`,
+`frontend/src/app/features/threats/threat-table/threat-table.component.ts`
+and `.html`, `frontend/src/app/features/incidents/incidents.ts` and `.html`,
+`README.md`, tests above.
+
+---
+
 ## 2026-11-25 · Playwright traces and screenshots uploaded on a CI e2e failure
 
 **Decision.**
