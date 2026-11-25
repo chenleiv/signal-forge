@@ -66,6 +66,9 @@
           <button class="btn-clear" aria-label="Cancel saving the hunt" (click)="showSave.set(false)">✕</button>
         </div>
       }
+      @if (saveError(); as error) {
+        <p class="save-error" role="alert">{{ error }}</p>
+      }
     </div>
 
     @if (savedHunts().length > 0) {
@@ -77,9 +80,12 @@
               <div class="saved-left">
                 <span class="saved-name">{{ hunt.name }}</span>
                 <span class="saved-meta">{{ hunt.result_count }} results · {{ hunt.created_at | date:'HH:mm' }}</span>
+                <span class="saved-owner">by {{ hunt.created_by ?? 'unknown' }}</span>
               </div>
-              <button class="saved-del" [attr.aria-label]="'Delete saved hunt ' + hunt.name"
-                      (click)="deleteHunt(hunt.id, $event)">✕</button>
+              @if (canDelete(hunt)) {
+                <button class="saved-del" [attr.aria-label]="'Delete saved hunt ' + hunt.name"
+                        (click)="deleteHunt(hunt.id, $event)">✕</button>
+              }
             </div>
           }
         </div>
