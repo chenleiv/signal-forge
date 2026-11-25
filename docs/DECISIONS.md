@@ -87,6 +87,8 @@ Files: `backend/routers/hunting.py`, `backend/authz.py`,
   `/api/ip/{ip}/case`). Each route counts separately. `/health` and the SPA
   stay unlimited (uptime checks, link crawlers). `/api/hunts` is left for
   the saved-hunts owner change (L3), a separate pull request.
+  (Closed, 2026-11-25: `GET /api/hunts` has `READ_LIMIT`, see "Saved hunts
+  have an owner (finding L3)".)
 - Quotas for the routes that call external services, with `KeyedLimit`,
   keyed by user AND client IP together (`user_ip_key`: SHA-256 of both,
   exactly the 64-character key, no address held as text):
@@ -273,6 +275,8 @@ Files: `backend/security_headers.py`, `backend/main.py`, `backend/user_admin.py`
   workflow used before, so behaviour did not change: `checkout` v4.4.0,
   `setup-python` v5.6.0, `setup-node` v4.4.0. Newer majors are left to
   Dependabot. There is no CodeQL or other workflow.
+  (Superseded: Dependabot has since moved the pins; `ci.yml` now names
+  `checkout` v7.0.1, `setup-python` v7.1.0 and `setup-node` v7.1.0.)
 - `.github/dependabot.yml`: weekly version updates, Monday 05:00 UTC (an hour
   before the weekly audit run), for `github-actions` at `/` (limit 5), `npm`
   at `/frontend` (limit 5) and `pip` at `/backend` (limit 3), each with a
@@ -899,6 +903,8 @@ Files: `backend/forwarded_diag.py` (new), `backend/main.py`, `README.md`.
   Verify with the README Deployment checklist step (count the
   `X-Forwarded-For` entries, never the IPs, on one HTTP request and one
   WebSocket upgrade). Not yet verified on Render.
+  (Superseded, 2026-11-22: the WebSocket path uses `TRUSTED_PROXY_HOPS_WS`,
+  see "Separate proxy hop counts for HTTP and WebSocket".)
 - Each incoming message is limited to 8 KiB by uvicorn:
   `--ws-max-size 8192` in the start command (Render setting, `build.sh`
   comment, `e2e/serve.mjs`). A larger one closes with 1009. The limit applies
@@ -1305,6 +1311,8 @@ Files: `frontend/package.json`, `frontend/playwright.config.ts` (comment),
 - All five Settings cards start closed (before: only the password card, see
   "Settings cards are collapsible" below). Only the password card clears its
   fields on close.
+  (Superseded, 2026-11-18: four cards since the Alert Thresholds card was
+  removed, see "Settings: the Alert Thresholds card is removed".)
 
 **Reason.** An always-enabled Save gave no sign of unsaved changes and stored
 the same values again; a disabled button that looks enabled reads as broken.
@@ -1347,6 +1355,9 @@ Files: `settings.ts`, `settings.html`, `settings.scss`, `settings.spec.ts`
   successful poll. The server limit is unchanged. While it is set, the shell
   shows a "STATS" banner (`role="status"`, same style as the feed banner):
   live stats are paused, retrying in about a minute.
+  (Superseded, 2026-11-25: every rate-limit 429 now has `Retry-After` and
+  the client pauses for it, 60 s only when it is missing; see "Read limits,
+  external lookup quotas, Retry-After on every 429".)
 - Rule toggle on-dot: `--c-input` instead of `--c-text-2`. Measured against
   the on track (`--c-text` at 51%): dark 4.89:1 over the page, 5.23:1 over
   the panel; light 3.53:1 and 3.30:1. Before: 1.74/1.63 (dark), 2.14/2.29
@@ -1374,6 +1385,9 @@ out, not reconnecting.
 - Reworking the rule row for a larger toggle: the `::after` hit area is
   enough and keeps the look.
 - Retrying alerts polling on 429: `GET /api/alerts` has no rate limit.
+  (Superseded, 2026-11-25: `GET /api/alerts` has `READ_LIMIT` and alerts
+  polling pauses on a 429; see "Read limits, external lookup quotas,
+  Retry-After on every 429".)
 
 The banner needed one line of test data in the existing
 `app-layout.spec.ts` stub (`statsLimited: signal(false)`), approved by the
@@ -1502,6 +1516,9 @@ per-IP limit on `/api/stats`, and the threats table stays empty.
 (`threats.service.ts`, `catchError(() => EMPTY)`): several users behind one
 shared IP, each polling every 5 seconds, can exhaust 50 requests per minute
 and the live table stays empty with no message.
+(Closed, 2026-11-17: the client pauses polling and shows a "STATS" banner,
+see "Small fixes: stream reconnect, stats 429, toggle contrast, touch
+targets".)
 
 Files: `_tokens.scss`, `_drawer.scss`, `app-layout.scss`,
 `command-console.scss`, `settings.scss`, `playwright.config.ts`,
