@@ -16,6 +16,51 @@ to anything listed here.
 
 ---
 
+## 2026-11-25 · Documentation audit against the code
+
+**Decision.**
+- `README.md`, this log, `build.sh` and `.github/dependabot.yml` comments
+  were checked claim by claim against the code on `master` (`ec84e5a`):
+  screens and routes, roles and the permission matrix, the API endpoint
+  table, rate limits and quotas (`backend/rate_limit.py` and every route
+  decorator), environment variables (every `os.environ` read), commands
+  (`frontend/package.json`, `ci.yml`), folder trees, the security section,
+  deployment and versions (`package.json`, the lock files, `.node-version`,
+  `.python-version`).
+- 21 README findings: 9 wrong (API docs at `/docs` without
+  `ENABLE_API_DOCS`; notes, and tasks, without managers (two rows); user
+  deletion rules; `Retry-After` on the WebSocket 429; the dashboard charts;
+  the number of CI dependency jobs; the feed retry without a key; a
+  placeholder for a screenshot that did not exist), 4 unclear and 8 missing. All fixed in
+  `README.md`: new sections for environment variables, security headers and
+  CORS, and a rate limit table that matches `rate_limit.py`.
+- Seven passages of this log that read as current but were replaced later
+  got one "Superseded" or "Closed" line each. No old text was changed.
+- No version mismatch was found: no file mentions Angular 19, and Angular 21,
+  D3 7, ECharts, Vitest, Node 26, Python 3.13 and uvicorn 0.54.0 match the
+  lock files.
+- Screenshots: the only one is `frontend/public/og-image.png` (dark theme
+  dashboard, demo banner). It and any README screenshot are retaken after
+  the color change; until then the README shows none.
+
+**Reason.** A security review had found seven mismatches between the
+documentation and the code; that list was lost. The audit could not tell
+which seven they were, so every claim was checked again.
+
+**Alternatives rejected.**
+- Rewriting stale log entries: the log is history; a pointer keeps it
+  accurate without losing what was decided at the time.
+- Reading `backend/.env.example` for the variables table: env files are not
+  opened; the table is built from the code, and `tests/test_env_example.py`
+  (CI) checks that the example lists every name.
+
+**Not verified.** The contents of `backend/.env.example`; Render settings
+and build logs; which seven items the old review listed.
+
+Files: `README.md`, `docs/DECISIONS.md`.
+
+---
+
 ## 2026-11-25 · Saved hunts have an owner (finding L3)
 
 **Decision.**
