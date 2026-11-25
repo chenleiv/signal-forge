@@ -30,11 +30,11 @@ export type ChartToken =
 
 export const CHART_PALETTE: Record<ChartTheme, Record<ChartToken, string>> = {
   dark: {
-    'c-text': '#e6edf3',
-    'c-text-2': '#a3aebb',
-    'c-muted': '#8b96a5',
-    'c-border': '#2a3444',
-    'c-accent': '#4c8dff',
+    'c-text': '#e7eef2',
+    'c-text-2': '#a4b0b8',
+    'c-muted': '#87939b',
+    'c-border': '#252c33',
+    'c-accent': '#06b6d4',
     'c-success': '#4ade80',
     'c-sev-critical-fill': '#f87171',
     'c-sev-high-fill': '#fb923c',
@@ -47,7 +47,7 @@ export const CHART_PALETTE: Record<ChartTheme, Record<ChartToken, string>> = {
     'c-text-2': '#4b5563',
     'c-muted': '#5b6575',
     'c-border': '#b8c2cf',
-    'c-accent': '#2f5fc4',
+    'c-accent': '#0e7490',
     'c-success': '#166534',
     'c-sev-critical-fill': '#dc2626',
     'c-sev-high-fill': '#dc4f0a',
