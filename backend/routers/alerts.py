@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_db
-from rate_limit import WRITE_LIMIT, limiter
+from rate_limit import READ_LIMIT, WRITE_LIMIT, limiter
 from schemas import AlertPatch
 from store import alerts_store, _blocked_ips, _find_alert, verify_token
 from routers.incidents import build_incident_for_ip
@@ -17,7 +17,8 @@ router = APIRouter()
 
 
 @router.get("/api/alerts")
-async def get_alerts(include_dismissed: bool = False, _=Depends(verify_token)):
+@limiter.limit(READ_LIMIT)
+async def get_alerts(request: Request, include_dismissed: bool = False, _=Depends(verify_token)):
     if include_dismissed:
         return list(alerts_store)
     return [a for a in alerts_store if a["status"] != "dismissed"]
@@ -37,7 +38,8 @@ async def patch_alert(request: Request, alert_id: str, body: AlertPatch, _=Depen
 
 
 @router.get("/api/alerts/summary")
-async def get_alerts_summary(_=Depends(verify_token)):
+@limiter.limit(READ_LIMIT)
+async def get_alerts_summary(request: Request, _=Depends(verify_token)):
     active = [a for a in alerts_store if a["status"] != "dismissed"]
     critical_count = sum(1 for a in active if a["severity"] == "critical")
 

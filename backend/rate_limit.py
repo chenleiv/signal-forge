@@ -117,6 +117,15 @@ limiter = Limiter(key_func=client_ip)
 WRITE_LIMIT = "30/minute"
 ADMIN_WRITE_LIMIT = "20/minute"
 
+# Per-IP limits for reads. Pages poll (alerts every 15 s, incidents every
+# 30 s, the feed status every minute) and every page load reads /auth/me and
+# /api/config; the busiest e2e pass sends at most 45 of one route in under a
+# minute (docs/DECISIONS.md). READ_LIMIT: in-memory reads and the public
+# /api/config. DB_READ_LIMIT: reads that query the database when
+# DATABASE_URL is set.
+READ_LIMIT = "120/minute"
+DB_READ_LIMIT = "60/minute"
+
 
 def seconds_until(reset_time: float) -> int:
     """Whole seconds until `reset_time` (epoch), at least 1: the value of a

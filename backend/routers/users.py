@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from authz import check_user_create, check_user_delete, check_user_update, require_admin
 from database import get_db
-from rate_limit import ADMIN_WRITE_LIMIT, limiter
+from rate_limit import ADMIN_WRITE_LIMIT, READ_LIMIT, limiter
 from schemas import UserCreate, UserPatch
 from store import verify_token
 from user_admin import create_user, delete_user, update_user
@@ -16,13 +16,15 @@ router = APIRouter()
 
 
 @router.get("/api/users")
-async def get_users(_=Depends(verify_token)):
+@limiter.limit(READ_LIMIT)
+async def get_users(request: Request, _=Depends(verify_token)):
     """Active users (assignable). Never includes password hashes."""
     return list_users()
 
 
 @router.get("/api/users/directory")
-async def get_user_directory(_=Depends(verify_token)):
+@limiter.limit(READ_LIMIT)
+async def get_user_directory(request: Request, _=Depends(verify_token)):
     """Every name ever used, including deleted users, so history keeps names."""
     return user_directory()
 

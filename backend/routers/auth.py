@@ -10,7 +10,7 @@ from starlette.concurrency import run_in_threadpool
 
 from database import get_db
 from sessions import new_session_id, revoke_session
-from rate_limit import WRITE_LIMIT, limiter, login_locked, login_retry_after, record_login_failure
+from rate_limit import READ_LIMIT, WRITE_LIMIT, limiter, login_locked, login_retry_after, record_login_failure
 from schemas import LoginBody, OwnPasswordBody
 from user_admin import change_own_password
 import store as _store
@@ -98,7 +98,8 @@ async def logout(request: Request, response: Response, db: Optional[AsyncSession
 
 
 @router.get("/auth/me")
-async def me(user: CurrentUser = Depends(verify_token)):
+@limiter.limit(READ_LIMIT)
+async def me(request: Request, user: CurrentUser = Depends(verify_token)):
     record = get_user(user.username)
     if record is None:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
