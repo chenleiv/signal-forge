@@ -3,7 +3,15 @@ import { NgClass, TitleCasePipe } from '@angular/common';
 import { ExportMenuComponent } from '../../../shared/ui/export-menu.component';
 import { FilterPillsComponent } from '../../../shared/ui/filter-pills.component';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
-import { downloadCsv, downloadPdf } from '../../../core/utils/export.utils';
+import { downloadCsv, downloadJson, downloadMarkdown, downloadPdf } from '../../../core/utils/export.utils';
+
+/** One row of the JSON export: typed values, stable snake_case keys. */
+export interface ThreatExportItem {
+  ip: string;
+  avg_score: number;
+  events: number;
+  threat_level: string | null;
+}
 
 @Component({
   selector: 'app-threat-table',
@@ -45,6 +53,14 @@ export class ThreatTableComponent {
 
   exportCsv() { downloadCsv(this.exportHeaders, this.exportRows, 'threats.csv'); }
   exportPdf() { downloadPdf('SignalForge — Threat Intelligence', this.exportHeaders, this.exportRows, 'threats.pdf'); }
+  exportJson() { downloadJson('threats', this.exportItems, 'threats.json'); }
+  exportMarkdown() { downloadMarkdown('SignalForge — Threat Intelligence', this.exportHeaders, this.exportRows, 'threats.md'); }
+
+  private get exportItems(): ThreatExportItem[] {
+    return this.filteredRows().map(r => ({
+      ip: r.ip, avg_score: r.score, events: r.count, threat_level: r.threat_level ?? null,
+    }));
+  }
 
   selectIp(ip: string) { this.ipSelected.emit(ip); }
 

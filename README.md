@@ -20,7 +20,9 @@ The attacking IPs come from the AbuseIPDB blacklist (or a bundled sample in demo
 - **Detection Rules** — condition-based rules that raise alerts, open incidents, or block IPs
 - **Threat Hunting** — query recent events and save hunts
 - **Command Console** — terminal panel (toggle with `` ` ``) with commands: `help`, `status`, `block ip`, `unblock ip`, `scan`, and `clear` (handled in the browser)
-- **Export** — CSV and PDF export of the threat table and the incident list
+- **Export** — CSV, PDF, JSON and Markdown export of the threat table and the incident list. JSON holds typed
+  fields for machines (a SIEM); CSV cells that start with `=`, `+`, `-`, `@`, a tab or a carriage return get a
+  leading `'`, so a spreadsheet does not run them as formulas
 - **Users and roles** — `admin`, `manager` and `analyst` roles, user management screen; see [Security](#security) for the permission matrix
 - **Authentication** — session in an HttpOnly cookie (8 hours), bcrypt-hashed passwords, rate-limited login
 - **Demo mode** — read-only public demo with in-browser simulation of analyst actions
@@ -76,7 +78,7 @@ signalforge/
         │   ├── services/    # ThreatStore, Threats, ThreatFeed, Auth, DemoMode, DemoSimulator, Settings, Theme
         │   ├── interceptors/# API base URL, 401 redirect, demo mode
         │   ├── guards/      # Auth guard (every page), admin guard (Users screen: admins and managers)
-        │   └── utils/       # CSV and PDF export helpers
+        │   └── utils/       # CSV, PDF, JSON and Markdown export helpers
         ├── shared/
         │   ├── models/      # TypeScript interfaces
         │   └── ui/          # Export menu, filter pills, drawer resize

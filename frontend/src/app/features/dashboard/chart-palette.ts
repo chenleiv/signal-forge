@@ -33,7 +33,7 @@ export const CHART_PALETTE: Record<ChartTheme, Record<ChartToken, string>> = {
     'c-text': '#e7eef2',
     'c-text-2': '#a4b0b8',
     'c-muted': '#87939b',
-    'c-border': '#252c33',
+    'c-border': '#232c38',
     'c-accent': '#06b6d4',
     'c-success': '#4ade80',
     'c-sev-critical-fill': '#f87171',

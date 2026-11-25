@@ -16,7 +16,20 @@ import { timer } from 'rxjs';
 import { Incident, SEVERITY_COLORS } from '../../shared/models/threat.models';
 import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { IncidentDetailComponent } from './incident-detail/incident-detail.component';
-import { downloadCsv, downloadPdf } from '../../core/utils/export.utils';
+import { downloadCsv, downloadJson, downloadMarkdown, downloadPdf } from '../../core/utils/export.utils';
+
+/** One row of the JSON export: typed values, ISO time, null when unassigned. */
+export interface IncidentExportItem {
+  id: string;
+  title: string;
+  severity: Incident['severity'];
+  status: Incident['status'];
+  attack_type: Incident['attack_type'];
+  source_region: string;
+  event_count: number;
+  assigned_to: string | null;
+  created_at: string;
+}
 
 @Component({
   selector: 'app-incidents',
@@ -131,6 +144,31 @@ export class Incidents {
       this.exportRows,
       'incidents.pdf',
     );
+  }
+  exportJson() {
+    downloadJson('incidents', this.exportItems, 'incidents.json');
+  }
+  exportMarkdown() {
+    downloadMarkdown(
+      'SignalForge — Incident Report',
+      this.exportHeaders,
+      this.exportRows,
+      'incidents.md',
+    );
+  }
+
+  private get exportItems(): IncidentExportItem[] {
+    return this.filtered().map((i) => ({
+      id: i.id,
+      title: i.title,
+      severity: i.severity,
+      status: i.status,
+      attack_type: i.attack_type,
+      source_region: i.source_region,
+      event_count: i.event_count,
+      assigned_to: i.assigned_to ?? null,
+      created_at: new Date(i.created_at).toISOString(),
+    }));
   }
 
   readonly severityColor = (sev: string) => SEVERITY_COLORS[sev] ?? 'var(--c-muted)';
