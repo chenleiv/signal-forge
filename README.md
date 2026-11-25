@@ -2,8 +2,6 @@
 
 **[Live demo](https://signalforge-api-ah1q.onrender.com)**: no sign-up, use the [demo accounts](#demo-accounts). The first load can be slow while the server wakes up.
 
-<!-- Screenshot placeholder: add docs/dashboard.png (or .gif), taken in demo mode, and show it here. -->
-
 SignalForge is a Security Operations Center (SOC) dashboard for security analysts: watch threats in real time, triage alerts and investigate incidents, with role-based access control and AI-assisted IP analysis. Built with Angular 21 and FastAPI.
 
 The attacking IPs come from the AbuseIPDB blacklist (or a bundled sample in demo mode when no list is available). The events around them are generated, so no real network is being monitored.
@@ -13,7 +11,7 @@ The attacking IPs come from the AbuseIPDB blacklist (or a bundled sample in demo
 ## Features
 
 - **Live SOC Stream** — real-time threat event feed over WebSocket with severity color coding
-- **Analytics Dashboard** — severity distribution, attack types, events-per-minute trend, and top attacking IPs (Apache ECharts)
+- **Analytics Dashboard** — summary cards (tracked IPs, events, events per minute, regions, high severity, critical alerts) and charts for severity distribution, attack types, regions and top attacking IPs (Apache ECharts)
 - **Threat Map** — animated D3.js world map showing attack origin → target lines in real time
 - **Threat Intelligence** — IP index with split-view detail panel, MITRE ATT&CK tags, event timeline, and AbuseIPDB enrichment
 - **AI Analysis** — per-IP threat summaries generated through the Groq API, displayed inline in the detail panel
@@ -21,7 +19,8 @@ The attacking IPs come from the AbuseIPDB blacklist (or a bundled sample in demo
 - **Alerts** — live alert feed with severity filters; acknowledge, dismiss, or open a case from an alert
 - **Detection Rules** — condition-based rules that raise alerts, open incidents, or block IPs
 - **Threat Hunting** — query recent events and save hunts
-- **Command Console** — terminal panel (toggle with `` ` ``) with commands: `help`, `status`, `block ip`, `unblock ip`, `scan`
+- **Command Console** — terminal panel (toggle with `` ` ``) with commands: `help`, `status`, `block ip`, `unblock ip`, `scan`, and `clear` (handled in the browser)
+- **Export** — CSV and PDF export of the threat table and the incident list
 - **Users and roles** — `admin`, `manager` and `analyst` roles, user management screen; see [Security](#security) for the permission matrix
 - **Authentication** — session in an HttpOnly cookie (8 hours), bcrypt-hashed passwords, rate-limited login
 - **Demo mode** — read-only public demo with in-browser simulation of analyst actions
@@ -60,7 +59,7 @@ signalforge/
 │   ├── repositories.py      # Storage: database or in-memory, one interface per data type
 │   ├── sessions.py          # Logout revocation (per-session ids)
 │   ├── rate_limit.py        # Per-IP and per-key rate limits
-│   ├── schemas.py           # Typed request bodies (unknown fields, types, sizes: 422)
+│   ├── schemas.py           # Typed request bodies (unknown fields, types, sizes: 422; notes ignore unknown fields)
 │   ├── security_headers.py  # CSP, HSTS over HTTPS, no-store on the API
 │   ├── request_limits.py    # Request body size limit (413 over 64 KB)
 │   ├── routers/             # auth, users, incidents, alerts, rules, behavioral, hunting, ip
@@ -76,9 +75,11 @@ signalforge/
         │   ├── auth/        # Permission helper (client-side copy of the matrix)
         │   ├── services/    # ThreatStore, Threats, ThreatFeed, Auth, DemoMode, DemoSimulator, Settings, Theme
         │   ├── interceptors/# API base URL, 401 redirect, demo mode
-        │   └── guards/      # Auth guard (every page), admin guard (Users screen)
+        │   ├── guards/      # Auth guard (every page), admin guard (Users screen: admins and managers)
+        │   └── utils/       # CSV and PDF export helpers
         ├── shared/
-        │   └── models/      # TypeScript interfaces
+        │   ├── models/      # TypeScript interfaces
+        │   └── ui/          # Export menu, filter pills, drawer resize
         ├── layout/          # AppLayout shell — sidebar, topbar, command console
         └── features/
             ├── dashboard/       # Live stream, ECharts panels, critical alerts
@@ -124,8 +125,35 @@ cp .env.example .env
 python3 -m uvicorn main:app --reload
 ```
 
-Backend runs on `http://localhost:8000`. API docs at `http://localhost:8000/docs`.
+Backend runs on `http://localhost:8000`. API docs (Swagger UI at `/docs`, ReDoc at `/redoc`) are served only with
+`ENABLE_API_DOCS=true`, for local development; otherwise those paths fall through to the SPA.
 Without `DATABASE_URL` everything is kept in memory; with it, migrations run on startup and a failed migration stops the server.
+
+### Environment variables
+
+Every variable the backend reads (`backend/.env.example` lists the same names with empty values; an empty value
+means "use the default"). Never commit real values.
+
+| Name | Default | Required | Stops startup |
+|---|---|---|---|
+| `JWT_SECRET` | none | yes | when missing or shorter than 32 bytes |
+| `DEMO_MODE` | on (anything but `false`) | no | no |
+| `ADMIN_PASSWORD` | empty | with `DEMO_MODE=false`, until an admin with a real password exists | with `DEMO_MODE=false`: when set but not 12-72 bytes; when empty and there is no database; when empty and the database has no admin or the admin still has the demo password |
+| `DATABASE_URL` | empty: in-memory storage | no | when a migration fails, or the database holds more than one active admin |
+| `ENV` | empty: the session cookie is `Secure` | `development` for local plain HTTP | no |
+| `CORS_ORIGINS` | empty: no cross-origin caller | for local `ng serve` | when an entry is not an exact lowercase `http(s)://host[:port]` origin |
+| `ENABLE_API_DOCS` | off (only `true` turns it on) | no | no |
+| `TRUSTED_PROXY_HOPS_HTTP` | 1 | no (Render: 2) | when not a non-negative integer |
+| `TRUSTED_PROXY_HOPS_WS` | 1 | no (Render: 1) | when not a non-negative integer |
+| `TRUSTED_PROXY_HOPS` | none (legacy name) | must not be set | **refused**: any non-empty value stops startup |
+| `ABUSEIPDB_API_KEY` | empty: cached list, or the bundled sample in demo mode | no | no |
+| `IPINFO_TOKEN` | empty: built-in geolocation data | no | no |
+| `GROQ_API_KEY` | empty: no AI summaries (`{"summary": null}`) | no | no |
+| `GROQ_MODEL` | `openai/gpt-oss-20b` (also when empty) | no | no |
+| `THREAT_IPS_CACHE` | `backend/threat_ips_cache.json` | no | no |
+
+Outside the backend: `PORT` is set by Render for the start command, and `BACKEND_PYTHON` points the e2e tests at
+another Python (default `backend/venv`).
 
 ### Updating Python dependencies
 
@@ -187,18 +215,21 @@ A real admin password, once set, is never overwritten by `ADMIN_PASSWORD`.
 cd backend && ruff check . && python -m pytest   # lint + all backend tests
 cd frontend && npm run lint                       # ESLint (incl. template accessibility rules)
 cd frontend && npm test -- --watch=false          # all frontend tests (Vitest)
-cd frontend && npm run e2e                        # layout checks in a real browser (Playwright)
+cd frontend && npm run e2e                        # layout and behaviour checks in a real browser (Playwright)
 ```
 
-**CI** (`.github/workflows/ci.yml`) runs all of the above on every pull request and on `master`, plus two
-dependency jobs that also run weekly: `python-lock` (the locks match their `.in` files) and `pip-audit` (fails on any
-known advisory in `requirements.txt`; the dev and pip-tools locks are only reported).
+**CI** (`.github/workflows/ci.yml`) runs all of the above on every pull request and on `master`, plus the production
+build and the link-preview tag check, and three dependency jobs that also run weekly: `python-lock` (the locks match
+their `.in` files), `pip-audit` (fails on any known advisory in `requirements.txt`; the dev and pip-tools locks are
+only reported) and `npm-audit` (fails on a high or critical advisory in the runtime packages; the full tree is only
+reported).
 
-**Layout checks (`npm run e2e`).** Builds the frontend, serves it from the backend in demo mode (like on Render,
+**Browser checks (`npm run e2e`).** Builds the frontend, serves it from the backend in demo mode (like on Render,
 no database), and checks every page on a phone (390 px), a tablet (820 px) and a desktop (1440 px), each in its own
 pass on a fresh server: nothing may be cut off by the
 screen edge (only wide tables scroll sideways, inside `.h-scroll`), the phone menu opens and closes, and logout
-is reachable. Tests only talk to the local server: every other request is blocked. First run:
+is reachable. Behaviour specs in `frontend/e2e/` also cover the WebSocket ticket and session expiry, failed
+incident updates and saving settings. Tests only talk to the local server: every other request is blocked. First run:
 `npx playwright install chromium`. The backend virtualenv is expected at `backend/venv` (override with
 `BACKEND_PYTHON`).
 
@@ -222,12 +253,12 @@ All endpoints require a session except those marked *public*. Role requirements 
 | GET | `/api/users/directory` | Every name ever used, incl. deleted users (for history) | any user |
 | POST | `/api/users` | Create a user | admin |
 | PATCH | `/api/users/{username}` | Change role and/or reset password (signs the user out) | admin, or manager for an analyst's password only |
-| DELETE | `/api/users/{username}` | Delete a user (soft delete; not yourself, not the last admin) | admin |
+| DELETE | `/api/users/{username}` | Delete a user (soft delete; never the admin account, `403`; not yourself, `409`) | admin |
 | GET | `/api/stats` | Aggregated chart data | any user |
 | GET | `/api/incidents` | Incident list | any user |
 | PATCH | `/api/incidents/{id}` | Change status / assignee | see matrix |
-| POST | `/api/incidents/{id}/notes` | Add a note | assignee or admin |
-| PATCH | `/api/incidents/{id}/tasks` | Update completed response tasks | assignee or admin |
+| POST | `/api/incidents/{id}/notes` | Add a note | assignee, manager or admin |
+| PATCH | `/api/incidents/{id}/tasks` | Update completed response tasks | assignee, manager or admin |
 | POST | `/api/incidents/from-ip` | Open a case for an IP (assigned to the creator) | any user |
 | GET | `/api/alerts`, `/api/alerts/summary` | Alerts and metrics | any user |
 | PATCH | `/api/alerts/{id}` | Acknowledge / dismiss | any user |
@@ -243,7 +274,7 @@ All endpoints require a session except those marked *public*. Role requirements 
 | GET | `/api/ip/{ip}/ai-summary` | AI-generated threat summary | any user |
 | POST, DELETE | `/api/ip/{ip}/block` | Block / unblock an IP | any user |
 | POST | `/api/command` | Command console | any user |
-| GET | `/health` | Health check | public |
+| GET, HEAD | `/health` | Health check (HEAD for uptime monitors, not in the schema) | public |
 
 ---
 
@@ -274,11 +305,11 @@ table, so a restart on a host with an ephemeral disk (Render) does not spend the
 | State | Meaning |
 |-------|---------|
 | `live` | A list fetched within the last day |
-| `cached` | An older stored list, because the refresh failed (`reason`: `quota`, `error`) or there is no `ABUSEIPDB_API_KEY` |
+| `cached` | An older stored list, because the refresh failed (`reason`: `quota`, `error`) or there is no `ABUSEIPDB_API_KEY` (`reason`: `no_key`) |
 | `sample` | Demo mode only, with no stored list: the bundled `threat_ips_sample.json` |
 | `unavailable` | Nothing to stream (outside demo mode, sample data is never used) |
 
-While the feed is not `live` the backend retries: at the quota reset when a 429 carries `Retry-After` (clamped to 5 minutes - 24 hours), otherwise hourly. The UI shows a banner for `sample` and `unavailable`.
+While the feed is not `live` the backend retries: at the quota reset when a 429 carries `Retry-After` (clamped to 5 minutes - 24 hours), daily when there is no `ABUSEIPDB_API_KEY`, otherwise hourly. The UI shows a banner for `sample` and `unavailable`.
 Stored lists are validated before use: public IPs with an integer score 0-100, at most 1000 entries.
 
 The frontend uses a central `ThreatStoreService` (Angular signals) as the single source of truth for HTTP calls and cached state. WebSocket events are pushed into the store, and components react to signal changes. The current user (from `/auth/me`) lives in `AuthService`; the UI hides or disables actions the user is not allowed to take, using the same permission rules as the server.
@@ -374,8 +405,11 @@ check, so the two cannot silently diverge.
 
 ### Demo mode
 
-- **On unless `DEMO_MODE=false`** (fails closed). A middleware rejects every non-GET request with
-  `403 {"detail": "Read-only demo"}`, except login and logout. It runs before any route or permission check.
+- **On unless `DEMO_MODE=false`** (fails closed). A middleware rejects every request other than `GET`, `HEAD` and
+  `OPTIONS` with `403 {"detail": "Read-only demo"}`, except `POST /auth/login` and `POST /auth/logout`. It runs before
+  any route or permission check.
+- With a database, startup in demo mode puts the demo accounts back to their seeded names and roles, and resets the
+  `admin` password to the public demo password if it was changed.
 - In the browser, common analyst actions are simulated locally (nothing is saved) so the demo stays interactive.
   The simulation applies the same permission rules, so it never "succeeds" at something the real server would deny.
 - The public demo accounts exist only in demo mode, and are exempt from the per-account login lockout
@@ -385,20 +419,29 @@ check, so the two cannot silently diverge.
 
 | Limit | Scope |
 |---|---|
-| Login: 5/minute | per client IP |
-| Login failures: 10/minute, 100/hour | per account, across all IPs |
+| Login (`POST /auth/login`): 5/minute | per client IP |
+| Login failures: 10/minute, 100/hour (not for the demo accounts in demo mode) | per account, across all IPs |
+| WebSocket tickets (`/auth/ws-ticket`): 60/minute | per client IP |
+| Stats (`/api/stats`): 50/minute | per client IP |
+| IP intelligence (`/api/ip/{ip}/history`, `/geo`, `/related`, `GET /block`): 30/minute each; `/ai-summary`: 10/minute | per client IP, per route |
+| Block / unblock an IP (`POST`, `DELETE /api/ip/{ip}/block`), console (`/api/command`): 20/minute each | per client IP, per route |
+| Writes: 30/minute each (`WRITE_LIMIT`): logout, `PATCH /auth/me`, every incident and alert write, opening a case, saving and deleting a hunt | per client IP, per route |
+| Running a hunt (`GET /api/hunt`, scans every stored event): 30/minute (`WRITE_LIMIT`) | per client IP |
+| Admin writes: 20/minute each (`ADMIN_WRITE_LIMIT`): create, change and delete users, every rule write, behavioral settings | per client IP, per route |
+| Reads: alerts, alerts summary, saved hunts, users, user directory, `/auth/me`, threat feed status, `/api/config`: 120/minute (`READ_LIMIT`) | per client IP, per route |
+| Database reads: incidents, rules, behavioral settings, open case for an IP: 60/minute (`DB_READ_LIMIT`) | per client IP, per route |
 | New cases: 5/minute, 30/hour | per user |
-| IP intelligence, block/unblock, console, stats | per client IP (10-50/minute depending on the route) |
-| Reads: alerts, alerts summary, saved hunts, users, user directory, `/auth/me`, threat feed status, `/api/config`: 120/minute | per client IP, per route |
-| Database reads: incidents, rules, behavioral settings, open case for an IP: 60/minute | per client IP, per route |
+| Wrong current password on `PATCH /auth/me`: 5/minute, 20/hour | per user |
 | AI summaries that call Groq: 5/minute, 50/day | per user and client IP together |
 | AI summaries that call Groq, whole server: 500/day | all users |
 | Geolocation lookups that call ipinfo: 20/minute, 300/day | per user and client IP together |
 | AbuseIPDB lookups for IP history: 20/minute, 300/day | per user and client IP together |
 | WebSocket connections open at once: 20 | per client IP (and 500 in total) |
 
-- Every rate-limit `429` carries `Retry-After` (seconds). Per-IP limits answer `{"error": "Rate limit exceeded: ..."}`,
-  the per-account and per-user ones `{"detail": "..."}`. The frontend pauses stats and alerts polling for that time
+- Every rate-limit `429` on an HTTP route carries `Retry-After` (seconds). Per-IP limits answer
+  `{"error": "Rate limit exceeded: ..."}`, the per-account and per-user ones `{"detail": "..."}`. The WebSocket cap is
+  the exception: the handshake is refused with `429 {"detail": "Too many open streams"}` and no `Retry-After` (or, if
+  the server cannot send a denial response, the socket closes with 1013). The frontend pauses stats and alerts polling for that time
   (one minute when the header is missing).
 - The external lookup quotas count only requests that really call the service: a cached answer or a missing API key
   costs nothing, and a failed or timed-out call still counts. They are keyed by user and client IP together, so
@@ -439,6 +482,33 @@ check, so the two cannot silently diverge.
 - Incident status, assignees, notes (non-empty string, max 2000 characters) and completed tasks (unique indexes
   within the incident's playbook) are validated (`422`, never `500`).
 - The blocklist is capped at 1000 entries.
+
+### Security headers
+
+Set on every HTTP response, error responses and CORS preflights included (`backend/security_headers.py`, the
+outermost middleware):
+
+- `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
+  `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `Cross-Origin-Opener-Policy: same-origin`.
+- **CSP for the SPA:** `script-src 'self'` (no inline scripts); styles from `'self'`, inline (Angular injects
+  component styles) and Google Fonts; `connect-src 'self'` plus the world map data on `cdn.jsdelivr.net`;
+  `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`.
+- **CSP for `/api/`, `/auth/` and `/health`:** `default-src 'none'; frame-ancestors 'none'`, plus
+  `Cache-Control: no-store`.
+- Only the exact docs paths (`/docs`, `/docs/oauth2-redirect`, `/redoc`) skip the CSP, and only while
+  `ENABLE_API_DOCS=true`.
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains` over HTTPS (directly, or the last
+  `X-Forwarded-Proto` value is `https`).
+- Request bodies over 64 KB get `413` (`backend/request_limits.py`).
+
+### CORS
+
+- Production serves the SPA from the API service (same origin) and needs no CORS origin.
+- `CORS_ORIGINS` lists exact origins, comma-separated (for local `ng serve`: `http://localhost:4200`). Unset or
+  empty allows none. A wildcard, a path, a trailing slash or uppercase stops startup.
+- Allowed methods `GET`, `POST`, `PATCH`, `DELETE`; the only allowed request header is `Content-Type`; credentials
+  (the session cookie) are allowed. No response header is exposed, so a cross-origin client cannot read
+  `Retry-After` and falls back to one minute.
 
 ### Running the security tests
 
