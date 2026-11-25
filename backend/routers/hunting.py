@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from rate_limit import WRITE_LIMIT, limiter
 from schemas import SavedHuntBody
 from store import ip_store, _saved_hunts, verify_token
+from users import CurrentUser
 
 MAX_HUNT_RESULTS = 500
 # In memory only: without a cap any user could grow the list without limit.
@@ -46,12 +47,13 @@ async def run_hunt(
 
 @router.get("/api/hunts")
 async def get_saved_hunts(_=Depends(verify_token)):
-    return _saved_hunts
+    # Hunts saved before owners were recorded answer created_by: null.
+    return [{"created_by": None, **h} for h in _saved_hunts]
 
 
 @router.post("/api/hunts")
 @limiter.limit(WRITE_LIMIT)
-async def save_hunt(request: Request, body: SavedHuntBody, _=Depends(verify_token)):
+async def save_hunt(request: Request, body: SavedHuntBody, user: CurrentUser = Depends(verify_token)):
     if len(_saved_hunts) >= MAX_SAVED_HUNTS:
         raise HTTPException(status_code=409, detail=f"Saved hunts are limited to {MAX_SAVED_HUNTS}, delete one first")
     hunt = {
@@ -60,6 +62,7 @@ async def save_hunt(request: Request, body: SavedHuntBody, _=Depends(verify_toke
         "query": body.query.model_dump(exclude_unset=True),
         "created_at": datetime.now(timezone.utc).isoformat(),
         "result_count": body.result_count,
+        "created_by": user.username,
     }
     _saved_hunts.insert(0, hunt)
     return hunt
