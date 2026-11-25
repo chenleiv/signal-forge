@@ -16,6 +16,33 @@ to anything listed here.
 
 ---
 
+## 2026-11-25 · Softer dark surfaces
+
+**Decision.** Dark theme only (`frontend/src/styles.scss`, `.theme-dark,
+:root[data-theme="dark"]`), four surface tokens change:
+- `--c-bg` `#050608` -> `#0b0f14`
+- `--c-panel` `#0e1114` -> `#121820`
+- `--c-border` `#252c33` -> `#232c38`
+- `--c-input` `#000000` -> `#0d1218`
+
+The `body` fallback and the dark `c-border` entry in
+`frontend/src/app/features/dashboard/chart-palette.ts` follow. Text, accent,
+`--c-on-accent` (still `#050608`), severity, status and purple tokens and the
+whole light theme are unchanged. Table header rows already use
+`var(--c-input)`, so they follow without a component change.
+
+Contrast on the new surfaces (bg / panel): `--c-text` 16.39 / 15.21,
+`--c-text-2` 8.68 / 8.05, `--c-muted` 6.11 / 5.67, `--c-accent` 7.92 / 7.35.
+The rule toggle on-dot (`--c-input` on the 51% text track) is 4.76 on bg and
+5.04 on panel (needs 3).
+
+**Reason.** The near-black surfaces read as a terminal, not as a SOC product.
+Slightly lifted, blue-tinted surfaces keep every WCAG threshold with margin.
+
+**Alternatives rejected.** Not recorded.
+
+---
+
 ## 2026-11-25 · Export hardening: CSV formula neutralisation, JSON and Markdown export
 
 **Decision.**
