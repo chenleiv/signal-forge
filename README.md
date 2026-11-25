@@ -129,6 +129,32 @@ Backend runs on `http://localhost:8000`. API docs (Swagger UI at `/docs`, ReDoc 
 `ENABLE_API_DOCS=true`, for local development; otherwise those paths fall through to the SPA.
 Without `DATABASE_URL` everything is kept in memory; with it, migrations run on startup and a failed migration stops the server.
 
+### Environment variables
+
+Every variable the backend reads (`backend/.env.example` lists the same names with empty values; an empty value
+means "use the default"). Never commit real values.
+
+| Name | Default | Required | Stops startup |
+|---|---|---|---|
+| `JWT_SECRET` | none | yes | when missing or shorter than 32 bytes |
+| `DEMO_MODE` | on (anything but `false`) | no | no |
+| `ADMIN_PASSWORD` | empty | with `DEMO_MODE=false`, until an admin with a real password exists | with `DEMO_MODE=false`: when set but not 12-72 bytes; when empty and there is no database; when empty and the database has no admin or the admin still has the demo password |
+| `DATABASE_URL` | empty: in-memory storage | no | when a migration fails, or the database holds more than one active admin |
+| `ENV` | empty: the session cookie is `Secure` | `development` for local plain HTTP | no |
+| `CORS_ORIGINS` | empty: no cross-origin caller | for local `ng serve` | when an entry is not an exact lowercase `http(s)://host[:port]` origin |
+| `ENABLE_API_DOCS` | off (only `true` turns it on) | no | no |
+| `TRUSTED_PROXY_HOPS_HTTP` | 1 | no (Render: 2) | when not a non-negative integer |
+| `TRUSTED_PROXY_HOPS_WS` | 1 | no (Render: 1) | when not a non-negative integer |
+| `TRUSTED_PROXY_HOPS` | none (legacy name) | must not be set | **refused**: any non-empty value stops startup |
+| `ABUSEIPDB_API_KEY` | empty: cached list, or the bundled sample in demo mode | no | no |
+| `IPINFO_TOKEN` | empty: built-in geolocation data | no | no |
+| `GROQ_API_KEY` | empty: no AI summaries (`{"summary": null}`) | no | no |
+| `GROQ_MODEL` | `openai/gpt-oss-20b` (also when empty) | no | no |
+| `THREAT_IPS_CACHE` | `backend/threat_ips_cache.json` | no | no |
+
+Outside the backend: `PORT` is set by Render for the start command, and `BACKEND_PYTHON` points the e2e tests at
+another Python (default `backend/venv`).
+
 ### Updating Python dependencies
 
 `requirements.in` (runtime) and `requirements-dev.in` (tests, lint, audit) are the sources. `requirements.txt` and
@@ -393,20 +419,29 @@ check, so the two cannot silently diverge.
 
 | Limit | Scope |
 |---|---|
-| Login: 5/minute | per client IP |
-| Login failures: 10/minute, 100/hour | per account, across all IPs |
+| Login (`POST /auth/login`): 5/minute | per client IP |
+| Login failures: 10/minute, 100/hour (not for the demo accounts in demo mode) | per account, across all IPs |
+| WebSocket tickets (`/auth/ws-ticket`): 60/minute | per client IP |
+| Stats (`/api/stats`): 50/minute | per client IP |
+| IP intelligence (`/api/ip/{ip}/history`, `/geo`, `/related`, `GET /block`): 30/minute each; `/ai-summary`: 10/minute | per client IP, per route |
+| Block / unblock an IP (`POST`, `DELETE /api/ip/{ip}/block`), console (`/api/command`): 20/minute each | per client IP, per route |
+| Writes: 30/minute each (`WRITE_LIMIT`): logout, `PATCH /auth/me`, every incident and alert write, opening a case, saving and deleting a hunt | per client IP, per route |
+| Running a hunt (`GET /api/hunt`, scans every stored event): 30/minute (`WRITE_LIMIT`) | per client IP |
+| Admin writes: 20/minute each (`ADMIN_WRITE_LIMIT`): create, change and delete users, every rule write, behavioral settings | per client IP, per route |
+| Reads: alerts, alerts summary, saved hunts, users, user directory, `/auth/me`, threat feed status, `/api/config`: 120/minute (`READ_LIMIT`) | per client IP, per route |
+| Database reads: incidents, rules, behavioral settings, open case for an IP: 60/minute (`DB_READ_LIMIT`) | per client IP, per route |
 | New cases: 5/minute, 30/hour | per user |
-| IP intelligence, block/unblock, console, stats | per client IP (10-50/minute depending on the route) |
-| Reads: alerts, alerts summary, saved hunts, users, user directory, `/auth/me`, threat feed status, `/api/config`: 120/minute | per client IP, per route |
-| Database reads: incidents, rules, behavioral settings, open case for an IP: 60/minute | per client IP, per route |
+| Wrong current password on `PATCH /auth/me`: 5/minute, 20/hour | per user |
 | AI summaries that call Groq: 5/minute, 50/day | per user and client IP together |
 | AI summaries that call Groq, whole server: 500/day | all users |
 | Geolocation lookups that call ipinfo: 20/minute, 300/day | per user and client IP together |
 | AbuseIPDB lookups for IP history: 20/minute, 300/day | per user and client IP together |
 | WebSocket connections open at once: 20 | per client IP (and 500 in total) |
 
-- Every rate-limit `429` carries `Retry-After` (seconds). Per-IP limits answer `{"error": "Rate limit exceeded: ..."}`,
-  the per-account and per-user ones `{"detail": "..."}`. The frontend pauses stats and alerts polling for that time
+- Every rate-limit `429` on an HTTP route carries `Retry-After` (seconds). Per-IP limits answer
+  `{"error": "Rate limit exceeded: ..."}`, the per-account and per-user ones `{"detail": "..."}`. The WebSocket cap is
+  the exception: the handshake is refused with `429 {"detail": "Too many open streams"}` and no `Retry-After` (or, if
+  the server cannot send a denial response, the socket closes with 1013). The frontend pauses stats and alerts polling for that time
   (one minute when the header is missing).
 - The external lookup quotas count only requests that really call the service: a cached answer or a missing API key
   costs nothing, and a failed or timed-out call still counts. They are keyed by user and client IP together, so
@@ -447,6 +482,33 @@ check, so the two cannot silently diverge.
 - Incident status, assignees, notes (non-empty string, max 2000 characters) and completed tasks (unique indexes
   within the incident's playbook) are validated (`422`, never `500`).
 - The blocklist is capped at 1000 entries.
+
+### Security headers
+
+Set on every HTTP response, error responses and CORS preflights included (`backend/security_headers.py`, the
+outermost middleware):
+
+- `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`,
+  `Permissions-Policy: camera=(), microphone=(), geolocation=()`, `Cross-Origin-Opener-Policy: same-origin`.
+- **CSP for the SPA:** `script-src 'self'` (no inline scripts); styles from `'self'`, inline (Angular injects
+  component styles) and Google Fonts; `connect-src 'self'` plus the world map data on `cdn.jsdelivr.net`;
+  `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors 'none'`.
+- **CSP for `/api/`, `/auth/` and `/health`:** `default-src 'none'; frame-ancestors 'none'`, plus
+  `Cache-Control: no-store`.
+- Only the exact docs paths (`/docs`, `/docs/oauth2-redirect`, `/redoc`) skip the CSP, and only while
+  `ENABLE_API_DOCS=true`.
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains` over HTTPS (directly, or the last
+  `X-Forwarded-Proto` value is `https`).
+- Request bodies over 64 KB get `413` (`backend/request_limits.py`).
+
+### CORS
+
+- Production serves the SPA from the API service (same origin) and needs no CORS origin.
+- `CORS_ORIGINS` lists exact origins, comma-separated (for local `ng serve`: `http://localhost:4200`). Unset or
+  empty allows none. A wildcard, a path, a trailing slash or uppercase stops startup.
+- Allowed methods `GET`, `POST`, `PATCH`, `DELETE`; the only allowed request header is `Content-Type`; credentials
+  (the session cookie) are allowed. No response header is exposed, so a cross-origin client cannot read
+  `Retry-After` and falls back to one minute.
 
 ### Running the security tests
 
