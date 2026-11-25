@@ -65,7 +65,8 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
         return {**existing, "existing": True}
 
     if CASES_PER_USER.exceeded(creator.username):
-        raise HTTPException(status_code=429, detail="Too many new cases, try again later")
+        raise HTTPException(status_code=429, detail="Too many new cases, try again later",
+                            headers={"Retry-After": str(CASES_PER_USER.retry_after(creator.username))})
     CASES_PER_USER.hit(creator.username)
 
     events = list(ip_store.get(ip, deque()))

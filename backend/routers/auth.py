@@ -10,7 +10,7 @@ from starlette.concurrency import run_in_threadpool
 
 from database import get_db
 from sessions import new_session_id, revoke_session
-from rate_limit import WRITE_LIMIT, limiter, login_locked, record_login_failure
+from rate_limit import WRITE_LIMIT, limiter, login_locked, login_retry_after, record_login_failure
 from schemas import LoginBody, OwnPasswordBody
 from user_admin import change_own_password
 import store as _store
@@ -64,7 +64,8 @@ async def login(request: Request, body: LoginBody, response: Response):
     # The per-IP limit above still applies to them.
     account_limited = not (_store.DEMO_MODE and username in DEMO_USERNAMES)
     if account_limited and login_locked(username):
-        raise HTTPException(status_code=429, detail="Too many login attempts, try again later")
+        raise HTTPException(status_code=429, detail="Too many login attempts, try again later",
+                            headers={"Retry-After": str(login_retry_after(username))})
     # bcrypt is CPU-bound: keep it off the event loop. Unknown user and wrong
     # password take the same path and return the same 401 (no enumeration).
     user = await run_in_threadpool(authenticate, username, password)

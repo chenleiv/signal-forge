@@ -1,13 +1,17 @@
 from __future__ import annotations
 import logging
+import math
 import os
+import time
 
 from limits import parse_many
 from limits.storage import MemoryStorage
 from limits.strategies import FixedWindowRateLimiter
-from slowapi import Limiter
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from starlette.requests import HTTPConnection
+from starlette.requests import HTTPConnection, Request
+from starlette.responses import Response
 
 # Number of reverse proxies in front of the app that append to
 # X-Forwarded-For, per connection type: on Render, HTTP requests and WebSocket
@@ -114,6 +118,24 @@ WRITE_LIMIT = "30/minute"
 ADMIN_WRITE_LIMIT = "20/minute"
 
 
+def seconds_until(reset_time: float) -> int:
+    """Whole seconds until `reset_time` (epoch), at least 1: the value of a
+    Retry-After header."""
+    return max(1, math.ceil(reset_time - time.time()))
+
+
+def rate_limit_exceeded_handler(request: Request, exc: RateLimitExceeded) -> Response:
+    """slowapi's own 429 (same body), plus Retry-After: the seconds until the
+    window that was hit has room again. slowapi's `headers_enabled` is not
+    used: it would need a `response` parameter on every limited route."""
+    response = _rate_limit_exceeded_handler(request, exc)
+    current = getattr(request.state, "view_rate_limit", None)
+    if current is not None:
+        stats = limiter.limiter.get_window_stats(current[0], *current[1])
+        response.headers["Retry-After"] = str(seconds_until(stats.reset_time))
+    return response
+
+
 class KeyedLimit:
     """A rate limit on an application key (username, ...) rather than on the
     client IP. Callers decide what counts: check `exceeded` before the action,
@@ -141,6 +163,16 @@ class KeyedLimit:
         for item in self.items:
             self._limiter.hit(item, self.namespace, key[:64])
 
+    def retry_after(self, key: str) -> int:
+        """Seconds until every exceeded window of `key` has room again (the
+        longest wait when several are full), at least 1."""
+        waits = [
+            self._limiter.get_window_stats(i, self.namespace, key[:64]).reset_time
+            for i in self.items
+            if not self._limiter.test(i, self.namespace, key[:64])
+        ]
+        return seconds_until(max(waits)) if waits else 1
+
 
 # ── Per-account login limit ───────────────────────────────────
 # Independent of IP, so a distributed brute force against one account is
@@ -161,6 +193,10 @@ PASSWORD_CHANGE_FAILURES = KeyedLimit("password-change", "5/minute;20/hour")
 
 def login_locked(username: str) -> bool:
     return LOGIN_FAILURES_PER_USER.exceeded(username)
+
+
+def login_retry_after(username: str) -> int:
+    return LOGIN_FAILURES_PER_USER.retry_after(username)
 
 
 def record_login_failure(username: str) -> None:
