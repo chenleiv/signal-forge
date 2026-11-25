@@ -22,6 +22,7 @@ ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
 GROQ_API_KEY      = os.environ.get("GROQ_API_KEY", "")
 # Groq retires models over time; override without a code change via GROQ_MODEL.
 GROQ_MODEL        = os.environ.get("GROQ_MODEL") or "openai/gpt-oss-20b"  # empty = default
+GROQ_TIMEOUT_SECONDS = 10.0
 
 # Per-IP lookup caches. Bounded: any public IP can be looked up, so an
 # unbounded cache grows without limit on a long-running server.
@@ -133,7 +134,9 @@ async def get_ip_ai_summary(
     }
     try:
         from groq import AsyncGroq
-        client = AsyncGroq(api_key=GROQ_API_KEY)
+        # The client's defaults are a 60 s timeout and 2 retries, so one slow
+        # request could hold a worker for minutes; fail fast instead.
+        client = AsyncGroq(api_key=GROQ_API_KEY, timeout=GROQ_TIMEOUT_SECONDS, max_retries=0)
         response = await client.chat.completions.create(
             model=GROQ_MODEL,
             # gpt-oss is a reasoning model: keep reasoning short and leave
