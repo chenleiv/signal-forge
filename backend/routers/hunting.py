@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from authz import check_delete_hunt
 from rate_limit import WRITE_LIMIT, limiter
 from schemas import SavedHuntBody
 from store import ip_store, _saved_hunts, verify_token
@@ -70,7 +71,13 @@ async def save_hunt(request: Request, body: SavedHuntBody, user: CurrentUser = D
 
 @router.delete("/api/hunts/{hunt_id}")
 @limiter.limit(WRITE_LIMIT)
-async def delete_hunt(request: Request, hunt_id: str, _=Depends(verify_token)):
-    import store as _store
-    _store._saved_hunts[:] = [h for h in _store._saved_hunts if h["id"] != hunt_id]
+async def delete_hunt(request: Request, hunt_id: str, user: CurrentUser = Depends(verify_token)):
+    # The list is shared with every signed-in user, so a 404 before the
+    # permission check reveals nothing. No await between the check and the
+    # removal, so no other request can change the list in between.
+    hunt = next((h for h in _saved_hunts if h["id"] == hunt_id), None)
+    if hunt is None:
+        raise HTTPException(status_code=404, detail="Saved hunt not found")
+    check_delete_hunt(user, hunt)
+    _saved_hunts[:] = [h for h in _saved_hunts if h["id"] != hunt_id]
     return {"ok": True}

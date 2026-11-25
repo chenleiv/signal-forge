@@ -209,12 +209,12 @@ def test_hunt_limit_at_max_is_accepted(alice):
     assert alice.get("/api/hunt", params={"limit": MAX_HUNT_RESULTS}).status_code == 200
 
 
-def test_saved_hunts_are_capped(alice, keep_state):
+def test_saved_hunts_are_capped(alice, admin, keep_state):
     store._saved_hunts[:] = [{"id": f"h{i}", "name": "h", "query": {}, "created_at": "", "result_count": 0}
                              for i in range(MAX_SAVED_HUNTS)]
     assert alice.post("/api/hunts", json={"name": "one more"}).status_code == 409
     assert len(store._saved_hunts) == MAX_SAVED_HUNTS
-    alice.delete("/api/hunts/h0")
+    admin.delete("/api/hunts/h0")
     assert alice.post("/api/hunts", json={"name": "one more"}).status_code == 200
 
 

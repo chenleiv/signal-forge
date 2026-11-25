@@ -7,7 +7,7 @@
     "{incident}": "an SQLi incident whose assignee is given by 'owner' (self / other / none)",
     "{alert}": "an existing alert",
     "{rule}": "an existing rule",
-    "{hunt}": "an existing saved hunt",
+    "{hunt}": "a saved hunt whose created_by is given by 'owner' (self / other / none)",
     "{ip}": "a public IP",
     "{self_password}": "the caller's current password"
   },
@@ -810,7 +810,7 @@
     {
       "action": "delete hunt",
       "role": "analyst",
-      "owner": null,
+      "owner": "self",
       "method": "DELETE",
       "path": "/api/hunts/{hunt}",
       "body": null,
@@ -819,7 +819,7 @@
     {
       "action": "delete hunt",
       "role": "admin",
-      "owner": null,
+      "owner": "self",
       "method": "DELETE",
       "path": "/api/hunts/{hunt}",
       "body": null,
@@ -828,7 +828,61 @@
     {
       "action": "delete hunt",
       "role": "manager",
-      "owner": null,
+      "owner": "self",
+      "method": "DELETE",
+      "path": "/api/hunts/{hunt}",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "delete hunt",
+      "role": "analyst",
+      "owner": "other",
+      "method": "DELETE",
+      "path": "/api/hunts/{hunt}",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete hunt",
+      "role": "manager",
+      "owner": "other",
+      "method": "DELETE",
+      "path": "/api/hunts/{hunt}",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete hunt",
+      "role": "admin",
+      "owner": "other",
+      "method": "DELETE",
+      "path": "/api/hunts/{hunt}",
+      "body": null,
+      "expect": "allow"
+    },
+    {
+      "action": "delete hunt",
+      "role": "analyst",
+      "owner": "none",
+      "method": "DELETE",
+      "path": "/api/hunts/{hunt}",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete hunt",
+      "role": "manager",
+      "owner": "none",
+      "method": "DELETE",
+      "path": "/api/hunts/{hunt}",
+      "body": null,
+      "expect": "deny"
+    },
+    {
+      "action": "delete hunt",
+      "role": "admin",
+      "owner": "none",
       "method": "DELETE",
       "path": "/api/hunts/{hunt}",
       "body": null,

@@ -48,3 +48,51 @@ def test_client_cannot_choose_the_creator():
     r = _client("alice").post("/api/hunts", json={"name": "h", "created_by": "bob"})
     assert r.status_code == 422
     assert store._saved_hunts == []
+
+
+# ── Delete: the creator or the admin ──────────────────────────
+
+DENIED = {"detail": "Only the hunt's creator or an admin can delete this hunt"}
+
+
+@pytest.mark.parametrize("caller,owner", [
+    ("alice", "bob"),    # analyst, another user's hunt
+    ("alice", None),     # analyst, no owner
+    ("mira", "alice"),   # manager, another user's hunt
+    ("mira", None),      # manager, no owner
+])
+def test_non_owner_cannot_delete(caller, owner):
+    store._saved_hunts[:] = [_hunt("h1", owner)]
+    before = [dict(h) for h in store._saved_hunts]
+    r = _client(caller).delete("/api/hunts/h1")
+    assert r.status_code == 403
+    assert r.json() == DENIED
+    assert store._saved_hunts == before
+
+
+@pytest.mark.parametrize("caller,owner", [
+    ("alice", "alice"),  # analyst, own hunt
+    ("mira", "mira"),    # manager, own hunt
+    ("admin", "bob"),    # admin, another user's hunt
+    ("admin", None),     # admin, no owner
+])
+def test_owner_or_admin_can_delete(caller, owner):
+    store._saved_hunts[:] = [_hunt("h1", owner), _hunt("h2", "bob")]
+    r = _client(caller).delete("/api/hunts/h1")
+    assert r.status_code == 200
+    assert [h["id"] for h in store._saved_hunts] == ["h2"]
+
+
+def test_delete_unknown_hunt_is_404():
+    store._saved_hunts[:] = [_hunt("h1", "alice")]
+    r = _client("alice").delete("/api/hunts/nope")
+    assert r.status_code == 404
+    assert r.json() == {"detail": "Saved hunt not found"}
+    assert [h["id"] for h in store._saved_hunts] == ["h1"]
+
+
+def test_delete_twice_is_404_the_second_time():
+    _client("alice").post("/api/hunts", json={"name": "a"})
+    hunt_id = store._saved_hunts[0]["id"]
+    assert _client("alice").delete(f"/api/hunts/{hunt_id}").status_code == 200
+    assert _client("alice").delete(f"/api/hunts/{hunt_id}").status_code == 404
