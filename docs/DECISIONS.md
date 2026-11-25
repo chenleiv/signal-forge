@@ -45,6 +45,7 @@ to anything listed here.
 - The export menu (`shared/ui/export-menu.component.ts`) lists CSV, PDF, JSON
   and Markdown, in that order, on the threat table and on incidents. Files:
   `threats.json`, `threats.md`, `incidents.json`, `incidents.md`.
+- CI finding (PR #64): on a one-row desktop threat table the `overflow: hidden` table container clipped the menu (JSON half cut, Markdown hidden). The menu is now `position: fixed`, placed from the button's viewport rect, and kept inside the component so tab order and outside-click closing are unchanged. Guarded by `frontend/e2e/export-menu-clipping.e2e.ts` (stubbed one-IP stats, ticket and socket).
 - PDF is not changed. jspdf's `text()` draws glyphs. Nothing in a PDF is run
   as a formula, and the app never calls `html()` (see "Frontend dependency
   updates", 2026-11-23). The only path is a person copying text out of the
