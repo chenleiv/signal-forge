@@ -11,7 +11,7 @@
            placeholder="Search title or ID…" />
     <app-filter-pills [options]="statuses" allLabel="All Status" [(value)]="statusFilter" />
     <app-filter-pills [options]="severities" allLabel="All Sev" [(value)]="severityFilter" />
-    <app-export-menu (csv)="exportCsv()" (pdf)="exportPdf()" />
+    <app-export-menu (csv)="exportCsv()" (pdf)="exportPdf()" (json)="exportJson()" (markdown)="exportMarkdown()" />
   </div>
 
   <div class="table-wrap h-scroll">
