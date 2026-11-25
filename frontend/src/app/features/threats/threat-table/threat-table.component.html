@@ -8,7 +8,7 @@
            (input)="searchIp.set($any($event.target).value)"
            placeholder="Search IP…" />
     <app-filter-pills [options]="levels" [(value)]="levelFilter" />
-    <app-export-menu (csv)="exportCsv()" (pdf)="exportPdf()" />
+    <app-export-menu (csv)="exportCsv()" (pdf)="exportPdf()" (json)="exportJson()" (markdown)="exportMarkdown()" />
   </div>
 
   <div class="table-scroll h-scroll">

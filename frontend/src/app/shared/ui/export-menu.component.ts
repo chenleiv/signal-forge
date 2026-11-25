@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, output, signal } from '@angular/core';
 
-/** "↓ Export" button with a CSV / PDF menu; closes on any click outside it. */
+export type ExportFormat = 'csv' | 'pdf' | 'json' | 'markdown';
+
+/** "↓ Export" button with a CSV / PDF / JSON / Markdown menu; closes on any click outside it. */
 @Component({
   selector: 'app-export-menu',
   standalone: true,
@@ -12,6 +14,8 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, output, signal 
       <div class="export-dropdown">
         <button type="button" (click)="choose('csv')">CSV</button>
         <button type="button" (click)="choose('pdf')">PDF</button>
+        <button type="button" (click)="choose('json')">JSON</button>
+        <button type="button" (click)="choose('markdown')">Markdown</button>
       </div>
     }
   `,
@@ -20,13 +24,19 @@ import { ChangeDetectionStrategy, Component, ElementRef, inject, output, signal 
 export class ExportMenuComponent {
   readonly csv = output<void>();
   readonly pdf = output<void>();
+  readonly json = output<void>();
+  readonly markdown = output<void>();
   readonly open = signal(false);
   private readonly host = inject(ElementRef<HTMLElement>);
 
-  choose(format: 'csv' | 'pdf') {
+  choose(format: ExportFormat) {
     this.open.set(false);
-    if (format === 'csv') this.csv.emit();
-    else this.pdf.emit();
+    switch (format) {
+      case 'csv': this.csv.emit(); break;
+      case 'pdf': this.pdf.emit(); break;
+      case 'json': this.json.emit(); break;
+      case 'markdown': this.markdown.emit(); break;
+    }
   }
 
   onDocumentClick(e: MouseEvent) {
