@@ -1,0 +1,19 @@
+@use 'tokens' as *;
+
+// Same look as the DEMO badge in the layout banner: accent text and border on
+// the surface behind it (--c-accent is checked at 4.5:1 on bg and panel).
+:host { display: inline-flex; vertical-align: middle; }
+
+.sim-tag {
+  margin-left: 8px;
+  padding: 1px 5px;
+  border: 1px solid $accent;
+  border-radius: 3px;
+  color: $accent;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

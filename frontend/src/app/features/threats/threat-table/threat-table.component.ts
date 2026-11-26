@@ -2,6 +2,7 @@ import { Component, output, input, inject, signal, computed, effect, ChangeDetec
 import { NgClass, TitleCasePipe } from '@angular/common';
 import { ExportMenuComponent } from '../../../shared/ui/export-menu.component';
 import { FilterPillsComponent } from '../../../shared/ui/filter-pills.component';
+import { SimulatedTagComponent } from '../../../shared/ui/simulated-tag.component';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
 import { downloadCsv, downloadJson, downloadMarkdown, downloadPdf } from '../../../core/utils/export.utils';
 
@@ -16,7 +17,7 @@ export interface ThreatExportItem {
 @Component({
   selector: 'app-threat-table',
   standalone: true,
-  imports: [NgClass, TitleCasePipe, FilterPillsComponent, ExportMenuComponent],
+  imports: [NgClass, TitleCasePipe, FilterPillsComponent, ExportMenuComponent, SimulatedTagComponent],
   templateUrl: './threat-table.component.html',
   styleUrl: './threat-table.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

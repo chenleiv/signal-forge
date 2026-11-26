@@ -31,8 +31,8 @@ const server = spawn(python, [
     JWT_SECRET: 'e2e-only-secret-never-used-in-production',
     ENV: 'development',           // plain-HTTP cookies on 127.0.0.1
     ABUSEIPDB_API_KEY: '', IPINFO_TOKEN: '', GROQ_API_KEY: '',
-    // A fixed set of threat IPs, so the live stream has events on any machine (CI too).
-    THREAT_IPS_CACHE: resolve(frontend, 'e2e/threat-ips.json'),
+    // Demo mode streams the built-in simulated pool (documentation-range IPs),
+    // so the live stream has events on any machine (CI too) without a feed file.
   },
 });
 for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.kill(signal));
