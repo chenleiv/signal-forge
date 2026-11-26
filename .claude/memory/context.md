@@ -19,6 +19,7 @@ backend/db_ops.py           SQLAlchemy data access
 backend/models.py           SQLAlchemy models
 backend/store.py            In-memory state, token verification, input and IP checks
 backend/simulation.py       Threat feed and event generation
+backend/simulated_pool.py   Demo mode's simulated IPs (documentation ranges) and geolocation
 backend/users.py            Users, password hashing, seeding, session checks
 backend/user_admin.py       User management operations
 backend/sessions.py         Logout revocation
@@ -140,7 +141,9 @@ the server. Startup must never delete stored data.
 Demo mode:
 
 On unless DEMO_MODE=false. Middleware in main.py rejects every write except
-login and logout. Frontend actions are simulated in the browser.
+login and logout. Frontend actions are simulated in the browser. The feed is
+the simulated pool only (no real third-party IPs); IP lookups accept only
+pool addresses (store.validate_lookup_ip).
 
 
 Avoid:

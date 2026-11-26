@@ -4,7 +4,7 @@
 
 SignalForge is a Security Operations Center (SOC) dashboard for security analysts: watch threats in real time, triage alerts and investigate incidents, with role-based access control and AI-assisted IP analysis. Built with Angular 21 and FastAPI.
 
-The attacking IPs come from the AbuseIPDB blacklist (or a bundled sample in demo mode when no list is available). The events around them are generated, so no real network is being monitored.
+The events are generated, so no real network is being monitored. In demo mode (the live demo) every IP address is simulated: it comes from the reserved documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24), so no real host is ever shown as an attacker, and the UI marks the data "Simulated". Outside demo mode the attacking IPs come from the AbuseIPDB blacklist.
 
 ---
 
@@ -13,7 +13,7 @@ The attacking IPs come from the AbuseIPDB blacklist (or a bundled sample in demo
 - **Live SOC Stream** — real-time threat event feed over WebSocket with severity color coding
 - **Analytics Dashboard** — summary cards (tracked IPs, events, events per minute, regions, high severity, critical alerts) and charts for severity distribution, attack types, regions and top attacking IPs (Apache ECharts)
 - **Threat Map** — animated D3.js world map showing attack origin → target lines in real time
-- **Threat Intelligence** — IP index with split-view detail panel, MITRE ATT&CK tags, event timeline, and AbuseIPDB enrichment
+- **Threat Intelligence** — IP index with split-view detail panel, MITRE ATT&CK tags, event timeline, and AbuseIPDB enrichment (outside demo mode)
 - **AI Analysis** — per-IP threat summaries generated through the Groq API, displayed inline in the detail panel
 - **Incidents** — incident log with split-view details, status tracking, response tasks, notes, and ownership (assignee)
 - **Alerts** — live alert feed with severity filters; acknowledge, dismiss, or open a case from an alert
@@ -54,6 +54,7 @@ signalforge/
 │   ├── main.py              # App setup, lifespan, demo-mode middleware, WebSocket stream
 │   ├── store.py             # In-memory state, session verification, config checks
 │   ├── simulation.py        # Threat feed (AbuseIPDB, cache, snapshot, sample) and event generation
+│   ├── simulated_pool.py    # Demo mode's simulated IPs (documentation ranges) and their geolocation
 │   ├── constants.py         # Simulation data, MITRE map, response playbooks, behavioral defaults
 │   ├── users.py             # Users, bcrypt, seeding, session checks
 │   ├── user_admin.py        # Admin user management (create, role, password, soft delete)
@@ -148,8 +149,8 @@ means "use the default"). Never commit real values.
 | `TRUSTED_PROXY_HOPS_HTTP` | 1 | no (Render: 2) | when not a non-negative integer |
 | `TRUSTED_PROXY_HOPS_WS` | 1 | no (Render: 1) | when not a non-negative integer |
 | `TRUSTED_PROXY_HOPS` | none (legacy name) | must not be set | **refused**: any non-empty value stops startup |
-| `ABUSEIPDB_API_KEY` | empty: cached list, or the bundled sample in demo mode | no | no |
-| `IPINFO_TOKEN` | empty: built-in geolocation data | no | no |
+| `ABUSEIPDB_API_KEY` | empty: cached list (never used in demo mode) | no | no |
+| `IPINFO_TOKEN` | empty: built-in geolocation data (never used in demo mode) | no | no |
 | `GROQ_API_KEY` | empty: no AI summaries (`{"summary": null}`) | no | no |
 | `GROQ_MODEL` | `openai/gpt-oss-20b` (also when empty) | no | no |
 | `THREAT_IPS_CACHE` | `backend/threat_ips_cache.json` | no | no |
@@ -273,8 +274,8 @@ All endpoints require a session except those marked *public*. Role requirements 
 | GET | `/api/hunt`, `/api/hunts` | Run a hunt / list saved hunts (shared, each with its `created_by`) | any user |
 | POST | `/api/hunts` | Save a hunt (20 per user, 100 in total, `409` past either) | any user |
 | DELETE | `/api/hunts/{id}` | Delete a saved hunt (`404` if it does not exist) | its creator or admin |
-| GET | `/api/ip/{ip}/history`, `/geo`, `/related`, `/case`, `/block` | IP intelligence and status | any user |
-| GET | `/api/ip/{ip}/ai-summary` | AI-generated threat summary | any user |
+| GET | `/api/ip/{ip}/history`, `/geo`, `/related`, `/case`, `/block` | IP intelligence and status (demo mode: simulated IPs only, else `404`) | any user |
+| GET | `/api/ip/{ip}/ai-summary` | AI-generated threat summary (demo mode: simulated IPs only, else `404`) | any user |
 | POST, DELETE | `/api/ip/{ip}/block` | Block / unblock an IP | any user |
 | POST | `/api/command` | Command console | any user |
 | GET, HEAD | `/health` | Health check (HEAD for uptime monitors, not in the schema) | public |
@@ -301,16 +302,21 @@ Routers never branch on the storage: `repositories.py` gives them the database o
 
 ### Threat feed
 
-The live stream is built from the AbuseIPDB blacklist (fetched at most once a day; the free tier allows only a few
-blacklist calls per day). The last list is kept in a file cache and, with a database, in the `threat_feed_snapshot`
+In demo mode the live stream uses only the built-in simulated pool (`backend/simulated_pool.py`: 36 addresses from the
+documentation ranges, with simulated geolocation) and the state is `simulated`; nothing below applies, and AbuseIPDB
+and ipinfo are never called.
+
+Outside demo mode the live stream is built from the AbuseIPDB blacklist (fetched at most once a day; the free tier
+allows only a few blacklist calls per day). The last list is kept in a file cache and, with a database, in the `threat_feed_snapshot`
 table, so a restart on a host with an ephemeral disk (Render) does not spend the quota.
 
 | State | Meaning |
 |-------|---------|
 | `live` | A list fetched within the last day |
 | `cached` | An older stored list, because the refresh failed (`reason`: `quota`, `error`) or there is no `ABUSEIPDB_API_KEY` (`reason`: `no_key`) |
-| `sample` | Demo mode only, with no stored list: the bundled `threat_ips_sample.json` |
+| `sample` | Only when `refresh_threat_ips` is called with `allow_sample` and has no stored list: the bundled `threat_ips_sample.json`. Startup no longer does this (demo mode uses `simulated`); the sample is kept until a follow-up removes it |
 | `unavailable` | Nothing to stream (outside demo mode, sample data is never used) |
+| `simulated` | Demo mode: the simulated pool, no banner (the DEMO banner and the "Simulated" tags explain it) |
 
 While the feed is not `live` the backend retries: at the quota reset when a 429 carries `Retry-After` (clamped to 5 minutes - 24 hours), daily when there is no `ABUSEIPDB_API_KEY`, otherwise hourly. The UI shows a banner for `sample` and `unavailable`.
 Stored lists are validated before use: public IPs with an integer score 0-100, at most 1000 entries.
@@ -413,6 +419,11 @@ check, so the two cannot silently diverge.
   any route or permission check.
 - With a database, startup in demo mode puts the demo accounts back to their seeded names and roles, and resets the
   `admin` password to the public demo password if it was changed.
+- **Simulated IPs only.** The stream, stats, alerts and incidents use the simulated pool (documentation ranges), and
+  the dashboard, threat table and threat drawer show a "Simulated" tag. IP lookups accept only pool addresses: any
+  other address gets `404` before AbuseIPDB, ipinfo or Groq is called. Stored incidents whose source IP is not in the
+  pool are not returned (they are kept, not deleted). The AI summary still calls Groq for pool addresses, with the
+  usual quotas; it only sends simulated events.
 - In the browser, common analyst actions are simulated locally (nothing is saved) so the demo stays interactive.
   The simulation applies the same permission rules, so it never "succeeds" at something the real server would deny.
 - The public demo accounts exist only in demo mode, and are exempt from the per-account login lockout

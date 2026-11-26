@@ -16,6 +16,128 @@ to anything listed here.
 
 ---
 
+## 2026-11-26 · Demo mode shows simulated IP addresses only
+
+**Decision.**
+- Demo mode (on unless `DEMO_MODE=false`) streams only a built-in pool of 36
+  addresses, 12 from each IPv4 documentation range (RFC 5737:
+  192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24), with fixed scores and
+  simulated geolocation: a real city (so the map spreads out), the org
+  "Simulated network" and an ASN from the documentation range AS64496-64511
+  (RFC 5398). Generated once from a fixed seed in `backend/simulated_pool.py`.
+- Startup (`backend/main.py`): in demo mode `simulation.use_simulated_feed()`
+  replaces `refresh_threat_ips` (state `simulated`, reason `null`); the daily
+  refresh loop and the ipinfo prefetch do not run. So the demo never calls
+  AbuseIPDB or ipinfo and never reads or writes the file cache or the stored
+  snapshot. The startup backfill also runs on the `simulated` state.
+- Lookups: `store.validate_lookup_ip` replaces `validate_ip` on the GET routes
+  `/api/ip/{ip}/history`, `/geo`, `/ai-summary`, `/related`, `/block` and
+  `/case`. Outside demo mode it is exactly `validate_ip`. In demo mode only a
+  pool address passes; any other address (public, private or reserved) gets
+  `404 "Demo mode: only IP addresses from the simulated feed can be looked
+  up"` before the route runs, so no external call is possible. A malformed
+  address is still `422`. `validate_ip` itself is unchanged, so the
+  documentation ranges are still refused outside demo mode.
+- For pool addresses in demo mode: `/geo` answers from the simulated table
+  (no ipinfo), `/history` returns the events without AbuseIPDB fields (no
+  AbuseIPDB call; the drawer hides that section), and `/ai-summary` still
+  calls Groq with the existing quotas (owner decision). Its context is the
+  pool address and its simulated events only.
+- Stored incidents: alerts, saved hunts, the blocklist and rule-made
+  incidents are in memory only; incidents opened by a user are stored in the
+  database when `DATABASE_URL` is set, and rows written before demo mode can
+  hold real IPs. In demo mode `GET /api/incidents` returns only incidents
+  whose `source_ip` is in the pool (no IP, or any other IP, is hidden). They
+  are filtered, not purged: startup must never delete stored data (see
+  `.claude/memory/context.md`), and `DEMO_MODE=false` on the same database
+  gets them back. `/api/ip/{ip}/case` cannot reach them (the lookup check
+  above). Writes on incidents are refused in demo mode by the middleware.
+- UI: a small "Simulated" tag (`shared/ui/simulated-tag.component.ts`), only
+  in demo mode, next to the Live SOC Stream and Top Attacking IPs titles on
+  the dashboard, the threat table title and the IP in the threat drawer.
+  `role="note"`, accessible name "Simulated data: these IP addresses are not
+  real hosts" (starts with the visible text). Same style as the DEMO badge:
+  `--c-accent` text and border, already checked at 4.5:1 on `--c-bg` and
+  `--c-panel` in both themes. The `simulated` feed state shows no feed
+  banner; the DEMO banner text now says IP addresses are simulated.
+- `frontend/e2e/serve.mjs` no longer sets `THREAT_IPS_CACHE`, and
+  `frontend/e2e/threat-ips.json` (public DNS resolvers) is deleted: demo mode
+  never reads a feed file. No secret was added to the e2e job or `serve.mjs`.
+- `DEMO_MODE=false`: unchanged. `refresh_threat_ips` is called as before
+  (`allow_sample` was `DEMO_MODE`, so it was already `False` there), the
+  lookups use `validate_ip` and call AbuseIPDB, ipinfo and Groq as before, and
+  every incident is listed.
+
+**Reason.** The live demo showed real third-party IP addresses (AbuseIPDB's
+blacklist or the Censys scanner sample) next to randomly generated attacks,
+scores and regions, which presents real hosts as the source of attacks they
+never made. Arbitrary lookups also let any visitor spend the AbuseIPDB,
+ipinfo and Groq quotas on any address. Documentation ranges are never routed,
+so no real host can be shown.
+
+**Cost.**
+- The demo shows no real threat intelligence: no AbuseIPDB reputation, and
+  geolocation is invented.
+- Visitors cannot look up an address of their own choice in the demo.
+- The 2026-11-23 backfill entry rejected documentation ranges because
+  allowing them in `validate_ip` would loosen a security control. Here
+  `validate_ip` is unchanged; the demo admits 36 fixed addresses, a narrower
+  set than before.
+
+**Alternatives rejected.**
+- Masking real IPs in the UI (as the og-image does): the real addresses would
+  still be in API responses, exports and the WebSocket stream.
+- Accepting any address in `ip_store` instead of the pool: in demo mode the
+  two are the same set, and the pool cannot be grown by a request.
+- Purging non-pool incidents on demo startup: startup must never delete data.
+- A 422 for an unknown address: the address is well formed, it is just not in
+  the demo's data, so 404.
+
+**Follow-up.** The Censys sample (`backend/threat_ips_sample.json`,
+`_load_sample`, the `sample` state and `allow_sample`) is no longer used at
+startup but is kept, with `refresh_threat_ips` untouched, so this change
+edits no existing test of it. Remove it in a separate pull request.
+
+**Not covered.**
+- Free text in database incidents (titles, notes) is not scanned. An
+  incident is shown only when its `source_ip` is a pool address, and no
+  request can store one: demo mode refuses writes, and outside demo mode
+  `validate_ip` refuses documentation ranges.
+- `constants.GEO_DATA` still lists 12 real addresses; it is used only as a
+  geolocation fallback outside demo mode and for alerts on those exact
+  addresses, which the demo never streams.
+- Stubbed API responses in existing e2e tests use real addresses
+  (`185.220.101.34`, `185.220.101.35`, `45.155.205.12`); they never reach
+  the live demo. Changing them needs the owner's approval for editing tests.
+
+**Not verified.** Whether the production database holds incidents with real
+IPs (they are hidden either way); whether `GROQ_API_KEY` and `IPINFO_TOKEN`
+are set on Render; the deploy itself.
+
+Tests: new `backend/tests/test_demo_simulated_ips.py` (49: the pool, demo
+startup with every outbound call recorded, the live stream with an
+always-firing rule, 404 for 4 outside addresses on each of the 6 lookup
+routes with no call, simulated geo and history, the Groq context, incidents
+in memory and in a database, and `DEMO_MODE=false` startup, lookups and
+listing), `frontend/src/app/shared/ui/simulated-tag.component.spec.ts` and
+`frontend/e2e/simulated-ips.e2e.ts`. Against the old routes and startup, 30
+of the 49 backend tests fail; the rest are guards (pool shape,
+`DEMO_MODE=false`). One existing test,
+`test_demo_seed.py::test_demo_startup_fills_stats_without_alerts`, asserts
+that demo startup streams the Censys sample and fails by design; its change
+waits for the owner's approval.
+
+Files: `backend/simulated_pool.py` (new), `backend/simulation.py`,
+`backend/store.py`, `backend/main.py`, `backend/routers/ip.py`,
+`backend/routers/incidents.py`, `frontend/src/app/shared/ui/simulated-tag.*`
+(new), `frontend/src/app/core/services/threat-feed.service.ts`,
+`frontend/src/app/layout/app-layout/app-layout.html`, the dashboard, threat
+table and threat drawer templates and components, `frontend/src/index.html`,
+`frontend/e2e/serve.mjs`, `frontend/e2e/threat-ips.json` (deleted),
+`README.md`, `.claude/memory/context.md`, tests above.
+
+---
+
 ## 2026-11-25 · Softer dark surfaces
 
 **Decision.** Dark theme only (`frontend/src/styles.scss`, `.theme-dark,
@@ -811,9 +933,9 @@ hidden from the schema rather than renamed.
 - Serving the image from a separate host: it would need its own deploy and
   checks; the API service already serves static files.
 
-**Known issue.** The live demo UI itself shows real third-party IP addresses
-(from AbuseIPDB, or the Censys sample) next to randomly generated attacks,
-scores and regions. No code change for now.
+**Known issue (closed 2026-11-26).** Demo mode now shows simulated IP
+addresses only; see "Demo mode shows simulated IP addresses only" at the top.
+The link-preview copy above was updated to match.
 
 **Not verified.** Whether LinkedIn's crawler sends HEAD; that `DEMO_MODE` is
 on in Render (the copy says "read-only"); how long LinkedIn keeps a cached
@@ -2088,6 +2210,8 @@ raising a burst of alerts.
   IP action in the UI (lookup, block, case from IP) would fail with 422 for
   every demo event, and `_clean_ips` would drop them. Allowing them would
   loosen a security control.
+  (Superseded, 2026-11-26: demo mode now uses them, without changing
+  `validate_ip`; see "Demo mode shows simulated IP addresses only".)
 
 Limits: the region chart, the summary cards and the map are built from the
 WebSocket events in the browser, which the backfill does not replay; they
