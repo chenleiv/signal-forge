@@ -15,6 +15,7 @@ from constants import (
     _SERVICES, _PROTOCOLS, _SCAN_TYPES, _ENDPOINTS,
 )
 from db_ops import db_get_threat_feed_snapshot, db_save_threat_feed_snapshot
+from simulated_pool import SIMULATED_GEO, SIMULATED_IPS
 from store import _ip_coords, is_public_ip, record_backfill
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
@@ -39,6 +40,7 @@ _quota_resets_in: Optional[int] = None
 # What the live stream is built from, served to the UI so a paused or sample
 # feed is explained instead of looking like a fault.
 #   state:  live (fresh data) | cached (older data) | sample | unavailable
+#           | simulated (demo mode: the simulated pool, see use_simulated_feed)
 #   reason: why it is not live: quota (AbuseIPDB 429) | no_key | error
 FEED_STATUS: dict[str, Optional[str]] = {"state": "unavailable", "reason": None}
 
@@ -271,6 +273,18 @@ async def refresh_threat_ips(allow_sample: bool = False, session_factory: Option
         print(f"[AbuseIPDB] Refresh failed ({type(exc).__name__}, status={status}) — feed is {FEED_STATUS['state']}")
 
 
+def use_simulated_feed() -> None:
+    """Demo mode: stream the simulated pool only (documentation-range IPs,
+    simulated geolocation). No AbuseIPDB or ipinfo call, and the file cache
+    and the stored snapshot are neither read nor written. Called instead of
+    refresh_threat_ips, which stays the path for DEMO_MODE=false."""
+    global THREAT_IPS
+    THREAT_IPS = dict(SIMULATED_IPS)
+    for ip, geo in SIMULATED_GEO.items():
+        _ip_coords[ip] = (geo["lat"], geo["lng"])
+    _set_status("simulated", None)
+
+
 def _attack_metadata(attack_type: str) -> dict:
     if attack_type == "DDoS":
         return {"packet_rate": random.randint(10_000, 2_000_000), "duration_sec": random.randint(5, 300), "protocol": random.choice(_PROTOCOLS)}
@@ -312,8 +326,8 @@ def generate_threat() -> dict:
 
 # ── Demo backfill ─────────────────────────────────────────────
 # A fresh demo process has no history, so the stats charts start at zero.
-# In demo mode on sample data only, record the last few minutes of
-# simulated events at startup. The minute buckets keep 15 minutes.
+# In demo mode on the simulated pool (or sample data) only, record the last
+# few minutes of simulated events at startup. The minute buckets keep 15 minutes.
 BACKFILL_MINUTES = 15
 BACKFILL_PER_MINUTE = 40
 MAX_BACKFILL_EVENTS = BACKFILL_MINUTES * BACKFILL_PER_MINUTE
@@ -321,9 +335,9 @@ MAX_BACKFILL_EVENTS = BACKFILL_MINUTES * BACKFILL_PER_MINUTE
 
 def backfill_demo_events(demo_mode: bool) -> int:
     """Record past simulated events for the demo; returns how many. Runs only
-    when demo mode is on and the feed is the bundled sample, never on live or
-    cached threat data."""
-    if not demo_mode or FEED_STATUS["state"] != "sample" or not THREAT_IPS:
+    when demo mode is on and the feed is the simulated pool or the bundled
+    sample, never on live or cached threat data."""
+    if not demo_mode or FEED_STATUS["state"] not in ("simulated", "sample") or not THREAT_IPS:
         return 0
     now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
     count = 0
@@ -337,5 +351,5 @@ def backfill_demo_events(demo_mode: bool) -> int:
             event["timestamp"] = (start + timedelta(seconds=offset)).isoformat()
             record_backfill(event, start.strftime("%H:%M"))
             count += 1
-    print(f"[Demo] Backfilled {count} sample events over {BACKFILL_MINUTES} min")
+    print(f"[Demo] Backfilled {count} simulated events over {BACKFILL_MINUTES} min")
     return count

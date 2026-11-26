@@ -27,6 +27,7 @@ from db_ops import db_get_rules, db_get_behavioral_settings
 import simulation
 from simulation import (
     refresh_threat_ips, fetch_ipinfo, generate_threat, next_refresh_in, backfill_demo_events, IPINFO_TOKEN,
+    use_simulated_feed,
 )
 from store import (
     _score_to_level, _create_alert, _record_event,
@@ -143,11 +144,16 @@ async def lifespan(app: FastAPI):
                 })
                 print(f"[DB] Loaded behavioral settings: {_store._behavioral_config}")
 
-    await refresh_threat_ips(allow_sample=DEMO_MODE, session_factory=AsyncSessionLocal if USE_DB else None)
+    if DEMO_MODE:
+        # Simulated IPs only: no real third party is shown, and no AbuseIPDB
+        # or ipinfo call is made (docs/DECISIONS.md).
+        use_simulated_feed()
+    else:
+        await refresh_threat_ips(allow_sample=False, session_factory=AsyncSessionLocal if USE_DB else None)
     backfill_demo_events(DEMO_MODE)
 
     async def _prefetch_ipinfo():
-        if IPINFO_TOKEN:
+        if IPINFO_TOKEN and not DEMO_MODE:
             async with httpx.AsyncClient() as client:
                 # Read at call time: refresh_threat_ips() rebinds THREAT_IPS.
                 for ip_addr in list(simulation.THREAT_IPS.keys())[:20]:
@@ -156,9 +162,11 @@ async def lifespan(app: FastAPI):
                         _store._ip_coords[ip_addr] = (data["lat"], data["lng"])
 
     async def _refresh_loop():
+        if DEMO_MODE:
+            return  # the simulated pool never changes
         while True:
             await asyncio.sleep(next_refresh_in())
-            await refresh_threat_ips(allow_sample=DEMO_MODE, session_factory=AsyncSessionLocal if USE_DB else None)
+            await refresh_threat_ips(allow_sample=False, session_factory=AsyncSessionLocal if USE_DB else None)
 
     async def _behavioral_loop():
         while True:

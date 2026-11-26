@@ -10,7 +10,7 @@ from constants import INCIDENT_TITLES, MITRE_MAP, RESPONSE_TASKS, MAX_NOTE_LENGT
 from database import get_db
 from db_ops import StaleIncident
 from repositories import incidents
-from store import ip_store, _score_to_level, validate_ip, verify_token
+from store import ip_store, _score_to_level, demo_visible, validate_ip, validate_lookup_ip, verify_token
 import store as _store
 from rate_limit import CASES_PER_USER, DB_READ_LIMIT, WRITE_LIMIT, limiter
 from schemas import IncidentFromIp, IncidentPatch, NoteBody, TasksBody
@@ -102,7 +102,9 @@ async def build_incident_for_ip(ip: str, db, creator: CurrentUser) -> dict:
 @router.get("/api/incidents")
 @limiter.limit(DB_READ_LIMIT)
 async def get_incidents(request: Request, db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)):
-    return await incidents(db).list()
+    # Demo mode hides stored incidents whose source IP is not simulated
+    # (rows written before demo mode can hold real IPs); nothing is deleted.
+    return [inc for inc in await incidents(db).list() if demo_visible(inc.get("source_ip"))]
 
 
 @router.patch("/api/incidents/{incident_id}")
@@ -127,7 +129,7 @@ async def patch_incident(
 @limiter.limit(DB_READ_LIMIT)
 async def get_ip_case(
     request: Request,
-    ip: str = Depends(validate_ip),
+    ip: str = Depends(validate_lookup_ip),
     db: Optional[AsyncSession] = Depends(get_db), _=Depends(verify_token)
 ):
     inc = await incidents(db).open_case_for_ip(ip)
