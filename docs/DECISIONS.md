@@ -106,9 +106,6 @@ edits no existing test of it. Remove it in a separate pull request.
 - `constants.GEO_DATA` still lists 12 real addresses; it is used only as a
   geolocation fallback outside demo mode and for alerts on those exact
   addresses, which the demo never streams.
-- Stubbed API responses in existing e2e tests use real addresses
-  (`185.220.101.34`, `185.220.101.35`, `45.155.205.12`); they never reach
-  the live demo. Changing them needs the owner's approval for editing tests.
 
 **Not verified.** Whether the production database holds incidents with real
 IPs (they are hidden either way); whether `GROQ_API_KEY` and `IPINFO_TOKEN`
@@ -122,10 +119,30 @@ in memory and in a database, and `DEMO_MODE=false` startup, lookups and
 listing), `frontend/src/app/shared/ui/simulated-tag.component.spec.ts` and
 `frontend/e2e/simulated-ips.e2e.ts`. Against the old routes and startup, 30
 of the 49 backend tests fail; the rest are guards (pool shape,
-`DEMO_MODE=false`). One existing test,
-`test_demo_seed.py::test_demo_startup_fills_stats_without_alerts`, asserts
-that demo startup streams the Censys sample and fails by design; its change
-waits for the owner's approval.
+`DEMO_MODE=false`). Changed with the owner's approval:
+- `test_demo_seed.py::test_demo_startup_fills_stats_without_alerts` asserted
+  that demo startup streams the Censys sample; it now expects the simulated
+  pool (one line).
+- The stubbed API responses in `frontend/e2e/responsive-data.e2e.ts`,
+  `incident-task-failure.e2e.ts` and `incident-update-failure.e2e.ts` used
+  real addresses (`185.220.101.34`, `185.220.101.35`, `45.155.205.12`); they
+  now use `203.0.113.34`, `203.0.113.35` and `198.51.100.12`. No assertion
+  referred to them, and no test logic changed.
+
+Frontend unit tests: the first run on this branch had 2 failures in the
+chart palette mirror check (`styles.contrast.spec.ts`, "matches the CSS
+tokens"), which compares the compiled `chart-palette.ts` with `styles.scss`
+read from disk. Neither file changed here, and no code writes to
+`CHART_PALETTE`. After removing `frontend/.angular/cache` and `dist` before
+each run, three runs passed 474 of 474. Two failures fit a compiled palette
+from before `e7c2b43` (it changed both themes; `f97853e` changed one dark
+token), pulled the night before, but the stale cache was deleted and the
+cause is not proven.
+
+Results: backend `ruff` clean, 1122 passed
+(`--ignore=tests/test_env_example.py`); frontend lint clean, 474 unit tests
+passed, production build and `check-og-tags.mjs` OK; `npm run e2e` phone 56,
+desktop 41, tablet 46 passed, none failed.
 
 Files: `backend/simulated_pool.py` (new), `backend/simulation.py`,
 `backend/store.py`, `backend/main.py`, `backend/routers/ip.py`,
