@@ -3,7 +3,9 @@ import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { catchError, of, switchMap, timer } from 'rxjs';
 
-export type FeedState  = 'live' | 'cached' | 'sample' | 'unavailable';
+/** 'simulated': demo mode, documentation-range IPs only (no banner; the
+ *  DEMO banner and the "Simulated" tags explain it). */
+export type FeedState  = 'live' | 'cached' | 'sample' | 'unavailable' | 'simulated';
 export type FeedReason = 'quota' | 'no_key' | 'error' | null;
 
 export interface ThreatFeedStatus {
@@ -24,7 +26,7 @@ export const FEED_POLL_MS = 60_000;
  * broken dashboard full of zeros.
  */
 export function feedNotice(status: ThreatFeedStatus | null): FeedNotice | null {
-  if (!status || status.state === 'live' || status.state === 'cached') return null;
+  if (!status || status.state === 'live' || status.state === 'cached' || status.state === 'simulated') return null;
   const resumes = 'Live data resumes automatically.';
   if (status.state === 'sample') {
     switch (status.reason) {

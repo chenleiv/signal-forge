@@ -11,7 +11,7 @@
   <div class="detail-header">
     <div>
       <span class="drawer-label">THREAT INTELLIGENCE</span>
-      <span class="drawer-ip">{{ history()?.ip ?? ip() }}</span>
+      <span class="drawer-ip">{{ history()?.ip ?? ip() }}</span><app-simulated-tag />
     </div>
     <button class="close-btn" (click)="close()">✕</button>
   </div>

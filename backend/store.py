@@ -19,6 +19,7 @@ from database import AsyncSessionLocal
 from db_ops import db_update_rule
 from users import ROLES, CurrentUser, analyst_usernames, is_session_current, password_problem
 from sessions import is_revoked
+from simulated_pool import is_simulated_ip
 
 SECRET_KEY = os.environ.get("JWT_SECRET")
 if not SECRET_KEY:
@@ -150,6 +151,33 @@ def validate_ip(ip: str) -> str:
     if _is_non_public(parsed):
         raise HTTPException(status_code=422, detail="Private or reserved IP not allowed")
     return str(parsed)
+
+
+DEMO_UNKNOWN_IP = "Demo mode: only IP addresses from the simulated feed can be looked up"
+
+
+def validate_lookup_ip(ip: str) -> str:
+    """The IP check for the lookup routes. Outside demo mode it is exactly
+    validate_ip. In demo mode only an address of the simulated pool passes
+    (documentation ranges, which validate_ip would refuse as reserved); any
+    other address is a 404 before the route runs, so it never reaches
+    AbuseIPDB, ipinfo or Groq. DEMO_MODE is read at call time."""
+    if not DEMO_MODE:
+        return validate_ip(ip)
+    try:
+        parsed = str(ipaddress.ip_address(ip))
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid IP address format") from None
+    if not is_simulated_ip(parsed):
+        raise HTTPException(status_code=404, detail=DEMO_UNKNOWN_IP)
+    return parsed
+
+
+def demo_visible(ip: object) -> bool:
+    """Whether an item with this source IP may be shown. Outside demo mode,
+    always. In demo mode only items from the simulated pool: stored data
+    (incidents in the database) can predate demo mode and hold real IPs."""
+    return not DEMO_MODE or is_simulated_ip(ip)
 
 
 # ── Pure helpers ──────────────────────────────────────────────

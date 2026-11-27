@@ -13,12 +13,13 @@ import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThreatStoreService } from '../../../core/services/threat-store.service';
+import { SimulatedTagComponent } from '../../../shared/ui/simulated-tag.component';
 import { IpHistory, IpGeo, RelatedIp, scoreToColor, scoreToTextColor } from '../../../shared/models/threat.models';
 
 @Component({
   selector: 'app-threat-detail-drawer',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, NgClass],
+  imports: [DatePipe, DecimalPipe, NgClass, SimulatedTagComponent],
   templateUrl: './threat-detail-drawer.component.html',
   styleUrl: './threat-detail-drawer.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

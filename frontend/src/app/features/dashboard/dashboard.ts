@@ -14,11 +14,12 @@ import { ThreatStoreService } from '../../core/services/threat-store.service';
 import { ThemeService } from '../../core/services/theme';
 import { ThreatStats } from '../../shared/models/threat.models';
 import { CHART_PALETTE } from './chart-palette';
+import { SimulatedTagComponent } from '../../shared/ui/simulated-tag.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [DatePipe, NgClass, NgxEchartsDirective, RouterLink],
+  imports: [DatePipe, NgClass, NgxEchartsDirective, RouterLink, SimulatedTagComponent],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

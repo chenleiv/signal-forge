@@ -13,6 +13,7 @@ from tests.conftest import session_client
 import main
 import simulation as m
 import store
+from simulated_pool import SIMULATED_IPS
 
 # The bundled sample: spread over its IPs, the backfill stays far below the
 # per-IP store cap (200), so no backfilled event is evicted.
@@ -111,7 +112,7 @@ def test_demo_startup_fills_stats_without_alerts(monkeypatch):
     assert sum(stats["severity_counts"].values()) == m.MAX_BACKFILL_EVENTS
     assert sum(stats["attack_types"].values()) == m.MAX_BACKFILL_EVENTS
     assert len(stats["events_per_min"]) == m.BACKFILL_MINUTES
-    assert {row["ip"] for row in stats["top_ips"]} <= set(SAMPLE)
+    assert {row["ip"] for row in stats["top_ips"]} <= set(SIMULATED_IPS)
 
 
 def test_non_demo_startup_backfills_nothing(monkeypatch):

@@ -16,10 +16,12 @@ from rate_limit import (
 )
 from schemas import CommandBody
 from users import CurrentUser
+import store as _store
 from store import (
     ip_store, _blocked_ips, _ip_coords, _score_to_level, block_ip as _block_ip,
-    validate_ip, verify_token, MAX_BLOCKED_IPS,
+    validate_ip, validate_lookup_ip, verify_token, MAX_BLOCKED_IPS,
 )
+from simulated_pool import SIMULATED_GEO
 from simulation import fetch_ipinfo, IPINFO_TOKEN
 
 ABUSEIPDB_API_KEY = os.environ.get("ABUSEIPDB_API_KEY", "")
@@ -113,7 +115,7 @@ async def enrich_ip(ip: str) -> Optional[dict]:
 @router.get("/api/ip/{ip}/history")
 @limiter.limit("30/minute")
 async def get_ip_history(
-    request: Request, ip: str = Depends(validate_ip), user: CurrentUser = Depends(verify_token)
+    request: Request, ip: str = Depends(validate_lookup_ip), user: CurrentUser = Depends(verify_token)
 ):
     events = list(ip_store.get(ip, []))
     if not events:
@@ -122,9 +124,10 @@ async def get_ip_history(
     avg = sum(e["score"] for e in events) / len(events)
     regions   = list({e.get("region", "US") for e in events})
     mitre_tags = list({tag for e in events for tag in MITRE_MAP.get(e.get("attack_type", ""), [])})
-    # A used-up quota skips only the AbuseIPDB lookup: the events are the
-    # main content of the panel and come from memory.
-    lookup_allowed = (
+    # Demo mode: simulated addresses have no AbuseIPDB record, so no lookup.
+    # Otherwise a used-up quota skips only the AbuseIPDB lookup: the events
+    # are the main content of the panel and come from memory.
+    lookup_allowed = not _store.DEMO_MODE and (
         ip in _abuse_cache or not ABUSEIPDB_API_KEY
         or not _take((HISTORY_PER_USER_IP, user_ip_key(user.username, request)))
     )
@@ -144,8 +147,10 @@ async def get_ip_history(
 @router.get("/api/ip/{ip}/ai-summary")
 @limiter.limit("10/minute")
 async def get_ip_ai_summary(
-    request: Request, ip: str = Depends(validate_ip), user: CurrentUser = Depends(verify_token)
+    request: Request, ip: str = Depends(validate_lookup_ip), user: CurrentUser = Depends(verify_token)
 ):
+    # In demo mode validate_lookup_ip admits only simulated-pool addresses, and
+    # the context below holds only their simulated events: nothing real is sent.
     if ip in _ai_summary_cache:
         return {"summary": _ai_summary_cache[ip]}
     if not GROQ_API_KEY:
@@ -193,8 +198,10 @@ async def get_ip_ai_summary(
 @router.get("/api/ip/{ip}/geo")
 @limiter.limit("30/minute")
 async def get_ip_geo(
-    request: Request, ip: str = Depends(validate_ip), user: CurrentUser = Depends(verify_token)
+    request: Request, ip: str = Depends(validate_lookup_ip), user: CurrentUser = Depends(verify_token)
 ):
+    if _store.DEMO_MODE:
+        return dict(SIMULATED_GEO[ip])  # simulated geolocation, no ipinfo call
     if ip in _geo_cache:
         return _geo_cache[ip]
 
@@ -220,7 +227,7 @@ async def get_ip_geo(
 @router.get("/api/ip/{ip}/related")
 @limiter.limit("30/minute")
 async def get_related_ips(
-    request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)
+    request: Request, ip: str = Depends(validate_lookup_ip), _=Depends(verify_token)
 ):
     target_events = list(ip_store.get(ip, []))
     if not target_events:
@@ -242,7 +249,7 @@ async def get_related_ips(
 
 @router.get("/api/ip/{ip}/block")
 @limiter.limit("30/minute")
-async def get_block_status(request: Request, ip: str = Depends(validate_ip), _=Depends(verify_token)):
+async def get_block_status(request: Request, ip: str = Depends(validate_lookup_ip), _=Depends(verify_token)):
     return {"blocked": ip in _blocked_ips, "ip": ip}
 
 

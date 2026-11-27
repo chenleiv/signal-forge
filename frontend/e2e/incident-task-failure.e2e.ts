@@ -19,7 +19,7 @@ const STATS: ThreatStats = {
 const now = new Date().toISOString();
 const INCIDENT: Incident = {
   id: 'INC-3002', title: 'Brute force against the VPN', severity: 'high',
-  status: 'open', attack_type: 'BruteForce', source_ip: '185.220.101.35',
+  status: 'open', attack_type: 'BruteForce', source_ip: '203.0.113.35',
   source_region: 'RU', event_count: 8, assigned_to: 'admin',
   created_at: now, updated_at: now, mitre_tags: [], notes: [], completed_tasks: [],
 };
