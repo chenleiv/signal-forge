@@ -11,7 +11,7 @@ import type { Incident } from '../src/app/shared/models/threat.models';
 const now = new Date().toISOString();
 const INCIDENT: Incident = {
   id: 'INC-3001', title: 'Port scan against the DMZ', severity: 'high',
-  status: 'open', attack_type: 'PortScan', source_ip: '185.220.101.34',
+  status: 'open', attack_type: 'PortScan', source_ip: '203.0.113.34',
   source_region: 'RU', event_count: 12, assigned_to: 'admin',
   created_at: now, updated_at: now, mitre_tags: [], notes: [], completed_tasks: [],
 };

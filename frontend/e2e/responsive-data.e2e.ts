@@ -17,7 +17,7 @@ const minutesAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString(
 const ALERTS: ThreatAlert[] = [
   {
     id: 'ALR-1001', source: 'behavioral', detection_source: 'behavioral_detection',
-    type: 'BruteForce', severity: 'critical', ip: '185.220.101.34',
+    type: 'BruteForce', severity: 'critical', ip: '203.0.113.34',
     country: 'Russia', country_code: 'RU', affected_asset: 'vpn-gw-01',
     mitre_technique: 'T1110', confidence_score: 92, risk_score: 88,
     message: 'Repeated failed SSH logins from one source within 10 minutes',
@@ -29,7 +29,7 @@ const ALERTS: ThreatAlert[] = [
   },
   {
     id: 'ALR-1002', source: 'rule', detection_source: 'sigma_rule',
-    type: 'SQLi', severity: 'high', ip: '45.155.205.12',
+    type: 'SQLi', severity: 'high', ip: '198.51.100.12',
     country: 'Netherlands', country_code: 'NL', affected_asset: 'web-app-02',
     mitre_technique: 'T1190', confidence_score: 78, risk_score: 71,
     message: 'SQL injection pattern in a login form parameter',
@@ -48,7 +48,7 @@ const SUMMARY: AlertSummaryMetrics = {
 const INCIDENTS: Incident[] = [
   {
     id: 'INC-2001', title: 'Brute force against the VPN gateway', severity: 'critical',
-    status: 'investigating', attack_type: 'BruteForce', source_ip: '185.220.101.34',
+    status: 'investigating', attack_type: 'BruteForce', source_ip: '203.0.113.34',
     source_region: 'RU', event_count: 42, assigned_to: 'admin',
     created_at: minutesAgo(60), updated_at: minutesAgo(10),
     mitre_tags: ['T1110', 'T1078'],
