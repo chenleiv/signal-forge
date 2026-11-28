@@ -329,6 +329,8 @@ The frontend uses a central `ThreatStoreService` (Angular signals) as the single
 
 The server is the security boundary. Everything the frontend does with permissions is UX only.
 
+For the findings, fixes, accepted risks and how to verify them, see [docs/SECURITY-REPORT.md](docs/SECURITY-REPORT.md).
+
 ### Sessions and tokens
 
 - **Session:** a JWT in the `sf_session` cookie — `HttpOnly`, `SameSite=Lax`, `Secure` unless `ENV=development`, 8 hours.
