@@ -112,6 +112,13 @@ test('the console command input is a 44px touch target with a name', async ({ pa
   await page.getByRole('button', { name: 'Toggle console' }).click();
   const input = page.getByRole('textbox', { name: 'Console command' });
   await expect(input).toBeVisible();
+  // Measure at rest: during the overlay's slide-up the box is read through a
+  // fractional translate, and Chromium's float math can give 43.99994px for a
+  // 44px input (see docs/DECISIONS.md). Only the overlay's own animations are
+  // awaited (the topbar has infinite ones); none at all resolves at once, and
+  // a cancelled one does not fail the test.
+  await input.evaluate(el => Promise.all(el.closest('.console-overlay')!.getAnimations()
+    .map(a => a.finished.catch(() => undefined))));
   expect((await input.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect(page.getByRole('button', { name: 'Close console' })).toBeVisible();
 });
