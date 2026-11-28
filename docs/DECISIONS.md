@@ -16,6 +16,46 @@ to anything listed here.
 
 ---
 
+## 2026-11-28 · Security report, production demo mode and branch protection checked
+
+**Decision.** `docs/SECURITY-REPORT.md` summarises the security work for
+outside readers: scope and threat model, method, a findings table with a
+severity judgment and its reason, supply chain and CI, accepted risks,
+limitations and how to verify. It is verified against `33127fc`, and each
+claim cites a file, pull request, commit or test. The README `Security`
+section links to it.
+
+Two read-only checks were made for it on 2026-11-28:
+- `curl https://signalforge-api-ah1q.onrender.com/api/config` returned
+  `{"demo_mode":true}` (the "Not verified" line of the link-preview entry,
+  2026-11-23, now has a note).
+- `gh api repos/chenleiv/signal-forge/branches/master/protection` (GET):
+  required checks `backend`, `frontend`, `e2e`, `python-lock` with
+  `strict: true`; a pull request with 0 required approvals; force pushes and
+  deletion disabled; `enforce_admins` disabled. `pip-audit` and `npm-audit`
+  are not required (owner's choice).
+
+**Reason.** One factual document for reviewers, instead of reading this log
+from the start. The two checks closed claims that were only owner-reported.
+
+**Session length (owner's rationale, stated 2026-11-28).** Sessions last 8
+hours (`backend/routers/auth.py`); no earlier entry records why. The length
+is not security-critical for a demo of simulated data with writes refused;
+it only needs to be long enough that a visitor is not logged out in the
+middle of exploring, and any value from about two hours up would serve the
+same purpose. Logout revocation on the server and session key rotation stay
+the mitigations. The same value applies with `DEMO_MODE=false`; this
+rationale does not cover that case.
+
+**Alternatives rejected.** Not recorded.
+
+**Not verified.** The Render measurements quoted in the report come from
+this log and were not re-run.
+
+Files: `docs/SECURITY-REPORT.md` (new), `docs/DECISIONS.md`, `README.md`.
+
+---
+
 ## 2026-11-28 · SignalForge favicon; missing icons get 404, not the SPA
 
 **Decision.** The stock Angular `favicon.ico` is replaced with the app shell's
@@ -1073,6 +1113,11 @@ The link-preview copy above was updated to match.
 on in Render (the copy says "read-only"); how long LinkedIn keeps a cached
 failed preview. The `/health` route still gives a duplicate operation id
 warning in the tests; it predates this change and was left alone.
+(Note, 2026-11-28: demo mode on Render is now verified. A read-only
+`curl https://signalforge-api-ah1q.onrender.com/api/config` on 2026-11-28
+returned `{"demo_mode":true}`. Owner-reported: `DEMO_MODE` is not set in the
+Render environment, so the default (on) applies, and the live site shows the
+demo banner. See `docs/SECURITY-REPORT.md`.)
 
 ---
 
