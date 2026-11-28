@@ -16,6 +16,64 @@ to anything listed here.
 
 ---
 
+## 2026-11-28 · Console input touch-target test measures at rest
+
+**Decision.** `e2e/small-fixes.e2e.ts`, "the console command input is a 44px
+touch target with a name", waits for the `.console-overlay` slide-up to
+finish (`getAnimations()` on the overlay only, each `finished` with a
+`catch`) before it reads `boundingBox()`. The `>= 44` check is unchanged and
+has no tolerance. No style changed.
+
+**Reason.** CI (Linux, phone project) measured 43.99993896484375px. The
+input's height is exactly 44px: `min-height: 44px` at or below `$tablet`,
+`box-sizing: border-box`, no border, no vertical padding, not stretched (the
+row is `align-items: center`), and no font metrics, `rem` or `em` involved.
+The test measured as soon as the input was visible, which is the first frame
+of the overlay's `slideUp` (`translateY(100%)` to `0` in 0.2s). Playwright
+reads the box from the transformed quad, and Chromium's float math under a
+fractional translate makes the height one float32 step off: 44 minus 2^-14
+(the step for values from 512 to 1024; the input was at y = 1011). At rest the
+height is exactly 44.
+
+Reproduction (phone project, local Chromium, temporary tests not committed):
+- The test as it was, 30 repeats: 30 passed; the race does not show on a fast
+  machine.
+- Sampling each frame: the first `boundingBox()` was at y = 1012, mid-slide
+  (resting y = 792).
+- Animation paused at 400 offsets from 0 to 200ms: 19 gave
+  43.99993896484375 or 44.00006103515625; at rest, always 44.
+- Held at 0.5ms: the old check failed with 43.99993896484375; the new one
+  waited for the slide to end and measured 44.
+- No animation (`prefers-reduced-motion` emulated, `animation: none`): the
+  wait returned in 2ms. A cancelled animation: returned in 9ms.
+
+Only the overlay's own animations are awaited: `document.getAnimations()`
+includes the topbar's infinite pulse animations and would never resolve.
+
+Other 44px checks were reviewed (`responsive-tools.e2e.ts`,
+`responsive-data.e2e.ts`, the rule toggle in `small-fixes.e2e.ts`): none
+measures an element under a running transform; the incident drawer test
+already waits out its slide-in.
+
+**Alternatives rejected.**
+- A fixed height, as for the topbar toggle (2026-11-18): the height is
+  already exact; the error comes from the transform, not the fonts.
+- A tolerance such as `>= 44 - 0.01`: hides the real cause and would also
+  accept a genuinely short input.
+- Removing the slide-up, or animating `bottom` instead of `transform`: a
+  visible change, or a layout animation, to suit a test.
+- Waiting with a fixed timeout: slower and still a guess on a slow runner.
+
+**Not verified.** The failing frame on the Linux CI runner itself; inferred
+from the identical value reproduced locally.
+
+Tests: changed with the owner's approval: the one test above (the wait
+only).
+
+Files: `frontend/e2e/small-fixes.e2e.ts`, `docs/DECISIONS.md`.
+
+---
+
 ## 2026-11-26 · Demo mode shows simulated IP addresses only
 
 **Decision.**
@@ -1426,6 +1484,9 @@ and no vertical padding), so they no longer follow the fonts installed. With
 `line-height: normal`, Linux fonts made the chip 18px, a 3px gap that failed
 CI.
 See `app-layout.scss`; guarded by `e2e/responsive-tools.e2e.ts`.
+(Note, 2026-11-28: the console input's 43.99994px CI failure had a different
+cause, an animation transform rather than font metrics, so a fixed height did
+not apply; see "Console input touch-target test measures at rest".)
 
 **Reason.** The 44x44 button stood far taller than the LIVE FEED chip (19px)
 and the clock (12px) on phones and tablets, so the row looked uneven. The
