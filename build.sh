@@ -17,6 +17,8 @@ npm ci
 npx ng build --configuration production
 # Stops the deploy if the link-preview tags or og-image.png are missing.
 node scripts/check-og-tags.mjs
+# Stops the deploy if an icon is missing, malformed or not linked.
+node scripts/check-icons.mjs
 
 echo "==> Copying static files to backend..."
 mkdir -p ../backend/static

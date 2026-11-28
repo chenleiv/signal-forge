@@ -16,7 +16,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from fastapi import Depends, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 import jwt
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text as _sa_text
@@ -36,7 +36,7 @@ from store import (
 import store as _store
 from rate_limit import READ_LIMIT, client_ip, limiter, rate_limit_exceeded_handler
 from request_limits import BodySizeLimitMiddleware
-from security_headers import SecurityHeadersMiddleware
+from security_headers import API_PREFIXES, SecurityHeadersMiddleware
 from users import seed_users, sync_users_with_db
 from sessions import load_revoked_sessions
 
@@ -522,20 +522,36 @@ def health():
 
 # Serve Angular SPA — catch-all returns index.html for unknown paths (client-side routing)
 _static = pathlib.Path(__file__).parent / "static"
-if _static.exists():
-    from fastapi.responses import FileResponse
 
+# Image types set explicitly: Python's mimetypes also reads the system's
+# mime.types on Linux, which can name .ico differently from macOS.
+_IMAGE_MEDIA_TYPES = {".ico": "image/x-icon", ".png": "image/png", ".svg": "image/svg+xml"}
+
+
+def spa_response(static_root: pathlib.Path, full_path: str) -> Response:
+    """A file from the build, or index.html for client-side routes. A missing
+    .ico, .png or .svg outside the API prefixes gets 404, not the SPA HTML:
+    browsers ask for icons such as /apple-touch-icon-precomposed.png on their
+    own, and HTML sent as an image is useless (and blocked by nosniff)."""
+    static_root = static_root.resolve()
+    index = static_root / "index.html"
+    try:
+        file_path = (static_root / full_path).resolve()
+        file_path.relative_to(static_root)
+    except (ValueError, OSError):
+        return FileResponse(str(index))
+    suffix = pathlib.PurePosixPath(full_path).suffix.lower()
+    if file_path.is_file():
+        return FileResponse(str(file_path), media_type=_IMAGE_MEDIA_TYPES.get(suffix))
+    if suffix in _IMAGE_MEDIA_TYPES and not ("/" + full_path).startswith(API_PREFIXES):
+        return Response(status_code=404)
+    return FileResponse(str(index))
+
+
+if _static.exists():
     # HEAD too: some link-preview crawlers send HEAD before GET, and a GET-only
     # route answers it with 405. Not an API route, so kept out of the OpenAPI
     # schema (two methods on one function also give a duplicate operation id).
     @app.api_route("/{full_path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     async def serve_spa(full_path: str):
-        static_root = _static.resolve()
-        try:
-            file_path = (static_root / full_path).resolve()
-            file_path.relative_to(static_root)
-        except (ValueError, OSError):
-            return FileResponse(str(static_root / "index.html"))
-        if file_path.is_file():
-            return FileResponse(str(file_path))
-        return FileResponse(str(static_root / "index.html"))
+        return spa_response(_static, full_path)

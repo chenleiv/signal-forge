@@ -23,7 +23,12 @@
   <meta name="twitter:description" content="Demo of a security operations dashboard with a real-time event stream, alerts, incidents, threat hunting and detection rules. All events are simulated and no real network is monitored. Source IP addresses are simulated too, from reserved documentation ranges. Public read-only demo accounts, no sign-up.">
   <meta name="twitter:image" content="https://signalforge-api-ah1q.onrender.com/og-image.png">
   <meta name="twitter:image:alt" content="SignalForge dashboard showing a stream of simulated events, severity counts and charts of attack types, regions and top source IPs.">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Icons: favicon.svg is the source; scripts/generate-icons.mjs makes the
+       other two and scripts/check-icons.mjs checks all three in the build.
+       sizes="32x32" on the .ico lets browsers that support SVG pick the SVG. -->
+  <link rel="icon" href="favicon.ico" sizes="32x32">
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <script src="theme-init.js"></script>
 </head>
 <body>
