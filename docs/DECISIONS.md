@@ -16,6 +16,63 @@ to anything listed here.
 
 ---
 
+## 2026-11-28 · SignalForge favicon; missing icons get 404, not the SPA
+
+**Decision.** The stock Angular `favicon.ico` is replaced with the app shell's
+hexagon mark (`layout/app-layout/app-layout.html`).
+- `frontend/public/favicon.svg` is the source: the accent `#06b6d4` hexagon
+  on a rounded `#0b0f14` tile. At 16px the mark is scaled up slightly and its
+  stroke thickened.
+- `frontend/scripts/generate-icons.mjs` renders it with the Chromium that
+  Playwright already installs. It writes `favicon.ico` (PNG entries at 16, 32
+  and 48) and `apple-touch-icon.png` (180, opaque). It is run by hand and the
+  output is committed. It never runs in the build or in CI.
+- `index.html` links all three. The `.ico` link has `sizes="32x32"` so
+  browsers that support SVG pick the SVG.
+- `scripts/check-icons.mjs` runs in CI's frontend job and in `build.sh`. It
+  parses the ICO (header, directory, each entry's image size), checks the
+  SVG (namespace, viewBox, no scripts, handlers or links), the apple-touch
+  icon's size, the links and the size caps.
+- `main.spa_response` (`backend/main.py`) sets the media type of `.ico`,
+  `.png` and `.svg` explicitly. A missing file with one of those extensions,
+  outside the API prefixes, gets 404 instead of `index.html`. Client-side
+  routes, API paths, other missing files and the security headers are
+  unchanged.
+
+**Reason.**
+- The tile keeps the mark readable on both light and dark browser tabs (see
+  the visual check in the PR).
+- Python's `mimetypes` also reads the system's `mime.types` on Linux
+  (Render, CI), which can name `.ico` differently from macOS.
+- Browsers request icons such as `/apple-touch-icon-precomposed.png` on their
+  own. The SPA fallback answered those with `200 text/html`, which is useless
+  as an image and blocked by `nosniff`.
+
+**Alternatives rejected.**
+- A `prefers-color-scheme` media query inside the SVG: it follows the OS
+  theme, not the tab colour, so it can still pick the wrong one.
+- Pillow, sharp or another image library: a new dependency for a one-off
+  task. Playwright is already a dev dependency.
+- Generating the icons in the build: the build would need a browser. The
+  committed files are checked instead.
+- Safari `mask-icon`: the owner chose to skip it.
+- 404 for missing image paths under `/api/` and `/auth/` too: kept as before
+  to leave API behaviour unchanged.
+
+**Not verified.** How each browser's own tab strip renders the icon. The
+check rendered the icon images at 16 and 32 on light, dark, white and black
+backgrounds in Chromium.
+
+Tests: new `backend/tests/test_favicon.py` and `frontend/e2e/favicon.e2e.ts`.
+No existing test changed.
+
+Files: `frontend/public/favicon.svg`, `favicon.ico`, `apple-touch-icon.png`,
+`frontend/src/index.html`, `frontend/scripts/generate-icons.mjs`,
+`frontend/scripts/check-icons.mjs`, `backend/main.py`,
+`.github/workflows/ci.yml`, `build.sh`, `docs/DECISIONS.md`.
+
+---
+
 ## 2026-11-28 · Console input touch-target test measures at rest
 
 **Decision.** `e2e/small-fixes.e2e.ts`, "the console command input is a 44px
